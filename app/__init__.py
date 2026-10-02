@@ -24,12 +24,14 @@ def create_app(config_object: object | None = None) -> Flask:
 
     from app.routes.access import access_bp
     from app.routes.auth import auth_bp
+    from app.routes.files import files_bp
     from app.routes.main import main_bp
     from app.routes.shop_admin import shop_admin_bp
     from app.routes.shops import shops_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp)
+    app.register_blueprint(files_bp)
     app.register_blueprint(access_bp)
     app.register_blueprint(shops_bp)
     app.register_blueprint(shop_admin_bp)

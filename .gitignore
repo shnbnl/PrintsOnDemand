@@ -9,9 +9,10 @@ venv/
 __pycache__/
 *.py[cod]
 
-# Private local application data and uploads
+# Private local application data and uploads (default UPLOAD_STORAGE_ROOT is instance/uploads)
 instance/
 uploads/
+# If UPLOAD_STORAGE_ROOT is set to another path inside the repository, ignore it too.
 *.db
 *.db-journal
 *.sqlite

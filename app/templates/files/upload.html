@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}Upload file | Prints On Demand{% endblock %}
+
+{% block content %}
+  <p><a href="{{ url_for('files.index') }}">← My files</a></p>
+  <h1>Select files to print</h1>
+  <p>Supported files: {{ extensions|sort|join(', ')|upper }}. Maximum {{ (config.UPLOAD_MAX_SIZE / 1048576)|round(1) }} MiB per file.</p>
+  <form class="account-form" method="post" enctype="multipart/form-data" novalidate>
+    {{ form.hidden_tag() }}
+    <div class="field">
+      {{ form.file.label }}
+      {{ form.file(accept=accept_types) }}
+      {% for error in form.file.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+    </div>
+    {{ form.submit() }}
+  </form>
+  <p>Upload only stores the file. You can configure it next; no order is submitted.</p>
+{% endblock %}

@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}Configure print | Prints On Demand{% endblock %}
+
+{% block content %}
+  <p><a href="{{ url_for('files.detail', file_id=record.id) }}">← {{ record.original_filename }}</a></p>
+  <h1>Customize print</h1>
+  <p>Set printing options for {{ record.original_filename }}. This does not submit an order.</p>
+  <form class="account-form" method="post" novalidate>
+    {{ form.hidden_tag() }}
+    {% for field in [form.paper_size, form.color_mode, form.quantity] %}
+      <div class="field">
+        {{ field.label }} {{ field() }}
+        {% for error in field.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+      </div>
+    {% endfor %}
+    <p class="hint">Print count must be between 1 and {{ max_quantity }}.</p>
+    <div>{{ form.is_rush() }} {{ form.is_rush.label }}</div>
+    {{ form.submit() }}
+  </form>
+{% endblock %}

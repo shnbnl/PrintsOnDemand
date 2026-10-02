@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}My files | Prints On Demand{% endblock %}
+
+{% block content %}
+  <h1>My files</h1>
+  <p>Uploaded files are private. Uploading and configuring a file does not submit an order.</p>
+  <p><a href="{{ url_for('files.upload') }}">Select files to print</a></p>
+  {% if records %}
+    <ul class="shop-list">
+      {% for record in records %}
+        <li class="shop-card">
+          <a href="{{ url_for('files.detail', file_id=record.id) }}">{{ record.original_filename }}</a>
+          <span>({{ record.file_size }} bytes)</span>
+          <p>Uploaded {{ record.created_at.strftime('%Y-%m-%d %H:%M UTC') }}</p>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>No files uploaded yet.</p>
+  {% endif %}
+{% endblock %}

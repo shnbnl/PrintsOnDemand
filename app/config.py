@@ -16,6 +16,10 @@ class Config:
     PERMANENT_SESSION_LIFETIME = timedelta(hours=12)
     REMEMBER_COOKIE_DURATION = timedelta(days=14)
     ENV_NAME = "development"
+    UPLOAD_MAX_SIZE = 16 * 1024 * 1024
+    UPLOAD_MAX_QUANTITY = 999
+    UPLOAD_STORAGE_ROOT = None
+    STORAGE_BACKEND = "local"
 
 
 class DevelopmentConfig(Config):
@@ -76,3 +80,20 @@ def configure_runtime(app: Flask) -> None:
         or app.config.get("SECRET_KEY")
         or secrets.token_urlsafe(32)
     )
+    for name in ("UPLOAD_MAX_SIZE", "UPLOAD_MAX_QUANTITY"):
+        value = os.getenv(name)
+        if value:
+            try:
+                parsed = int(value)
+            except ValueError as error:
+                raise ValueError(f"{name} must be a positive integer.") from error
+            if parsed < 1:
+                raise ValueError(f"{name} must be a positive integer.")
+            app.config[name] = parsed
+    app.config["UPLOAD_STORAGE_ROOT"] = (
+        os.getenv("UPLOAD_STORAGE_ROOT") or app.config.get("UPLOAD_STORAGE_ROOT")
+        or os.path.join(app.instance_path, "uploads")
+    )
+    app.config["STORAGE_BACKEND"] = os.getenv("STORAGE_BACKEND") or app.config["STORAGE_BACKEND"]
+    # Allow room for multipart headers while enforcing the file's own limit separately.
+    app.config["MAX_CONTENT_LENGTH"] = app.config["UPLOAD_MAX_SIZE"] + 64 * 1024

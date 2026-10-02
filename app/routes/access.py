@@ -17,6 +17,7 @@ def student():
     return render_template(
         "main/protected.html", title="Student access", next_url=url_for("shops.index"),
         next_label="Browse printing shops",
+        files_url=url_for("files.index"),
     )
 
 

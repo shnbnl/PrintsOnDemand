@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Uploaded file | Prints On Demand{% endblock %}
+
+{% block content %}
+  <p><a href="{{ url_for('files.index') }}">← My files</a></p>
+  <h1>File uploaded successfully</h1>
+  <p>This file is stored privately. No order has been submitted or sent to a shop or professor.</p>
+  <section>
+    <h2>{{ record.original_filename }}</h2>
+    <p>File size: {{ record.file_size }} bytes</p>
+    <p>Uploaded: {{ record.created_at.strftime('%Y-%m-%d %H:%M UTC') }}</p>
+    <p>Type: {{ record.mime_type }}</p>
+    <p><a href="{{ url_for('files.download', file_id=record.id) }}">Download my file</a></p>
+  </section>
+  <section>
+    <h2>Print configuration</h2>
+    {% if record.configuration %}
+      <p>Paper size: {{ record.configuration.paper_size.label }}</p>
+      <p>Print color output: {{ record.configuration.color_mode.label }}</p>
+      <p>Print count: {{ record.configuration.quantity }}</p>
+      <p>Rush printing: {{ 'Yes' if record.configuration.is_rush else 'No' }}</p>
+    {% else %}
+      <p>No print configuration saved yet.</p>
+    {% endif %}
+    <p><a href="{{ url_for('files.configure', file_id=record.id) }}">{{ 'Edit' if record.configuration else 'Set' }} print configuration</a></p>
+  </section>
+  <form method="post" action="{{ url_for('files.delete', file_id=record.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit">Delete file</button>
+  </form>
+{% endblock %}

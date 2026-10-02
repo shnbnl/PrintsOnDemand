@@ -2,7 +2,7 @@
 
 Prints On Demand is a planned printing-service web application for students. Students will find a printing shop, submit documents with printing instructions, choose a recipient and fulfillment method, and follow an order through completion.
 
-**Current stage: Stage 3 — printing shops and configurable pricing.** Students can search active shops and view services, hours, and prices. Admins can manage shops, services, prices, fees, and staff assignments. Shop Staff can view their assigned shop. Professors, orders, payment, uploads, order tracking, dashboards, and the full reference UI remain for later stages.
+**Current stage: Stage 4 — private file uploads and print configuration.** Students can search shops, upload and download their own files, and save paper size, color, print count, and rush settings. Admins manage shop services and prices; Shop Staff can view their assigned shop. Professors, orders, checkout, payment, delivery, tracking, dashboards, and the full reference UI remain for later stages.
 
 ## Planned features
 
@@ -14,7 +14,7 @@ Prints On Demand is a planned printing-service web application for students. Stu
 - Receive separate upload and order confirmations, an order reference number, status tracking, and order history.
 - Give Shop Staff and Admin their own dashboards and authorized management tools.
 
-All features above are planned, not completed. See [the project specification](docs/project-specification.md) for rules, statuses, security, and open decisions.
+The list combines implemented foundations with later goals. See [the project specification](docs/project-specification.md) for rules, statuses, security, and open decisions.
 
 ## User roles
 
@@ -37,12 +37,12 @@ Dependencies are listed in `requirements.txt`. Gunicorn is the production WSGI s
 | 0 — Foundation (complete) | Repository inspection, specification, configuration placeholders, and directory layout. |
 | 1 — Application setup (complete) | Flask application factory, environment configuration, extensions, dependency manifest, migration environment, landing page, health route, and basic checks. |
 | 2 — Authentication and roles (complete) | User model, student registration, login/logout, controlled staff/admin account creation, and role-protected placeholders. |
-| 3 — Shops and pricing (current) | Active-shop directory/search/details, admin shop/service/price/fee settings, staff assignment, and opt-in demo seed. |
-| 4 — Ordering and file storage (planned) | Private uploads, print configuration, recipient validation, server-side quotations, and order submission. |
+| 3 — Shops and pricing (complete) | Active-shop directory/search/details, admin shop/service/price/fee settings, staff assignment, and opt-in demo seed. |
+| 4 — File upload and print configuration (current) | Private student uploads and one active print configuration per file. No order or quote yet. |
 | 5 — Payment and fulfillment (planned) | Manual payment verification, onsite collection, guarded status updates, tracking, and order history. |
 | 6 — UI and release preparation (planned) | Refine the reference UI, test workflows/security, configure persistent storage, and prepare Render deployment. |
 
-Stages 4-6 remain a proposed sequence and have not started. Professor administration and approval are still planned; their stage boundary will be finalized with the related ordering work.
+The stage labels after Stage 4 are provisional. Recipient selection, order submission, and pricing integration are outside Stage 4. Professor administration and approval are still planned.
 
 ## Repository layout
 
@@ -51,15 +51,16 @@ app/
   __init__.py         Application factory
   config.py           Development, testing, and production configuration
   extensions.py       SQLAlchemy, migrations, login, and CSRF instances
-  routes/             Public, authentication, role-check, shop, and admin blueprints
-  models/             User, shop, service, price, and fee models
+  routes/             Public, authentication, role-check, shop, admin, and student-file blueprints
+  models/             User, shop, pricing, uploaded-file, and print-configuration models
   forms.py            CSRF-protected registration and login forms
   shop_forms.py       Shop, service, price, fee, and staff-assignment forms
+  file_forms.py       CSRF-protected upload and print-configuration forms
   seed.py             Explicit demo shop and pricing data
   authorization.py    Reusable role guard
   cli.py              Controlled staff/admin provisioning
   services/           Reserved for future business rules
-  storage/            Reserved for future private storage adapters
+  storage/            Private local adapter and reusable upload validation
   templates/          Base, account, access, shop directory, and admin templates
   static/
     css/              Simple foundation stylesheet
@@ -70,14 +71,14 @@ docs/
   ui-reference.md
   references/         Supplied UI reference PDF
 migrations/           Flask-Migrate/Alembic environment and schema revisions
-tests/                Foundation, authentication, shop, and pricing tests
+tests/                Foundation, authentication, shop, pricing, and file tests
 run.py                Local development server entry point
 wsgi.py               Production WSGI entry point
 requirements.txt      Python dependencies
 pytest.ini            Test discovery configuration
 ```
 
-Some `.gitkeep` files still preserve empty future directories. Stage 3 adds `printing_shops`, `shop_services`, `print_prices`, and `shop_fees`, plus an optional staff-to-shop foreign key on `users`.
+Stage 3 added `printing_shops`, `shop_services`, `print_prices`, and `shop_fees`, plus an optional staff-to-shop foreign key on `users`. Stage 4 adds `uploaded_files` and `print_configurations`.
 
 ## Local development plan
 
@@ -85,7 +86,7 @@ Some `.gitkeep` files still preserve empty future directories. Stage 3 adds `pri
 2. Activate it with `.venv\Scripts\Activate.ps1` on PowerShell or `source .venv/bin/activate` on macOS/Linux.
 3. Install dependencies with `python -m pip install -r requirements.txt`.
 4. Optionally copy `.env.example` to `.env` and set local values. PowerShell: `Copy-Item .env.example .env`; macOS/Linux: `cp .env.example .env`. An empty or unset `FLASK_ENV` selects development, which uses a local SQLite database in ignored `instance/` and an ephemeral signing secret. No `.env` is needed for the initial landing page.
-5. Run `python -m flask --app wsgi:app db upgrade` to apply the user, shop, and pricing migrations, then `python -m flask --app wsgi:app db check` to confirm there are no pending schema changes. The migration environment is already initialized; do not run `db init` again.
+5. Run `python -m flask --app wsgi:app db upgrade` to apply the user, shop, pricing, and file migrations, then `python -m flask --app wsgi:app db check` to confirm there are no pending schema changes. The migration environment is already initialized; do not run `db init` again.
 6. Start the local server with `python run.py` (default `http://127.0.0.1:5000/`). Check `/` and `/health`, then `/auth/register` and `/auth/login`.
 7. Run tests with `python -m pytest`.
 
@@ -93,16 +94,20 @@ Public registration creates **STUDENT** accounts only. Use a trusted server shel
 
 After logging in, students can open `/shops` to search active shops and view `/shops/<id>` for details and a per-page price table. Admins use `/admin/shops` to create and edit shops, activate/deactivate them, choose services, set paper-size/color prices and rush/delivery fees, and assign existing staff accounts. Assigned staff see only their shop at `/shop`. The `Proceed` button on shop details is intentionally disabled until ordering exists.
 
+Students can open `/files` from `/student`, then `/files/upload` to store one document at a time. The detail page confirms the filename, byte size, and upload time. It also offers an authorized download, configuration, and deletion. Configuration supports Letter, Legal, A4, A3, A2; grayscale or color; print count 1–999 by default; and rush printing. One active configuration is saved per file. These settings do **not** calculate a price or submit an order. Only the owner may list, view, download, configure, or delete their file; staff/admin file access is not available yet. Deletion is allowed for all Stage 4 files because orders do not exist; a future order-attachment guard is required when orders arrive.
+
+Private local uploads default to ignored `instance/uploads`, outside `app/static`. `UPLOAD_STORAGE_ROOT` selects another private root for development/testing; if it is inside the repository, add that custom path to `.gitignore`. `UPLOAD_MAX_SIZE` sets the maximum file size in bytes (default **16 MiB**) and the request cap adds 64 KiB for multipart form overhead. `UPLOAD_MAX_QUANTITY` changes the print-count ceiling (default **999**). Supported extensions are PDF, DOC, DOCX, PPT, PPTX, JPG, JPEG, and PNG. The server checks the extension, declared MIME type, and a recognizable file signature or OOXML ZIP structure. This is a screening measure, not a malware scan or complete document parser: legacy DOC/PPT share an OLE signature, and valid-looking content can still be malicious. Uploaded bytes live outside the database under random keys; metadata and SHA-256 live in the database. The current adapter is local and **production uploads are refused** until a durable private adapter is configured. Do not use an ephemeral Render filesystem for real uploads.
+
 For development data only, run `python -m flask --app wsgi:app seed-demo-shops` explicitly after `db upgrade`. It adds four sample shops based on the PDF names, sample services, prices for Letter/Legal/A4/A3/A2 in grayscale and color, and sample rush/delivery fees where relevant. It is idempotent by shop name, does not overwrite existing shops or prices, and refuses to run in production. The seed amounts and addresses are **demo values, not approved business rates**; seeded pages label them as demo. Admins can replace prices and fees through the UI without changing code.
 
-`DATABASE_URL` overrides the local SQLite default; `postgres://` URLs are normalized to `postgresql://`. `FLASK_ENV` accepts `development`, `testing`, or `production`. `TESTING=true` also selects the isolated in-memory SQLite configuration; it cannot be enabled with production. Production requires a PostgreSQL `DATABASE_URL` and `SECRET_KEY`, enables secure session cookies, and does not silently use local defaults. Other names in `.env.example` reserve settings for later upload and storage stages and are not used yet. Never commit `.env`, passwords, payment receipts, uploaded documents, or production data.
+`DATABASE_URL` overrides the local SQLite default; `postgres://` URLs are normalized to `postgresql://`. `FLASK_ENV` accepts `development`, `testing`, or `production`. `TESTING=true` also selects the isolated in-memory SQLite configuration; it cannot be enabled with production. Production requires a PostgreSQL `DATABASE_URL` and `SECRET_KEY`, enables secure session cookies, and does not silently use local defaults. Object-storage names in `.env.example` are reserved for a later adapter and are not used yet. Never commit `.env`, passwords, payment receipts, uploaded documents, or production data.
 
 ## Deployment target and storage
 
 Source control will use GitHub and deployment will target Render with PostgreSQL. Runtime settings and secrets come from environment variables. The WSGI entry point is ready for `gunicorn wsgi:app` on Linux. Render service settings and release/migration steps will be finalized before deployment.
 
-Local uploads are for development only and must not be assumed durable in production. The planned storage interface will support private persistent/object storage independently of the application's local filesystem. See the [storage and deployment specification](docs/project-specification.md#storage-and-deployment).
+Local uploads are for development only and must not be assumed durable in production. The storage interface can be replaced with private persistent/object storage without changing file routes. Cleanup of abandoned uploads and recovery after a storage/database failure remain future operational work. See the [storage and deployment specification](docs/project-specification.md#storage-and-deployment).
 
 ## UI/UX reference
 
-**[PrintsOnDemand Mobile.pdf](docs/references/PrintsOnDemand%20Mobile.pdf)** is the primary student UI reference. [UI reference notes](docs/ui-reference.md) record the review of all nine pages, including terminology, flow, and required extensions for later implementation. Stage 3 implements the shop search, detail, services, and pricelist concepts as functional pages; map layout and full visual polish remain for a later UI stage.
+**[PrintsOnDemand Mobile.pdf](docs/references/PrintsOnDemand%20Mobile.pdf)** is the primary student UI reference. [UI reference notes](docs/ui-reference.md) record the review of all nine pages, including terminology, flow, and required extensions for later implementation. Stage 4 makes the page 4 file selection and pages 5–8 print customization concepts functional with basic Jinja pages; map layout and full visual polish remain for a later UI stage.

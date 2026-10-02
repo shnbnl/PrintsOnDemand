@@ -47,6 +47,7 @@ class User(UserMixin, db.Model):
         index=True,
     )
     shop: Mapped[PrintingShop | None] = relationship(back_populates="staff")
+    uploaded_files: Mapped[list[UploadedFile]] = relationship(back_populates="user")
 
     @staticmethod
     def normalize_email(value: str) -> str:
