@@ -144,7 +144,11 @@ def configure(file_id: int):
 @roles_required(UserRole.STUDENT)
 def delete(file_id: int):
     record = owned_file(file_id)
-    # Stage 4 has no orders. Add an order-attachment guard when orders are introduced.
+    if record.order_items:
+        return render_template(
+            "files/detail.html", record=record,
+            delete_error="This file belongs to a placed order and cannot be deleted.",
+        ), 409
     try:
         private_storage().delete(record.storage_key)
     except (OSError, StorageError):

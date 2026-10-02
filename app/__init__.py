@@ -1,10 +1,23 @@
 """Flask application factory for Prints On Demand."""
 
+import sqlite3
+
 from flask import Flask, render_template
 from dotenv import load_dotenv
+from sqlalchemy import event
+from sqlalchemy.engine import Engine
 
 from app.config import configure_runtime, select_config
 from app.extensions import csrf, db, login_manager, migrate
+
+
+@event.listens_for(Engine, "connect")
+def enforce_sqlite_foreign_keys(connection, record):
+    """SQLite needs this opt-in to enforce the same FK rules as PostgreSQL."""
+    if isinstance(connection, sqlite3.Connection):
+        cursor = connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
 
 
 def create_app(config_object: object | None = None) -> Flask:
@@ -26,12 +39,14 @@ def create_app(config_object: object | None = None) -> Flask:
     from app.routes.auth import auth_bp
     from app.routes.files import files_bp
     from app.routes.main import main_bp
+    from app.routes.orders import orders_bp
     from app.routes.shop_admin import shop_admin_bp
     from app.routes.shops import shops_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(files_bp)
+    app.register_blueprint(orders_bp)
     app.register_blueprint(access_bp)
     app.register_blueprint(shops_bp)
     app.register_blueprint(shop_admin_bp)

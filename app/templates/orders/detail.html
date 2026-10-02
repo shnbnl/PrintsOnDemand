@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Order {{ order.order_reference }} | Prints On Demand{% endblock %}
+
+{% block content %}
+  <h1>Order created successfully.</h1>
+  <p>Your order has been created and is awaiting payment. Payment has not been completed.</p>
+  <section>
+    <h2>Order {{ order.order_reference }}</h2>
+    <p>Created: {{ order.created_at.strftime('%Y-%m-%d %H:%M UTC') }}</p>
+    <p>Printing shop: {{ order.shop_name }}</p>
+    <p>Status: {{ order.status.value }} (awaiting payment)</p>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>File</th><th>Paper</th><th>Output</th><th>Print count</th><th>Unit price</th><th>Line total</th></tr></thead>
+        <tbody>
+          {% for item in order.items %}
+            <tr>
+              <td>{{ item.original_filename }}</td>
+              <td>{{ item.paper_size.label }}</td>
+              <td>{{ item.color_mode.label }}</td>
+              <td>{{ item.quantity }}</td>
+              <td>{{ order.currency }} {{ item.unit_price }}</td>
+              <td>{{ order.currency }} {{ item.line_total }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p>Subtotal: {{ order.currency }} {{ order.subtotal }}</p>
+    {% if order.items | selectattr('is_rush') | list %}<p>Rush printing fee: {{ order.currency }} {{ order.rush_fee }}</p>{% endif %}
+    <p>Fees total: {{ order.currency }} {{ order.fees_total }}</p>
+    <p><strong>Total: {{ order.currency }} {{ order.total }}</strong></p>
+  </section>
+  <p>No payment or shop processing has been confirmed.</p>
+{% endblock %}

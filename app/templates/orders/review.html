@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Review order | Prints On Demand{% endblock %}
+
+{% block content %}
+  <p><a href="{{ url_for('orders.new', file_id=quote.uploaded_file.id, shop_id=quote.shop.id) }}">← Change selection</a></p>
+  <h1>Review order</h1>
+  {% if warning %}<p class="notice" role="alert">{{ warning }}</p>{% endif %}
+  {% if quote.is_demo %}<p class="demo-label">Demo shop or rates — sample values, not approved business rates.</p>{% endif %}
+  <p>Placing this order creates a record awaiting payment. No payment will be collected here.</p>
+  <section>
+    <h2>{{ quote.shop.name }}</h2>
+    <p>{{ quote.shop.address }}</p>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>File</th><th>Paper</th><th>Output</th><th>Print count</th><th>Unit price</th><th>Line total</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>{{ quote.uploaded_file.original_filename }}</td>
+            <td>{{ quote.paper_size.label }}</td>
+            <td>{{ quote.color_mode.label }}</td>
+            <td>{{ quote.quantity }}</td>
+            <td>{{ quote.currency }} {{ quote.unit_price }}</td>
+            <td>{{ quote.currency }} {{ quote.line_total }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Subtotal: {{ quote.currency }} {{ quote.subtotal }}</p>
+    {% if quote.is_rush %}<p>Rush printing fee: {{ quote.currency }} {{ quote.rush_fee }}</p>{% endif %}
+    <p>Fees total: {{ quote.currency }} {{ quote.fees_total }}</p>
+    <p><strong>Total: {{ quote.currency }} {{ quote.total }}</strong></p>
+  </section>
+  <p class="hint">This Stage 5 quote uses the shop's matching rate multiplied by print count. It does not inspect pages inside a document.</p>
+  <form method="post" action="{{ url_for('orders.create') }}">
+    {{ form.hidden_tag() }}
+    {{ form.submit() }}
+  </form>
+{% endblock %}

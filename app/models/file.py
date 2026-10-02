@@ -38,6 +38,7 @@ class UploadedFile(db.Model):
     configuration: Mapped[PrintConfiguration | None] = relationship(
         back_populates="uploaded_file", uselist=False, cascade="all, delete-orphan"
     )
+    order_items: Mapped[list[OrderItem]] = relationship(back_populates="uploaded_file")
 
 
 class PrintConfiguration(db.Model):

@@ -17,7 +17,7 @@
   {% else %}<p>No services are currently listed.</p>{% endif %}
 
   <h2>Pricelist</h2>
-  <p>Prices are per page or print unit. The final pricing rules will be set before ordering is available.</p>
+  <p>Current shop rates for paper and color. Checkout calculates the total from the selected file's print count.</p>
   <div class="table-scroll">
     <table>
       <thead><tr><th scope="col">Paper Size</th><th scope="col">Grayscale/page</th><th scope="col">Colored/page</th></tr></thead>
@@ -39,7 +39,11 @@
   {% endif %}
 
   {% if not staff_view %}
-    <button type="button" disabled>Proceed</button>
-    <p class="hint">Ordering will be available in a later stage.</p>
+    {% if can_order %}
+      <p><a href="{{ url_for('orders.new', shop_id=shop.id) }}">Proceed to order review</a></p>
+    {% else %}
+      <button type="button" disabled>Proceed</button>
+      <p class="hint"><a href="{{ url_for('files.index') }}">Upload and configure a file</a> before ordering.</p>
+    {% endif %}
   {% endif %}
 {% endblock %}

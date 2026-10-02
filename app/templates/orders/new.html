@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Create order | Prints On Demand{% endblock %}
+
+{% block content %}
+  <h1>Create an order</h1>
+  <p>Choose one configured file and an active printing shop to review the current price.</p>
+  {% if error %}<p class="field-error" role="alert">{{ error }}</p>{% endif %}
+  {% if not files %}<p><a href="{{ url_for('files.index') }}">Upload and configure a file first.</a></p>{% endif %}
+  {% if not shops %}<p>No active printing shops are available.</p>{% endif %}
+  {% if files and shops %}
+    <form class="account-form" method="get" action="{{ url_for('orders.new') }}">
+      <div class="field">
+        <label for="file_id">Your configured file</label>
+        <select id="file_id" name="file_id" required>
+          <option value="">Select a file</option>
+          {% for file in files %}
+            <option value="{{ file.id }}" {% if file.id == selected_file_id %}selected{% endif %}>{{ file.original_filename }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label for="shop_id">Printing shop</label>
+        <select id="shop_id" name="shop_id" required>
+          <option value="">Select a shop</option>
+          {% for shop in shops %}
+            <option value="{{ shop.id }}" {% if shop.id == selected_shop_id %}selected{% endif %}>{{ shop.name }}{% if shop.is_demo %} (demo rates){% endif %}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button type="submit">Review order</button>
+    </form>
+  {% endif %}
+  <p>Payment is not available yet. A placed order will be marked pending payment.</p>
+{% endblock %}

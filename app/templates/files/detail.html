@@ -5,7 +5,11 @@
 {% block content %}
   <p><a href="{{ url_for('files.index') }}">← My files</a></p>
   <h1>File uploaded successfully</h1>
-  <p>This file is stored privately. No order has been submitted or sent to a shop or professor.</p>
+  {% if record.order_items %}
+    <p>This private file belongs to a placed order and remains available for download or reprinting.</p>
+  {% else %}
+    <p>This file is stored privately. No order has been submitted or sent to a shop or professor.</p>
+  {% endif %}
   <section>
     <h2>{{ record.original_filename }}</h2>
     <p>File size: {{ record.file_size }} bytes</p>
@@ -24,9 +28,13 @@
       <p>No print configuration saved yet.</p>
     {% endif %}
     <p><a href="{{ url_for('files.configure', file_id=record.id) }}">{{ 'Edit' if record.configuration else 'Set' }} print configuration</a></p>
+    {% if record.configuration %}<p><a href="{{ url_for('orders.new', file_id=record.id) }}">Review an order for this file</a></p>{% endif %}
   </section>
-  <form method="post" action="{{ url_for('files.delete', file_id=record.id) }}">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <button type="submit">Delete file</button>
-  </form>
+  {% if delete_error %}<p class="field-error">{{ delete_error }}</p>{% endif %}
+  {% if not record.order_items %}
+    <form method="post" action="{{ url_for('files.delete', file_id=record.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit">Delete file</button>
+    </form>
+  {% endif %}
 {% endblock %}

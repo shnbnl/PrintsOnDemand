@@ -86,6 +86,7 @@ class PrintingShop(db.Model):
         back_populates="shop", cascade="all, delete-orphan"
     )
     staff: Mapped[list[User]] = relationship(back_populates="shop")
+    orders: Mapped[list[Order]] = relationship(back_populates="shop")
 
 
 class ShopService(db.Model):

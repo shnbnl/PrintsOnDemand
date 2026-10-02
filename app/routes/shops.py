@@ -1,11 +1,12 @@
 """Student shop directory and read-only shop details."""
 
 from flask import Blueprint, abort, render_template, request
+from flask_login import current_user
 from sqlalchemy import select
 
 from app.authorization import roles_required
 from app.extensions import db
-from app.models import ColorMode, PaperSize, PrintingShop, UserRole
+from app.models import ColorMode, PaperSize, PrintConfiguration, PrintingShop, UploadedFile, UserRole
 
 
 shops_bp = Blueprint("shops", __name__, url_prefix="/shops")
@@ -51,4 +52,10 @@ def detail(shop_id: int):
     shop = db.session.get(PrintingShop, shop_id)
     if shop is None or not shop.is_active:
         abort(404)
-    return render_template("shops/detail.html", **detail_context(shop))
+    has_configured_file = db.session.scalar(
+        select(UploadedFile.id)
+        .join(PrintConfiguration, PrintConfiguration.file_id == UploadedFile.id)
+        .where(UploadedFile.user_id == current_user.id)
+        .limit(1)
+    ) is not None
+    return render_template("shops/detail.html", **detail_context(shop), can_order=has_configured_file)

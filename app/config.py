@@ -20,6 +20,7 @@ class Config:
     UPLOAD_MAX_QUANTITY = 999
     UPLOAD_STORAGE_ROOT = None
     STORAGE_BACKEND = "local"
+    ORDER_CURRENCY = "PHP"
 
 
 class DevelopmentConfig(Config):
