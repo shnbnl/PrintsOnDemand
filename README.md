@@ -2,7 +2,7 @@
 
 Prints On Demand is a planned printing-service web application for students. Students will find a printing shop, submit documents with printing instructions, choose a recipient and fulfillment method, and follow an order through completion.
 
-**Current stage: Stage 0 — specification and repository foundation only.** There is no runnable application, database schema, authentication, payment integration, or implemented UI yet. Empty directories reserve space for later work.
+**Current stage: Stage 1 — runnable Flask foundation.** The landing page, health endpoint, configuration, extensions, migration environment, and basic tests are in place. Business models, authentication, ordering, payment, uploads, dashboards, and the reference UI are not implemented yet.
 
 ## Planned features
 
@@ -28,62 +28,70 @@ All features above are planned, not completed. See [the project specification](d
 
 Python 3.12, Flask, SQLAlchemy, Flask-Migrate, Flask-Login, Flask-WTF with CSRF protection, PostgreSQL, Jinja templates, vanilla JavaScript, CSS, pytest, and Gunicorn for production.
 
-Dependency selection and installation belong to Stage 1. No dependency manifest or application code is included in this stage.
+Dependencies are listed in `requirements.txt`. Gunicorn is the production WSGI server for Linux deployment; use Flask's development server locally on Windows.
 
 ## Development stages
 
 | Stage | Scope |
 | --- | --- |
-| 0 — Foundation (current) | Repository inspection, specification, configuration placeholders, and directory layout. |
-| 1 — Application setup | Flask application factory, configuration validation, extensions, dependency manifest, PostgreSQL connectivity, migrations, and basic checks. |
+| 0 — Foundation (complete) | Repository inspection, specification, configuration placeholders, and directory layout. |
+| 1 — Application setup (current) | Flask application factory, environment configuration, extensions, dependency manifest, migration environment, landing page, health route, and basic checks. |
 | 2 — Accounts and administration | Authentication, role permissions, shop/staff management, professors and approvals, and configurable prices. |
 | 3 — Ordering and file storage | Private uploads, print configuration, recipient validation, server-side quotations, and order submission. |
 | 4 — Payment and fulfillment | Manual payment verification, onsite collection, guarded status updates, tracking, and order history. |
 | 5 — UI implementation and refinement | Review the reference PDF and implement/refine student, staff, and admin flows with responsive and accessible screens. |
 | 6 — Release preparation | Security and workflow testing, persistent storage, production configuration, and Render deployment. |
 
-Stages after Stage 0 are a proposed implementation sequence and have not started.
+Stages 2-6 remain a proposed implementation sequence and have not started.
 
 ## Repository layout
 
 ```text
 app/
-  routes/             Future Flask blueprints and request handlers
-  models/             Future SQLAlchemy models
-  services/           Future pricing, ordering, and payment rules
-  storage/            Future private storage interface and adapters
-  templates/          Future Jinja templates
+  __init__.py         Application factory
+  config.py           Development, testing, and production configuration
+  extensions.py       SQLAlchemy, migrations, login, and CSRF instances
+  routes/             Main blueprint and public foundation routes
+  models/             Reserved for future SQLAlchemy models
+  services/           Reserved for future business rules
+  storage/            Reserved for future private storage adapters
+  templates/          Base, landing, and error templates
   static/
-    css/              Future stylesheets
-    js/               Future vanilla JavaScript
+    css/              Simple foundation stylesheet
+    js/               JavaScript entry point
     images/           Public UI assets only; never uploaded documents
 docs/
   project-specification.md
   ui-reference.md
-  references/         Reserved for the supplied UI reference PDF
-tests/                Future pytest tests
+  references/         Supplied UI reference PDF
+migrations/           Flask-Migrate/Alembic environment; no revisions yet
+tests/                Basic pytest coverage for the foundation
+run.py                Local development server entry point
+wsgi.py               Production WSGI entry point
+requirements.txt      Python dependencies
+pytest.ini            Test discovery configuration
 ```
 
-`.gitkeep` files preserve empty directories; they contain no implementation. The application factory, configuration module, extension initialization, and entry points will be added in Stage 1. Flask-Migrate will generate `migrations/` when the database setup is implemented.
+Some `.gitkeep` files still preserve empty future directories. There are no business tables or application migration revisions yet.
 
 ## Local development plan
 
-For now, read the specification and UI reference notes. To prepare the environment later:
+1. Install Python 3.12 and create a virtual environment with `python -m venv .venv`.
+2. Activate it with `.venv\Scripts\Activate.ps1` on PowerShell or `source .venv/bin/activate` on macOS/Linux.
+3. Install dependencies with `python -m pip install -r requirements.txt`.
+4. Optionally copy `.env.example` to `.env` and set local values. PowerShell: `Copy-Item .env.example .env`; macOS/Linux: `cp .env.example .env`. An empty or unset `FLASK_ENV` selects development, which uses a local SQLite database in ignored `instance/` and an ephemeral signing secret. No `.env` is needed for the initial landing page.
+5. Run `python -m flask --app wsgi:app check-db` to verify the database connection. The migration environment is already initialized; use `python -m flask --app wsgi:app db upgrade` to apply future revisions. Do not run `db init` again.
+6. Start the local server with `python run.py` (default `http://127.0.0.1:5000/`). Check `/` and `/health`.
+7. Run tests with `python -m pytest`.
 
-1. Install Python 3.12 and PostgreSQL and create a dedicated local development database.
-2. Create a virtual environment with `python -m venv .venv`.
-3. Activate it with `.venv\Scripts\Activate.ps1` on PowerShell or `source .venv/bin/activate` on macOS/Linux.
-4. Copy `.env.example` to `.env` and fill in local values. On PowerShell, use `Copy-Item .env.example .env`; on macOS/Linux, use `cp .env.example .env`.
-5. In Stage 1, add and install the dependency manifest, implement configuration loading, initialize migrations, and document the exact Flask and pytest commands.
-
-The environment file currently contains names with empty values only; it is not a working configuration. Never commit `.env`, passwords, payment receipts, uploaded documents, or production data. Runtime commands will be documented once they exist. Gunicorn is intended for Render's production Linux environment.
+`DATABASE_URL` overrides the local SQLite default; `postgres://` URLs are normalized to `postgresql://`. `FLASK_ENV` accepts `development`, `testing`, or `production`. `TESTING=true` also selects the isolated in-memory SQLite configuration; it cannot be enabled with production. Production requires a PostgreSQL `DATABASE_URL` and `SECRET_KEY`, enables secure session cookies, and does not silently use local defaults. Other names in `.env.example` reserve settings for later upload and storage stages and are not used yet. Never commit `.env`, passwords, payment receipts, uploaded documents, or production data.
 
 ## Deployment target and storage
 
-Source control will use GitHub and deployment will target Render with PostgreSQL. Runtime settings and secrets will come from environment variables. Render service configuration and a Gunicorn startup command will be added when a real application entry point exists.
+Source control will use GitHub and deployment will target Render with PostgreSQL. Runtime settings and secrets come from environment variables. The WSGI entry point is ready for `gunicorn wsgi:app` on Linux. Render service settings and release/migration steps will be finalized before deployment.
 
 Local uploads are for development only and must not be assumed durable in production. The planned storage interface will support private persistent/object storage independently of the application's local filesystem. See the [storage and deployment specification](docs/project-specification.md#storage-and-deployment).
 
 ## UI/UX reference
 
-**PrintsOnDemand Mobile.pdf** is the designated primary student UI reference. It was not present in the repository or supplied attachment directory during Stage 0, so its actual pages have not been reviewed. [UI reference notes](docs/ui-reference.md) record the supplied terminology, flow, and required extensions for later implementation.
+**[PrintsOnDemand Mobile.pdf](docs/references/PrintsOnDemand%20Mobile.pdf)** is the primary student UI reference. [UI reference notes](docs/ui-reference.md) record the review of all nine pages, including terminology, flow, and required extensions for later implementation. The Stage 1 landing page is only a running-app check.

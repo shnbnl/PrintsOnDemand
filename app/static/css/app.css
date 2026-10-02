@@ -1,0 +1,24 @@
+:root {
+  color-scheme: light;
+  font-family: system-ui, sans-serif;
+  color: #0b2848;
+  background: #f7f5ee;
+}
+
+body {
+  margin: 0;
+}
+
+.page {
+  max-width: 40rem;
+  margin: 5rem auto;
+  padding: 0 1.5rem;
+}
+
+h1 {
+  line-height: 1.2;
+}
+
+a {
+  color: inherit;
+}

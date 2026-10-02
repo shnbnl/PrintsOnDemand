@@ -4,7 +4,7 @@
 
 **PrintsOnDemand Mobile.pdf** is the primary reference for the existing student-facing UI, navigation, screen flow, terminology, and layout. Preserve its overall concept and navigation during later implementation; improve it where finalized requirements require changes.
 
-All **9 pages** have now been rendered and visually reviewed, with extracted text used to cross-check labels and amounts. The reviewed PDF is at the [repository root](../PrintsOnDemand%20Mobile.pdf). The intended `docs/references/PrintsOnDemand Mobile.pdf` location was not populated at review time. The source was reviewed in place and was not moved or modified.
+All **9 pages** have now been rendered and visually reviewed, with extracted text used to cross-check labels and amounts. The reviewed PDF is now at [docs/references/PrintsOnDemand Mobile.pdf](references/PrintsOnDemand%20Mobile.pdf); it was at the repository root during the original review. Stage 1 does not alter the PDF.
 
 This review records visible mockup content separately from future requirements in the [project specification](project-specification.md). A static PDF does not establish working navigation, uploads, payments, or backend behavior. This follow-up updates documentation only and does not implement or redesign the UI.
 
