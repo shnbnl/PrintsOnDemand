@@ -22,13 +22,26 @@ def create_app(config_object: object | None = None) -> Flask:
     login_manager.init_app(app)
     csrf.init_app(app)
 
+    from app.routes.access import access_bp
+    from app.routes.auth import auth_bp
     from app.routes.main import main_bp
 
     app.register_blueprint(main_bp)
+    app.register_blueprint(auth_bp)
+    app.register_blueprint(access_bp)
+    login_manager.login_view = "auth.login"
+
+    from app.cli import register_commands
+
+    register_commands(app)
 
     @app.errorhandler(404)
     def page_not_found(error):
         return render_template("main/error.html", message="Page not found."), 404
+
+    @app.errorhandler(403)
+    def forbidden(error):
+        return render_template("main/error.html", message="Access denied."), 403
 
     @app.errorhandler(500)
     def internal_error(error):

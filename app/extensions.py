@@ -13,6 +13,12 @@ csrf = CSRFProtect()
 
 
 @login_manager.user_loader
-def load_user(user_id: str) -> None:
-    """No users exist yet; Stage 2 will load them from the database."""
-    return None
+def load_user(user_id: str):
+    """Reload active users from the database for each authenticated request."""
+    from app.models import User
+
+    try:
+        user = db.session.get(User, int(user_id))
+    except ValueError:
+        return None
+    return user if user and user.is_active else None

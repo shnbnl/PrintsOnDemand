@@ -2,6 +2,7 @@
 
 import os
 import secrets
+from datetime import timedelta
 
 from flask import Flask
 
@@ -10,6 +11,10 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
+    REMEMBER_COOKIE_HTTPONLY = True
+    REMEMBER_COOKIE_SAMESITE = "Lax"
+    PERMANENT_SESSION_LIFETIME = timedelta(hours=12)
+    REMEMBER_COOKIE_DURATION = timedelta(days=14)
     ENV_NAME = "development"
 
 
@@ -27,6 +32,7 @@ class TestingConfig(Config):
 class ProductionConfig(Config):
     ENV_NAME = "production"
     SESSION_COOKIE_SECURE = True
+    REMEMBER_COOKIE_SECURE = True
 
 
 CONFIGS = {
