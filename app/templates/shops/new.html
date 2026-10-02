@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}Create shop | Prints On Demand{% endblock %}
+
+{% block content %}
+  <p><a href="{{ url_for('shop_admin.index') }}">← Manage shops</a></p>
+  <h1>Create printing shop</h1>
+  <form class="account-form" method="post" novalidate>
+    {{ form.hidden_tag() }}
+    {% for field in [form.name, form.description, form.address, form.opening_time, form.closing_time] %}
+      <div class="field">
+        {{ field.label }} {{ field() }}
+        {% for error in field.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+      </div>
+    {% endfor %}
+    <div class="checkbox-field">{{ form.is_active() }} {{ form.is_active.label }}</div>
+    <div class="checkbox-field">{{ form.is_demo() }} {{ form.is_demo.label }}</div>
+    {{ form.submit() }}
+  </form>
+{% endblock %}

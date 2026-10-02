@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}{{ shop.name }} | Prints On Demand{% endblock %}
+
+{% block content %}
+  {% if not staff_view %}<p><a href="{{ url_for('shops.index') }}">← Printing shops</a></p>{% endif %}
+  <h1>{{ shop.name }}</h1>
+  {% if staff_view %}<p class="notice">Your assigned shop{% if not shop.is_active %} — inactive{% endif %}</p>{% endif %}
+  {% if shop.is_demo %}<p class="demo-label">Demo shop information and pricing — not final business rates.</p>{% endif %}
+  {% if shop.description %}<p>{{ shop.description }}</p>{% endif %}
+  <p><strong>Address:</strong> {{ shop.address }}</p>
+  <p><strong>Open:</strong> {{ shop.opening_time.strftime('%I:%M %p') }} - {{ shop.closing_time.strftime('%I:%M %p') }}</p>
+
+  <h2>Services offered</h2>
+  {% if services %}
+    <ul>{% for service in services %}<li>{{ service.service_type.label }}</li>{% endfor %}</ul>
+  {% else %}<p>No services are currently listed.</p>{% endif %}
+
+  <h2>Pricelist</h2>
+  <p>Prices are per page or print unit. The final pricing rules will be set before ordering is available.</p>
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th scope="col">Paper Size</th><th scope="col">Grayscale/page</th><th scope="col">Colored/page</th></tr></thead>
+      <tbody>
+        {% for row in price_rows %}
+          <tr>
+            <th scope="row">{{ row.size.label }}</th>
+            <td>{% if row.grayscale %}₱{{ '%.2f'|format(row.grayscale.price) }}{% if row.grayscale.is_demo %} (demo){% endif %}{% else %}Not set{% endif %}</td>
+            <td>{% if row.color %}₱{{ '%.2f'|format(row.color.price) }}{% if row.color.is_demo %} (demo){% endif %}{% else %}Not set{% endif %}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if fees %}
+    <h2>Additional fees</h2>
+    <ul>{% for fee in fees %}<li>{{ fee.fee_type.label }}: ₱{{ '%.2f'|format(fee.amount) }}{% if fee.is_demo %} (demo){% endif %}</li>{% endfor %}</ul>
+  {% endif %}
+
+  {% if not staff_view %}
+    <button type="button" disabled>Proceed</button>
+    <p class="hint">Ordering will be available in a later stage.</p>
+  {% endif %}
+{% endblock %}

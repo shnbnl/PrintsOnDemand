@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}Manage shops | Prints On Demand{% endblock %}
+
+{% block content %}
+  <h1>Manage printing shops</h1>
+  <p><a href="{{ url_for('shop_admin.create') }}">Create printing shop</a></p>
+  {% if shops %}
+    <ul class="shop-list">
+      {% for shop in shops %}
+        <li class="shop-card">
+          <h2><a href="{{ url_for('shop_admin.edit', shop_id=shop.id) }}">{{ shop.name }}</a></h2>
+          <p>{{ 'Active' if shop.is_active else 'Inactive' }}{% if shop.is_demo %} · Demo shop{% endif %}</p>
+          <p>{{ shop.address }}</p>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}<p>No printing shops have been created.</p>{% endif %}
+{% endblock %}

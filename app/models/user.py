@@ -1,10 +1,12 @@
 """User identity and the three application roles."""
 
+from __future__ import annotations
+
 from datetime import datetime, timezone
 from enum import StrEnum
 
 from flask_login import UserMixin
-from sqlalchemy.orm import Mapped, mapped_column, validates
+from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from app.extensions import db
@@ -39,6 +41,12 @@ class User(UserMixin, db.Model):
     updated_at: Mapped[datetime] = mapped_column(
         db.DateTime(timezone=True), nullable=False, default=utc_now, onupdate=utc_now
     )
+    shop_id: Mapped[int | None] = mapped_column(
+        db.ForeignKey("printing_shops.id", name="fk_users_shop_id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    shop: Mapped[PrintingShop | None] = relationship(back_populates="staff")
 
     @staticmethod
     def normalize_email(value: str) -> str:

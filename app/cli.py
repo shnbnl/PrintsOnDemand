@@ -2,7 +2,7 @@
 
 import click
 from email_validator import EmailNotValidError, validate_email
-from flask import Flask
+from flask import Flask, current_app
 from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
@@ -42,3 +42,13 @@ def register_commands(app: Flask) -> None:
             db.session.rollback()
             raise click.ClickException("Account could not be created.") from error
         click.echo(f"Created {role} account for {user.email}.")
+
+    @app.cli.command("seed-demo-shops")
+    def seed_demo_shops_command() -> None:
+        """Insert sample shops/prices only when intentionally run locally."""
+        if current_app.config["ENV_NAME"] not in {"development", "testing"}:
+            raise click.ClickException("Demo seeding is disabled in production.")
+        from app.seed import seed_demo_shops
+
+        count = seed_demo_shops()
+        click.echo(f"Added {count} demo shops. Existing shops were left unchanged.")
