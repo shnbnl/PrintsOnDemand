@@ -11,11 +11,17 @@ from app.extensions import db
 from app.models import Order, OrderItem, OrderStatus
 from app.models.user import utc_now
 from app.services.pricing import OrderQuote
+from app.services.professors import assign_professor, validate_professor_selection
 
 
-def create_order(quote: OrderQuote) -> Order:
+def create_order(
+    quote: OrderQuote, *, destination: str | None = None, professor_id: str | int | None = None
+) -> Order:
     """Commit one order and its item, retrying rare reference collisions."""
     for _ in range(5):
+        professor = validate_professor_selection(
+            shop_id=quote.shop.id, destination=destination, professor_id=professor_id
+        )
         reference = f"POD-{utc_now().year}-{secrets.token_hex(6).upper()}"
         order = Order(
             user_id=quote.user_id,
@@ -29,6 +35,8 @@ def create_order(quote: OrderQuote) -> Order:
             total=quote.total,
             currency=quote.currency,
         )
+        if professor is not None:
+            assign_professor(order, professor)
         order.items.append(OrderItem(
             uploaded_file_id=quote.uploaded_file.id,
             original_filename=quote.uploaded_file.original_filename,

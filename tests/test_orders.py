@@ -13,11 +13,13 @@ from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
 from app.models import (
-    ColorMode, FeeType, Order, OrderItem, OrderStatus, PaperSize,
+    ColorMode, FeeType, Order, OrderDestination, OrderItem, OrderStatus, PaperSize,
     PrintConfiguration, PrintPrice, PrintingShop, ServiceType, ShopFee,
-    ShopService, UploadedFile, User, UserRole,
+    ShopService, UploadedFile, User, UserRole, Professor,
 )
 from app.services.pricing import PricingError, quote_order
+from app.services.orders import create_order
+from app.services.professors import ProfessorSelectionError
 from app.storage import LocalStorage
 
 
@@ -101,6 +103,242 @@ def place(client, file_id, shop_id, **extras):
         "csrf_token": token(client.get("/student")),
         "file_id": str(file_id), "shop_id": str(shop_id), **extras,
     })
+
+
+def approved_professor(app, *, active=True, approved=True, name="Maria Santos"):
+    with app.app_context():
+        professor = Professor(
+            name=name, email=f"{name.lower().replace(' ', '.')}@example.edu",
+            department="Computer Engineering", office="Engineering Building 204",
+            is_active=active, direct_send_approved=approved,
+        )
+        db.session.add(professor)
+        db.session.commit()
+        return professor.id
+
+
+def offer_professor_service(app, shop_id, *, enabled=True):
+    with app.app_context():
+        service = db.session.scalar(select(ShopService).where(
+            ShopService.shop_id == shop_id,
+            ShopService.service_type == ServiceType.DIRECT_TO_PROFESSOR,
+        ))
+        if service is None:
+            db.session.add(ShopService(
+                shop_id=shop_id, service_type=ServiceType.DIRECT_TO_PROFESSOR,
+                enabled=enabled,
+            ))
+        else:
+            service.enabled = enabled
+        db.session.commit()
+
+
+def professor_review(client, file_id, shop_id, professor_id):
+    return client.get("/orders/new", query_string={
+        "file_id": file_id, "shop_id": shop_id,
+        "destination": "PROFESSOR", "professor_id": professor_id,
+    })
+
+
+def professor_place(client, file_id, shop_id, professor_id, **extras):
+    return place(client, file_id, shop_id, destination="PROFESSOR",
+                 professor_id=str(professor_id), **extras)
+
+
+def test_professor_checkout_review_confirmation_and_snapshot(client, test_app):
+    user_id = student(test_app)
+    shop_id = shop(test_app)
+    file_id = file(test_app, user_id)
+    offer_professor_service(test_app, shop_id)
+    professor_id = approved_professor(test_app)
+    approved_professor(test_app, approved=False, name="Ana Reyes")
+    approved_professor(test_app, active=False, name="Liza Navarro")
+    sign_in(client, user_id)
+    selection = client.get("/orders/new")
+    assert b"Send to professor" in selection.data
+    assert b"Maria Santos" in selection.data
+    assert b"Ana Reyes" not in selection.data
+    assert b"Liza Navarro" not in selection.data
+    reviewed = professor_review(client, file_id, shop_id, professor_id)
+    assert reviewed.status_code == 200
+    assert b"Computer Engineering" in reviewed.data
+    assert b"Engineering Building 204" in reviewed.data
+    assert b"maria.santos@example.edu" in reviewed.data
+    response = professor_place(
+        client, file_id, shop_id, professor_id,
+        professor_email="attacker@example.edu", total="0.01", status="PAID",
+    )
+    assert response.status_code == 302
+    confirmation = client.get(response.headers["Location"])
+    assert confirmation.status_code == 200
+    assert b"Intended recipient" in confirmation.data
+    assert b"Maria Santos" in confirmation.data
+    assert b"maria.santos@example.edu" in confirmation.data
+    assert b"PENDING_PAYMENT" in confirmation.data
+    assert b"No file or email has been sent" in confirmation.data
+    assert b"Payment has not been completed" in confirmation.data
+    with test_app.app_context():
+        order = db.session.scalar(select(Order))
+        assert order.destination == OrderDestination.PROFESSOR
+        assert order.professor_id == professor_id
+        assert order.professor_name == "Maria Santos"
+        assert order.professor_email == "maria.santos@example.edu"
+        assert order.professor_department == "Computer Engineering"
+        assert order.professor_office == "Engineering Building 204"
+        assert order.status == OrderStatus.PENDING_PAYMENT
+        assert order.total == Decimal("6.75")
+        assert order.items[0].unit_price == Decimal("2.25")
+        db.session.get(Professor, professor_id).name = "Changed Later"
+        db.session.commit()
+    assert b"Maria Santos" in client.get(response.headers["Location"]).data
+
+
+@pytest.mark.parametrize("invalid", ["999999", "0", "not-an-id", "-1"])
+def test_invalid_professor_id_never_creates_order(client, test_app, invalid):
+    user_id = student(test_app)
+    shop_id = shop(test_app)
+    file_id = file(test_app, user_id)
+    offer_professor_service(test_app, shop_id)
+    sign_in(client, user_id)
+    assert professor_review(client, file_id, shop_id, invalid).status_code == 400
+    assert professor_place(client, file_id, shop_id, invalid).status_code == 400
+    with test_app.app_context():
+        assert db.session.scalar(select(Order)) is None
+
+
+@pytest.mark.parametrize("active,approved", [(True, False), (False, True), (False, False)])
+def test_ineligible_professor_rejected_at_review_and_placement(client, test_app, active, approved):
+    user_id = student(test_app)
+    shop_id = shop(test_app)
+    file_id = file(test_app, user_id)
+    offer_professor_service(test_app, shop_id)
+    professor_id = approved_professor(test_app, active=active, approved=approved)
+    sign_in(client, user_id)
+    assert professor_review(client, file_id, shop_id, professor_id).status_code == 400
+    assert professor_place(client, file_id, shop_id, professor_id).status_code == 400
+    with test_app.app_context():
+        assert db.session.scalar(select(Order)) is None
+
+
+def test_professor_rechecked_after_review_and_in_order_service(client, test_app):
+    user_id = student(test_app)
+    shop_id = shop(test_app)
+    file_id = file(test_app, user_id)
+    offer_professor_service(test_app, shop_id)
+    professor_id = approved_professor(test_app)
+    sign_in(client, user_id)
+    assert professor_review(client, file_id, shop_id, professor_id).status_code == 200
+    with test_app.app_context():
+        db.session.get(Professor, professor_id).direct_send_approved = False
+        db.session.commit()
+    assert professor_place(client, file_id, shop_id, professor_id).status_code == 400
+    with test_app.app_context():
+        assert db.session.scalar(select(Order)) is None
+        db.session.get(Professor, professor_id).direct_send_approved = True
+        db.session.commit()
+    assert professor_review(client, file_id, shop_id, professor_id).status_code == 200
+    with test_app.app_context():
+        db.session.get(Professor, professor_id).office = "New Room"
+        db.session.commit()
+    changed = professor_place(client, file_id, shop_id, professor_id)
+    assert changed.status_code == 409
+    assert b"New Room" in changed.data
+    assert professor_place(client, file_id, shop_id, professor_id).status_code == 302
+
+
+def test_order_service_independently_rejects_revoked_professor(test_app):
+    user_id = student(test_app)
+    shop_id = shop(test_app)
+    file_id = file(test_app, user_id)
+    offer_professor_service(test_app, shop_id)
+    professor_id = approved_professor(test_app)
+    with test_app.app_context():
+        quote = quote_order(user_id=user_id, file_id=file_id, shop_id=shop_id, max_quantity=999)
+        db.session.get(Professor, professor_id).direct_send_approved = False
+        db.session.commit()
+        with pytest.raises(ProfessorSelectionError):
+            create_order(quote, destination="PROFESSOR", professor_id=professor_id)
+        assert db.session.scalar(select(Order)) is None
+
+
+def test_changing_professor_after_review_requires_new_confirmation(client, test_app):
+    user_id = student(test_app)
+    shop_id = shop(test_app)
+    file_id = file(test_app, user_id)
+    offer_professor_service(test_app, shop_id)
+    maria_id = approved_professor(test_app)
+    juan_id = approved_professor(test_app, name="Juan Dela Cruz")
+    sign_in(client, user_id)
+    assert professor_review(client, file_id, shop_id, maria_id).status_code == 200
+    response = professor_place(client, file_id, shop_id, juan_id)
+    assert response.status_code == 409
+    assert b"Juan Dela Cruz" in response.data
+    with test_app.app_context():
+        assert db.session.scalar(select(Order)) is None
+    assert professor_place(client, file_id, shop_id, juan_id).status_code == 302
+
+
+def test_professor_requires_shop_service_and_no_future_destination(client, test_app):
+    user_id = student(test_app)
+    shop_id = shop(test_app)
+    file_id = file(test_app, user_id)
+    professor_id = approved_professor(test_app)
+    sign_in(client, user_id)
+    assert professor_review(client, file_id, shop_id, professor_id).status_code == 400
+    offer_professor_service(test_app, shop_id, enabled=False)
+    assert professor_review(client, file_id, shop_id, professor_id).status_code == 400
+    offer_professor_service(test_app, shop_id, enabled=True)
+    assert client.get("/orders/new", query_string={
+        "file_id": file_id, "shop_id": shop_id,
+        "destination": "PICKUP",
+    }).status_code == 400
+    with test_app.app_context():
+        assert db.session.scalar(select(Order)) is None
+
+
+def test_owner_can_select_professor_on_existing_order_but_other_user_cannot(client, test_app):
+    owner = student(test_app)
+    other = student(test_app, "other@example.edu")
+    shop_id = shop(test_app)
+    file_id = file(test_app, owner)
+    offer_professor_service(test_app, shop_id)
+    professor_id = approved_professor(test_app)
+    sign_in(client, owner)
+    assert review(client, file_id, shop_id).status_code == 200
+    url = place(client, file_id, shop_id).headers["Location"]
+    with test_app.app_context():
+        total_before = db.session.scalar(select(Order)).total
+    sign_in(client, other)
+    assert client.get(url).status_code == 404
+    assert client.post(
+        url + "/professor",
+        data={"csrf_token": token(client.get("/student")), "professor_id": str(professor_id)},
+    ).status_code == 404
+    sign_in(client, owner)
+    assert client.post(url + "/professor", data={"professor_id": str(professor_id)}).status_code == 400
+    assert client.post(
+        url + "/professor",
+        data={"csrf_token": token(client.get(url)), "professor_id": "99999"},
+    ).status_code == 400
+    with test_app.app_context():
+        assert db.session.scalar(select(Order)).professor_id is None
+    response = client.post(
+        url + "/professor",
+        data={"csrf_token": token(client.get(url)), "professor_id": str(professor_id)},
+    )
+    assert response.status_code == 302
+    with test_app.app_context():
+        order = db.session.scalar(select(Order))
+        assert order.professor_id == professor_id
+        assert order.destination == OrderDestination.PROFESSOR
+        assert order.total == total_before
+        assert order.status == OrderStatus.PENDING_PAYMENT
+        db.session.get(PrintingShop, shop_id).is_active = False
+        db.session.commit()
+    assert client.post(
+        url + "/professor",
+        data={"csrf_token": token(client.get(url)), "professor_id": str(professor_id)},
+    ).status_code == 400
 
 
 def test_order_quote_creation_and_model_snapshots(client, test_app):

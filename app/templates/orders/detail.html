@@ -10,6 +10,16 @@
     <p>Created: {{ order.created_at.strftime('%Y-%m-%d %H:%M UTC') }}</p>
     <p>Printing shop: {{ order.shop_name }}</p>
     <p>Status: {{ order.status.value }} (awaiting payment)</p>
+    {% if order.destination and order.destination.value == 'PROFESSOR' %}
+      <section>
+        <h3>Send to professor</h3>
+        <p>Intended recipient: <strong>{{ order.professor_name }}</strong></p>
+        <p>Department: {{ order.professor_department or 'Not listed' }}</p>
+        <p>Office: {{ order.professor_office or 'Not listed' }}</p>
+        <p>Email: {{ order.professor_email }}</p>
+        <p>The order was created with this intended recipient. No file or email has been sent to the professor.</p>
+      </section>
+    {% endif %}
     <div class="table-scroll">
       <table>
         <thead><tr><th>File</th><th>Paper</th><th>Output</th><th>Print count</th><th>Unit price</th><th>Line total</th></tr></thead>
@@ -32,5 +42,16 @@
     <p>Fees total: {{ order.currency }} {{ order.fees_total }}</p>
     <p><strong>Total: {{ order.currency }} {{ order.total }}</strong></p>
   </section>
+  {% if professor_form %}
+    <section>
+      <h2>{% if order.professor_id %}Change intended professor{% else %}Select intended professor{% endif %}</h2>
+      {% if professor_error %}<p class="field-error" role="alert">{{ professor_error }}</p>{% endif %}
+      <form method="post" action="{{ url_for('orders.select_professor', order_reference=order.order_reference) }}">
+        {{ professor_form.hidden_tag() }}
+        <div class="field">{{ professor_form.professor_id.label }} {{ professor_form.professor_id() }}</div>
+        {{ professor_form.submit() }}
+      </form>
+    </section>
+  {% endif %}
   <p>No payment or shop processing has been confirmed.</p>
 {% endblock %}

@@ -52,3 +52,13 @@ def register_commands(app: Flask) -> None:
 
         count = seed_demo_shops()
         click.echo(f"Added {count} demo shops. Existing shops were left unchanged.")
+
+    @app.cli.command("seed-demo-professors")
+    def seed_demo_professors_command() -> None:
+        """Insert fictional professors only when intentionally run locally."""
+        if current_app.config["ENV_NAME"] not in {"development", "testing"}:
+            raise click.ClickException("Demo seeding is disabled in production.")
+        from app.seed import seed_demo_professors
+
+        count = seed_demo_professors()
+        click.echo(f"Added {count} demo professors. Existing professors were left unchanged.")

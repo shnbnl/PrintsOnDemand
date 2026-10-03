@@ -18,6 +18,12 @@ class OrderStatus(StrEnum):
     PENDING_PAYMENT = "PENDING_PAYMENT"
 
 
+class OrderDestination(StrEnum):
+    PROFESSOR = "PROFESSOR"
+    PICKUP = "PICKUP"
+    DELIVERY = "DELIVERY"
+
+
 class Order(db.Model):
     __tablename__ = "orders"
     __table_args__ = (
@@ -36,6 +42,18 @@ class Order(db.Model):
     )
     order_reference: Mapped[str] = mapped_column(db.String(32), unique=True, nullable=False)
     shop_name: Mapped[str] = mapped_column(db.String(120), nullable=False)
+    destination: Mapped[OrderDestination | None] = mapped_column(
+        db.Enum(OrderDestination, name="order_destination", native_enum=False, create_constraint=True),
+        nullable=True,
+    )
+    professor_id: Mapped[int | None] = mapped_column(
+        db.ForeignKey("professors.id", name="fk_orders_professor_id", ondelete="RESTRICT"),
+        nullable=True, index=True
+    )
+    professor_name: Mapped[str | None] = mapped_column(db.String(120), nullable=True)
+    professor_email: Mapped[str | None] = mapped_column(db.String(254), nullable=True)
+    professor_department: Mapped[str | None] = mapped_column(db.String(120), nullable=True)
+    professor_office: Mapped[str | None] = mapped_column(db.String(120), nullable=True)
     status: Mapped[OrderStatus] = mapped_column(
         db.Enum(OrderStatus, name="order_status", native_enum=False, create_constraint=True),
         nullable=False, default=OrderStatus.PENDING_PAYMENT,
@@ -54,6 +72,7 @@ class Order(db.Model):
 
     user: Mapped[User] = relationship(back_populates="orders")
     shop: Mapped[PrintingShop] = relationship(back_populates="orders")
+    professor: Mapped[Professor | None] = relationship(back_populates="orders")
     items: Mapped[list[OrderItem]] = relationship(
         back_populates="order", cascade="all, delete-orphan", order_by="OrderItem.id"
     )

@@ -3,7 +3,7 @@
 {% block title %}Review order | Prints On Demand{% endblock %}
 
 {% block content %}
-  <p><a href="{{ url_for('orders.new', file_id=quote.uploaded_file.id, shop_id=quote.shop.id) }}">← Change selection</a></p>
+  <p><a href="{{ url_for('orders.new', file_id=quote.uploaded_file.id, shop_id=quote.shop.id, destination=form.destination.data, professor_id=form.professor_id.data) }}">← Change selection</a></p>
   <h1>Review order</h1>
   {% if warning %}<p class="notice" role="alert">{{ warning }}</p>{% endif %}
   {% if quote.is_demo %}<p class="demo-label">Demo shop or rates — sample values, not approved business rates.</p>{% endif %}
@@ -31,6 +31,16 @@
     <p>Fees total: {{ quote.currency }} {{ quote.fees_total }}</p>
     <p><strong>Total: {{ quote.currency }} {{ quote.total }}</strong></p>
   </section>
+  {% if professor %}
+    <section>
+      <h2>Send to professor</h2>
+      <p><strong>{{ professor.name }}</strong></p>
+      <p>Department: {{ professor.department or 'Not listed' }}</p>
+      <p>Office: {{ professor.office or 'Not listed' }}</p>
+      <p>Email: {{ professor.email }}</p>
+      <p>This professor is the intended recipient. No file or email has been sent.</p>
+    </section>
+  {% endif %}
   <p class="hint">This Stage 5 quote uses the shop's matching rate multiplied by print count. It does not inspect pages inside a document.</p>
   <form method="post" action="{{ url_for('orders.create') }}">
     {{ form.hidden_tag() }}

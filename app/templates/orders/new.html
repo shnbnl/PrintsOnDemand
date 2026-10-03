@@ -4,7 +4,7 @@
 
 {% block content %}
   <h1>Create an order</h1>
-  <p>Choose one configured file and an active printing shop to review the current price.</p>
+  <p>Choose one configured file, an active printing shop, and an intended destination to review the current price.</p>
   {% if error %}<p class="field-error" role="alert">{{ error }}</p>{% endif %}
   {% if not files %}<p><a href="{{ url_for('files.index') }}">Upload and configure a file first.</a></p>{% endif %}
   {% if not shops %}<p>No active printing shops are available.</p>{% endif %}
@@ -28,6 +28,23 @@
           {% endfor %}
         </select>
       </div>
+      <div class="field">
+        <label for="destination">Destination / claiming method</label>
+        <select id="destination" name="destination">
+          <option value="">No destination selected yet</option>
+          <option value="PROFESSOR" {% if selected_destination == 'PROFESSOR' %}selected{% endif %}>Send to professor</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="professor_id">Approved professor (for Send to professor)</label>
+        <select id="professor_id" name="professor_id">
+          <option value="">Select a professor</option>
+          {% for professor in professors %}
+            <option value="{{ professor.id }}" {% if selected_professor_id == professor.id|string %}selected{% endif %}>{{ professor.name }} — {{ professor.department or 'Department not listed' }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <p class="hint">Direct-to-Professor requires a shop that offers the service. The professor is an intended recipient; no file is sent at this stage.</p>
       <button type="submit">Review order</button>
     </form>
   {% endif %}

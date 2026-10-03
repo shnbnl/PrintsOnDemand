@@ -11,6 +11,7 @@ from app.models import (
     FeeType,
     PaperSize,
     PrintPrice,
+    Professor,
     PrintingShop,
     ServiceType,
     ShopFee,
@@ -75,6 +76,29 @@ def seed_demo_shops() -> int:
         for fee_type, amount in DEMO_FEES.items():
             if fee_type.value in {service.value for service in services}:
                 shop.fees.append(ShopFee(fee_type=fee_type, amount=Decimal(amount), is_demo=True))
+        added += 1
+    db.session.commit()
+    return added
+
+
+DEMO_PROFESSORS = (
+    ("Maria Santos", "maria.santos@example.edu", "Computer Engineering", "Engineering Building 204", True, True),
+    ("Juan Dela Cruz", "juan.delacruz@example.edu", "Information Technology", "ICT Building 301", True, True),
+    ("Ana Reyes", "ana.reyes@example.edu", "Electronics Engineering", "Engineering Building 105", True, False),
+    ("Liza Navarro", "liza.navarro@example.edu", "Mathematics", "Science Building 102", False, True),
+)
+
+
+def seed_demo_professors() -> int:
+    """Insert missing fictional professors; never change existing approvals."""
+    added = 0
+    for name, email, department, office, is_active, approved in DEMO_PROFESSORS:
+        if db.session.scalar(select(Professor.id).where(Professor.email == email)):
+            continue
+        db.session.add(Professor(
+            name=name, email=email, department=department, office=office,
+            is_active=is_active, direct_send_approved=approved,
+        ))
         added += 1
     db.session.commit()
     return added
