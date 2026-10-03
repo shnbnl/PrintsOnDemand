@@ -26,6 +26,8 @@ class Config:
     ONLINE_PAYMENT_ACCOUNT_NAME = ""
     ONLINE_PAYMENT_DESTINATION = ""
     ONSITE_PAYMENT_INSTRUCTIONS = "Pay at the printing shop. Your order remains unpaid until payment is recorded."
+    GOOGLE_MAPS_API_KEY = ""
+    GOOGLE_MAPS_MAP_ID = "DEMO_MAP_ID"
 
 
 class DevelopmentConfig(Config):
@@ -44,6 +46,7 @@ class ProductionConfig(Config):
     DEBUG = False
     SESSION_COOKIE_SECURE = True
     REMEMBER_COOKIE_SECURE = True
+    GOOGLE_MAPS_MAP_ID = ""
 
 
 CONFIGS = {
@@ -108,6 +111,10 @@ def configure_runtime(app: Flask) -> None:
         or os.path.join(app.instance_path, "uploads")
     )
     app.config["STORAGE_BACKEND"] = os.getenv("STORAGE_BACKEND") or app.config["STORAGE_BACKEND"]
+    app.config["GOOGLE_MAPS_API_KEY"] = (os.getenv("GOOGLE_MAPS_API_KEY") or "").strip()
+    app.config["GOOGLE_MAPS_MAP_ID"] = (
+        os.getenv("GOOGLE_MAPS_MAP_ID") or app.config["GOOGLE_MAPS_MAP_ID"]
+    ).strip()
     online_enabled = os.getenv("ONLINE_PAYMENT_ENABLED")
     if online_enabled:
         normalized = online_enabled.strip().lower()

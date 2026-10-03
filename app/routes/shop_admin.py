@@ -80,6 +80,8 @@ def create():
                 name=form.name.data,
                 description=form.description.data or "",
                 address=form.address.data,
+                latitude=form.latitude.data,
+                longitude=form.longitude.data,
                 opening_time=form.opening_time.data,
                 closing_time=form.closing_time.data,
                 is_active=bool(form.is_active.data),
@@ -107,6 +109,8 @@ def edit(shop_id: int):
             shop.name = form.name.data
             shop.description = form.description.data or ""
             shop.address = form.address.data
+            shop.latitude = form.latitude.data
+            shop.longitude = form.longitude.data
             shop.opening_time = form.opening_time.data
             shop.closing_time = form.closing_time.data
             shop.is_active = bool(form.is_active.data)

@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}Shop map | Prints On Demand{% endblock %}
+
+{% block content %}
+  <a class="back-link" href="{{ url_for('shops.index', q=query) }}">← Printing shops</a>
+  <header class="page-intro page-intro--with-action">
+    <div>
+      <p class="page-eyebrow">Find your place to print</p>
+      <h1>Shop map</h1>
+      <p class="page-lead">Explore registered printing shops near Mapúa Malayan Colleges Laguna. Select a pin or a shop card to see its current details.</p>
+    </div>
+    <nav class="shop-view-switch" aria-label="Shop discovery view">
+      <a href="{{ url_for('shops.index', q=query) }}">List view</a>
+      <span aria-current="page">Map view</span>
+    </nav>
+  </header>
+
+  <form class="search-form content-card map-search" method="get" action="{{ url_for('shops.map_view') }}" role="search">
+    <div class="field search-field">
+      <label for="map-shop-search">Search Printing Shop</label>
+      <input id="map-shop-search" name="q" type="search" value="{{ query }}" maxlength="100" placeholder="Search by shop name">
+    </div>
+    <button class="button button-primary" type="submit">Search</button>
+  </form>
+
+  <div class="map-layout">
+    <div class="map-stage">
+      <div id="shop-map" class="map-canvas" role="region" aria-label="Interactive map of registered printing shops near Mapúa Malayan Colleges Laguna"
+           data-api-key="{{ maps_api_key }}" data-map-id="{{ maps_map_id }}"
+           data-center-lat="{{ center.lat }}" data-center-lng="{{ center.lng }}"></div>
+      <div id="map-message" class="map-message" role="status">
+        {% if not maps_api_key or not maps_map_id %}
+          <h2>Map unavailable</h2>
+          {% if show_config_hint %}<p>Configure GOOGLE_MAPS_API_KEY{% if not maps_map_id %} and GOOGLE_MAPS_MAP_ID{% endif %} to show the interactive map.</p>
+          {% else %}<p>The interactive map is unavailable right now.</p>{% endif %}
+        {% else %}
+          <p>Loading the interactive map…</p>
+        {% endif %}
+        <a class="button button-secondary" href="{{ url_for('shops.index', q=query) }}">View shops as a list</a>
+      </div>
+      <div class="map-toolbar">
+        <button id="locate-me" type="button" class="button button-secondary" disabled aria-label="Show my current location on the map">Use my location</button>
+        <p id="location-status" class="map-location-status" role="status">Location is off until you choose to share it.</p>
+      </div>
+    </div>
+
+    <aside class="map-sidebar" aria-label="Shop selection and details">
+      {% if markers %}
+        <div class="map-panels" aria-live="polite">
+          {% for marker in markers %}
+            <section class="map-shop-panel" data-shop-panel="{{ marker.id }}" {% if not loop.first %}hidden{% endif %}>
+              <div class="map-panel-heading">
+                <span class="shop-avatar" aria-hidden="true">P</span>
+                <div>
+                  <p class="page-eyebrow">Selected printing shop</p>
+                  <h2>{{ marker.name }}</h2>
+                </div>
+              </div>
+              {% if marker.is_demo %}<p class="demo-label">Illustrative demo pin — not a verified business location.</p>{% endif %}
+              {% if marker.description %}<p>{{ marker.description }}</p>{% endif %}
+              <p><strong>Address:</strong> {{ marker.address }}</p>
+              <p><strong>Hours:</strong> {{ marker.hours }}</p>
+              {% if marker.services %}
+                <div class="map-panel-services">
+                  <span class="detail-label">Offers</span>
+                  <ul class="chip-list">{% for service in marker.services %}<li>{{ service }}</li>{% endfor %}</ul>
+                </div>
+              {% endif %}
+              <div class="map-panel-prices">
+                <h3>Pricelist</h3>
+                <div class="table-scroll" role="region" aria-label="{{ marker.name }} print prices" tabindex="0">
+                  <table class="data-table pricing-table">
+                    <thead><tr><th scope="col">Paper Size</th><th scope="col">Grayscale/page</th><th scope="col">Colored/page</th></tr></thead>
+                    <tbody>{% for row in marker.prices %}<tr><th scope="row">{{ row.size }}</th><td data-label="Grayscale/page">{{ row.grayscale }}</td><td data-label="Colored/page">{{ row.color }}</td></tr>{% endfor %}</tbody>
+                  </table>
+                </div>
+                <p class="hint">Current listed rates. Checkout calculates and confirms the order total on the server.</p>
+              </div>
+              <a class="button button-primary button-block" href="{{ marker.detail_url }}">Proceed <span aria-hidden="true">→</span></a>
+            </section>
+          {% endfor %}
+        </div>
+        <section class="map-shop-choices" aria-label="Shops with map locations">
+          <h2>Shops on this map</h2>
+          <ul>
+            {% for marker in markers %}
+              <li>
+                <button type="button" class="map-shop-choice" data-shop-id="{{ marker.id }}" aria-pressed="{{ 'true' if loop.first else 'false' }}">
+                  <strong>{{ marker.name }}</strong>
+                  <span>{{ marker.hours }}</span>
+                  {% if marker.is_demo %}<small>Demo location</small>{% endif %}
+                </button>
+                <a href="{{ marker.detail_url }}">Shop details</a>
+              </li>
+            {% endfor %}
+          </ul>
+        </section>
+      {% else %}
+        <section class="map-shop-panel map-empty">
+          <h2>No shops on this map</h2>
+          <p>No active shop with a map location matches this search. The full list may include shops that have not added coordinates yet.</p>
+          <a class="button button-secondary" href="{{ url_for('shops.index', q=query) }}">View shops as a list</a>
+        </section>
+      {% endif %}
+    </aside>
+  </div>
+  <script id="map-shop-data" type="application/json">{{ markers|tojson }}</script>
+  <script src="{{ url_for('static', filename='js/shop-map.js') }}" defer></script>
+{% endblock %}

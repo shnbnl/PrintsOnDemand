@@ -2,7 +2,7 @@
 
 import sqlite3
 
-from flask import Flask, render_template
+from flask import Flask, render_template, request
 from dotenv import load_dotenv
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
@@ -70,7 +70,12 @@ def create_app(config_object: object | None = None) -> Flask:
         """Apply low-risk browser protections to every application response."""
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
-        response.headers["Referrer-Policy"] = "same-origin"
+        # Google Maps website-restricted browser keys require the site's origin
+        # on cross-origin API requests; keep the stricter default elsewhere.
+        response.headers["Referrer-Policy"] = (
+            "strict-origin-when-cross-origin"
+            if request.endpoint == "shops.map_view" else "same-origin"
+        )
         return response
 
     from app.cli import register_commands

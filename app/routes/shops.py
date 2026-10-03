@@ -1,8 +1,9 @@
 """Student shop directory and read-only shop details."""
 
-from flask import Blueprint, abort, render_template, request
+from flask import Blueprint, abort, current_app, render_template, request, url_for
 from flask_login import current_user
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from app.authorization import roles_required
 from app.extensions import db
@@ -10,6 +11,7 @@ from app.models import ColorMode, PaperSize, PrintConfiguration, PrintingShop, U
 
 
 shops_bp = Blueprint("shops", __name__, url_prefix="/shops")
+SCHOOL_AREA_CENTER = {"lat": 14.243375, "lng": 121.112716}
 
 
 def detail_context(shop: PrintingShop) -> dict:
@@ -34,16 +36,70 @@ def detail_context(shop: PrintingShop) -> dict:
     return {"shop": shop, "price_rows": rows, "services": services, "fees": fees}
 
 
-@shops_bp.get("")
-@roles_required(UserRole.STUDENT)
-def index():
-    query = request.args.get("q", "").strip()[:100]
+def active_shop_statement(query: str):
     statement = select(PrintingShop).where(PrintingShop.is_active.is_(True))
     if query:
         escaped = query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
         statement = statement.where(PrintingShop.name.ilike(f"%{escaped}%", escape="\\"))
+    return statement
+
+
+@shops_bp.get("")
+@roles_required(UserRole.STUDENT)
+def index():
+    query = request.args.get("q", "").strip()[:100]
+    statement = active_shop_statement(query)
     shops = db.session.scalars(statement.order_by(PrintingShop.name)).all()
     return render_template("shops/index.html", shops=shops, query=query)
+
+
+@shops_bp.get("/map")
+@roles_required(UserRole.STUDENT)
+def map_view():
+    """Discover only active shops with stored, valid coordinates."""
+    query = request.args.get("q", "").strip()[:100]
+    statement = active_shop_statement(query).where(
+        PrintingShop.latitude.is_not(None), PrintingShop.longitude.is_not(None),
+        PrintingShop.latitude.between(-90, 90),
+        PrintingShop.longitude.between(-180, 180),
+    ).options(
+        selectinload(PrintingShop.services), selectinload(PrintingShop.prices),
+    )
+    shops = db.session.scalars(statement.order_by(PrintingShop.name)).all()
+    markers = []
+    for shop in shops:
+        context = detail_context(shop)
+        markers.append({
+            "id": shop.id,
+            "name": shop.name,
+            "description": shop.description,
+            "address": shop.address,
+            "hours": f"{shop.opening_time:%I:%M %p} - {shop.closing_time:%I:%M %p}",
+            "services": [item.service_type.label for item in context["services"]],
+            "prices": [{
+                "size": row["size"].label,
+                "grayscale": (
+                    f"₱{row['grayscale'].price:.2f}"
+                    f"{' (demo)' if row['grayscale'].is_demo else ''}"
+                    if row["grayscale"] else "Not set"
+                ),
+                "color": (
+                    f"₱{row['color'].price:.2f}"
+                    f"{' (demo)' if row['color'].is_demo else ''}"
+                    if row["color"] else "Not set"
+                ),
+            } for row in context["price_rows"]],
+            "is_demo": shop.is_demo,
+            "position": {"lat": float(shop.latitude), "lng": float(shop.longitude)},
+            "detail_url": url_for("shops.detail", shop_id=shop.id),
+        })
+    return render_template(
+        "shops/map.html", markers=markers, query=query,
+        center=SCHOOL_AREA_CENTER,
+        maps_api_key=current_app.config["GOOGLE_MAPS_API_KEY"],
+        maps_map_id=current_app.config["GOOGLE_MAPS_MAP_ID"],
+        show_config_hint=current_app.config["ENV_NAME"] != "production",
+    )
 
 
 @shops_bp.get("/<int:shop_id>")

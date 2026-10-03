@@ -3,10 +3,16 @@
 {% block title %}Printing shops | Prints On Demand{% endblock %}
 
 {% block content %}
-  <header class="page-intro">
-    <p class="page-eyebrow">Find your place to print</p>
-    <h1>Printing shops</h1>
-    <p class="page-lead">Browse active shops and check their services before you prepare an order.</p>
+  <header class="page-intro page-intro--with-action">
+    <div>
+      <p class="page-eyebrow">Find your place to print</p>
+      <h1>Printing shops</h1>
+      <p class="page-lead">Browse active shops and check their services before you prepare an order.</p>
+    </div>
+    <nav class="shop-view-switch" aria-label="Shop discovery view">
+      <span aria-current="page">List view</span>
+      <a href="{{ url_for('shops.map_view', q=query) }}">Map view</a>
+    </nav>
   </header>
   <form class="search-form content-card" method="get" action="{{ url_for('shops.index') }}" role="search">
     <div class="field search-field">

@@ -67,6 +67,16 @@ class PrintingShop(db.Model):
     name: Mapped[str] = mapped_column(db.String(120), unique=True, nullable=False)
     description: Mapped[str] = mapped_column(db.Text, nullable=False, default="")
     address: Mapped[str] = mapped_column(db.String(255), nullable=False)
+    latitude: Mapped[Decimal | None] = mapped_column(
+        db.Numeric(9, 6),
+        CheckConstraint("latitude BETWEEN -90 AND 90", name="shop_latitude_range"),
+        nullable=True,
+    )
+    longitude: Mapped[Decimal | None] = mapped_column(
+        db.Numeric(9, 6),
+        CheckConstraint("longitude BETWEEN -180 AND 180", name="shop_longitude_range"),
+        nullable=True,
+    )
     opening_time: Mapped[time] = mapped_column(db.Time, nullable=False)
     closing_time: Mapped[time] = mapped_column(db.Time, nullable=False)
     is_active: Mapped[bool] = mapped_column(db.Boolean, nullable=False, default=True)

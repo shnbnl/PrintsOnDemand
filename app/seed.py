@@ -28,6 +28,14 @@ DEMO_PRICES = {
     PaperSize.A2: ("18.00", "30.00"),
 }
 DEMO_FEES = {FeeType.RUSH_PRINTING: "25.00", FeeType.DELIVERY: "30.00"}
+DEMO_ADDRESS = "Demo location near Mapúa Malayan Colleges Laguna"
+# Illustrative pins near campus, not verified locations of these businesses.
+DEMO_SHOP_COORDINATES = {
+    "Blue and Silver Bookstore": (Decimal("14.243650"), Decimal("121.111900")),
+    "Iced Design and Prints": (Decimal("14.243520"), Decimal("121.113450")),
+    "CHALECOSPOT": (Decimal("14.242700"), Decimal("121.113250")),
+    "Pixels Print and Press": (Decimal("14.242550"), Decimal("121.112050")),
+}
 
 DEMO_SHOPS = (
     (
@@ -53,12 +61,19 @@ def seed_demo_shops() -> int:
     """Insert missing named demo shops once; never overwrite edited rows."""
     added = 0
     for name, opening_time, closing_time, services in DEMO_SHOPS:
-        if db.session.scalar(select(PrintingShop.id).where(PrintingShop.name == name)):
+        existing = db.session.scalar(select(PrintingShop).where(PrintingShop.name == name))
+        if existing:
+            # Upgrade only untouched placeholder locations from earlier demo seeds.
+            if (existing.is_demo and existing.address == DEMO_ADDRESS
+                    and existing.latitude is None and existing.longitude is None):
+                existing.latitude, existing.longitude = DEMO_SHOP_COORDINATES[name]
             continue
         shop = PrintingShop(
             name=name,
             description="Sample shop based on the UI reference; confirm details before real use.",
-            address="Demo location near Mapúa Malayan Colleges Laguna",
+            address=DEMO_ADDRESS,
+            latitude=DEMO_SHOP_COORDINATES[name][0],
+            longitude=DEMO_SHOP_COORDINATES[name][1],
             opening_time=opening_time,
             closing_time=closing_time,
             is_demo=True,
