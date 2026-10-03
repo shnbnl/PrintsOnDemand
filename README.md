@@ -2,7 +2,7 @@
 
 Prints On Demand is a planned printing-service web application for students. Students will find a printing shop, submit documents with printing instructions, choose a recipient and fulfillment method, and follow an order through completion.
 
-**Current stage: Stage 7 — Payment.** Students can search shops, privately upload and configure files, review a database-priced quote, select an approved professor as intended recipient, and place an order. They can then choose manual online or onsite payment. Online references await verification; selecting a method never marks an order paid. Pickup/delivery scheduling, tracking, and staff order processing remain for later stages.
+**Current stage: Stage 8 — Order confirmation and tracking.** Students can create an order, choose manual online or onsite payment, and view a clear confirmation and status timeline for that individual order. Online references await verification; selecting a method never marks an order paid. Pickup/delivery scheduling, order history, and staff processing remain for later stages.
 
 ## Planned features
 
@@ -41,8 +41,9 @@ Dependencies are listed in `requirements.txt`. Gunicorn is the production WSGI s
 | 4 — File upload and print configuration (complete) | Private student uploads and one active print configuration per file. |
 | 5 — Order creation and checkout review (complete) | Active-shop selection, server-calculated quote, order/item snapshots, reference-based confirmation. |
 | 6 — Direct-to-Professor (complete) | Approved professor selection, server-side eligibility checks, order recipient snapshots, and confirmation. |
-| 7 — Payment (current) | Manual online reference submission, onsite selection, separate payment status, and configuration-driven instructions. |
-| Later stages (planned) | Payment verification, pickup/delivery, staff processing, tracking, history, UI refinement, persistent storage, and deployment. |
+| 7 — Payment (complete) | Manual online reference submission, onsite selection, separate payment status, and configuration-driven instructions. |
+| 8 — Order confirmation and tracking (current) | Owner-only order detail with reference, next step, and a timeline derived from order and payment records. |
+| Later stages (planned) | Payment verification, pickup/delivery, staff processing, history, UI refinement, persistent storage, and deployment. |
 
 Orders still use `PENDING_PAYMENT`. A separate payment record uses `PENDING` when a method is selected and `SUBMITTED` when an online reference awaits manual verification. The schema also reserves `PAID` and `REJECTED` for a future authorized verification workflow; no student route can set them. Professor administration and approval UI remain planned.
 
@@ -82,7 +83,7 @@ requirements.txt      Python dependencies
 pytest.ini            Test discovery configuration
 ```
 
-Stage 3 added shops, services, prices, and fees. Stage 4 added uploaded files and print configurations. Stage 5 added `orders` and `order_items`; Stage 6 added professors and optional order destinations; Stage 7 adds one payment record per order.
+Stage 3 added shops, services, prices, and fees. Stage 4 added uploaded files and print configurations. Stage 5 added `orders` and `order_items`; Stage 6 added professors and optional order destinations; Stage 7 added one payment record per order. Stage 8 derives tracking from those existing records without adding a table.
 
 ## Local development plan
 
@@ -106,6 +107,8 @@ The completed order receives a unique reference such as `POD-2026-A1B2C3D4E5F6` 
 
 On the order detail page, choose **Onsite payment** to record a pending payment and see the configured counter instructions. To use manual **Online payment**, set `ONLINE_PAYMENT_ENABLED=true` and provide nonempty `ONLINE_PAYMENT_INSTRUCTIONS`, `ONLINE_PAYMENT_ACCOUNT_NAME`, and `ONLINE_PAYMENT_DESTINATION` in your private environment or `.env`; the option stays unavailable if any detail is missing. After choosing online payment, the page shows the order reference, server-stored total and currency, and configured transfer details. Enter a payment reference to move the payment from `PENDING` to `SUBMITTED`. This is only a claim awaiting manual verification; it does **not** prove funds were received, mark the payment `PAID`, or change the order's `PENDING_PAYMENT` status. A repeated identical submission is harmless; a different reference or method change after submission is rejected. `ONSITE_PAYMENT_INSTRUCTIONS` optionally overrides the default counter message. Use fictional details for development; do not commit live account details. No receipt upload, QR code, gateway integration, or staff verification interface exists yet.
 
+The same `/orders/<reference>` page confirms the stable order reference, shop, total, intended professor when selected, payment method/status, order status, and current next step. Its **Order tracking** section shows order creation, the recorded payment state, and the current order state. It uses stored order and payment timestamps; an unrecorded step has no timestamp. Refreshing the page creates no new order, payment, or event. Only the order owner can view it. This is a derived status view, not real-time shop processing or an order-history page.
+
 **Pricing limit:** Stage 3 rates are presented as per-page/print-unit rates, but Stage 4 does not establish a trusted page count inside PDF or Office files. Stage 5 uses the student's print count as the number of billed print units and does not inspect document pages. This rule needs reconciliation before real payment. Local demo rates remain sample values and are labeled as such at review. No payment verification, pickup/delivery flow, order history, or tracking is implemented.
 
 Private local uploads default to ignored `instance/uploads`, outside `app/static`. `UPLOAD_STORAGE_ROOT` selects another private root for development/testing; if it is inside the repository, add that custom path to `.gitignore`. `UPLOAD_MAX_SIZE` sets the maximum file size in bytes (default **16 MiB**) and the request cap adds 64 KiB for multipart form overhead. `UPLOAD_MAX_QUANTITY` changes the print-count ceiling (default **999**). Supported extensions are PDF, DOC, DOCX, PPT, PPTX, JPG, JPEG, and PNG. The server checks the extension, declared MIME type, and a recognizable file signature or OOXML ZIP structure. This is a screening measure, not a malware scan or complete document parser: legacy DOC/PPT share an OLE signature, and valid-looking content can still be malicious. Uploaded bytes live outside the database under random keys; metadata and SHA-256 live in the database. The current adapter is local and **production uploads are refused** until a durable private adapter is configured. Do not use an ephemeral Render filesystem for real uploads.
@@ -124,4 +127,4 @@ Local uploads are for development only and must not be assumed durable in produc
 
 ## UI/UX reference
 
-**[PrintsOnDemand Mobile.pdf](docs/references/PrintsOnDemand%20Mobile.pdf)** is the primary student UI reference. [UI reference notes](docs/ui-reference.md) record the review of all nine pages. Stage 6 replaced manual receiver-email entry with approved professor selection. Stage 7 adds a basic manual payment flow; the full visual design remains for later stages.
+**[PrintsOnDemand Mobile.pdf](docs/references/PrintsOnDemand%20Mobile.pdf)** is the primary student UI reference. [UI reference notes](docs/ui-reference.md) record the review of all nine pages. Stage 6 replaced manual receiver-email entry with approved professor selection. Stage 7 added a basic manual payment flow, and Stage 8 adds clear confirmation/tracking on the existing detail page. The full visual design remains for later stages.

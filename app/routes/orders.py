@@ -23,6 +23,7 @@ from app.services.professors import (
     ProfessorSelectionError, assign_professor, professor_service_available,
     professor_snapshot, selectable_professors, validate_professor_selection,
 )
+from app.services.tracking import build_tracking
 
 
 orders_bp = Blueprint("orders", __name__, url_prefix="/orders")
@@ -185,7 +186,7 @@ def detail(order_reference: str):
     return render_order_detail(order)
 
 
-def render_order_detail(order, *, payment_error=None, status=200):
+def render_order_detail(order, *, payment_error=None, professor_error=None, status=200):
     online_details = online_payment_details()
     method_form = None
     if order.status == OrderStatus.PENDING_PAYMENT and (
@@ -209,7 +210,9 @@ def render_order_detail(order, *, payment_error=None, status=200):
         "orders/detail.html", order=order, professor_form=professor_form(order),
         method_form=method_form, reference_form=reference_form,
         online_details=online_details, payment_error=payment_error,
+        professor_error=professor_error,
         onsite_instructions=current_app.config["ONSITE_PAYMENT_INSTRUCTIONS"],
+        tracking=build_tracking(order),
     ), status
 
 
@@ -288,10 +291,9 @@ def select_professor(order_reference: str):
         abort(404)
     form = professor_form(order)
     if form is None or not form.validate_on_submit():
-        return render_template(
-            "orders/detail.html", order=order, professor_form=form,
-            professor_error="Select an active, approved professor.",
-        ), 400
+        return render_order_detail(
+            order, professor_error="Select an active, approved professor.", status=400
+        )
     try:
         professor = validate_professor_selection(
             shop_id=order.shop_id, destination=OrderDestination.PROFESSOR,
@@ -300,8 +302,5 @@ def select_professor(order_reference: str):
         assign_professor(order, professor)
         db.session.commit()
     except ProfessorSelectionError as error:
-        return render_template(
-            "orders/detail.html", order=order, professor_form=professor_form(order),
-            professor_error=str(error),
-        ), 400
+        return render_order_detail(order, professor_error=str(error), status=400)
     return redirect(url_for("orders.detail", order_reference=order_reference))
