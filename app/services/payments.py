@@ -5,14 +5,21 @@ from __future__ import annotations
 import re
 
 from flask import current_app
-from sqlalchemy import select
+from sqlalchemy import exists, select, update
 from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
 from app.models import Order, OrderStatus, Payment, PaymentMethod, PaymentSettings, PaymentStatus
+from app.models.user import utc_now
 
 
 REFERENCE_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9 ._/-]{3,119}\Z")
+
+
+def pending_order_for_payment():
+    return exists(select(Order.id).where(
+        Order.id == Payment.order_id, Order.status == OrderStatus.PENDING_PAYMENT,
+    ))
 
 
 class PaymentError(ValueError):
@@ -83,8 +90,19 @@ def select_payment_method(*, order_reference: str, user_id: int, method: str) ->
             return payment  # Repeated selection is harmless, including after submission.
         if payment.payment_status != PaymentStatus.PENDING:
             raise PaymentError("A submitted payment method cannot be changed.", 409)
-        payment.payment_method = selected
-        payment.payment_reference = None
+        result = db.session.execute(update(Payment).where(
+            Payment.id == payment.id,
+            Payment.payment_status == PaymentStatus.PENDING,
+            Payment.amount == order.total, Payment.currency == order.currency,
+            pending_order_for_payment(),
+        ).values(
+            payment_method=selected, payment_reference=None, updated_at=utc_now(),
+        ).execution_options(synchronize_session=False))
+        if result.rowcount != 1:
+            db.session.rollback()
+            raise PaymentError("Payment selection changed. Reload this order.", 409)
+        db.session.commit()
+        return db.session.get(Payment, payment.id, populate_existing=True)
     else:
         payment = Payment(
             order_id=order.id, payment_method=selected,
@@ -122,7 +140,23 @@ def submit_online_reference(*, order_reference: str, user_id: int, reference: st
         return payment  # Browser retry must not create another submission.
     if payment.payment_status != PaymentStatus.PENDING:
         raise PaymentError("Payment information was already submitted.", 409)
-    payment.payment_reference = cleaned
-    payment.payment_status = PaymentStatus.SUBMITTED
+    result = db.session.execute(update(Payment).where(
+        Payment.id == payment.id,
+        Payment.payment_method == PaymentMethod.ONLINE,
+        Payment.payment_status == PaymentStatus.PENDING,
+        Payment.payment_reference.is_(None),
+        Payment.amount == order.total, Payment.currency == order.currency,
+        pending_order_for_payment(),
+    ).values(
+        payment_reference=cleaned, payment_status=PaymentStatus.SUBMITTED,
+        updated_at=utc_now(),
+    ).execution_options(synchronize_session=False))
+    if result.rowcount != 1:
+        db.session.rollback()
+        current = db.session.get(Payment, payment.id, populate_existing=True)
+        if (current is not None and current.payment_status == PaymentStatus.SUBMITTED
+                and current.payment_reference == cleaned):
+            return current
+        raise PaymentError("Payment information was already submitted.", 409)
     db.session.commit()
-    return payment
+    return db.session.get(Payment, payment.id, populate_existing=True)

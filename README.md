@@ -2,7 +2,7 @@
 
 Prints On Demand is a planned printing-service web application for students. Students will find a printing shop, submit documents with printing instructions, choose a recipient and fulfillment method, and follow an order through completion.
 
-**Current stage: Stage 11 — Student Order History.** Students can review their own previous orders, filter by order or payment status, and open the existing detail and tracking page. Payment verification and pickup/delivery scheduling remain for later stages.
+**Current stage: Stage 13 — Security & Quality Review.** The Stage 12 mobile-first UI is in place. Students can review and track their own orders; payment verification and pickup/delivery scheduling remain for later stages.
 
 ## Planned features
 
@@ -45,8 +45,10 @@ Dependencies are listed in `requirements.txt`. Gunicorn is the production WSGI s
 | 8 — Order confirmation and tracking (complete) | Owner-only order detail with reference, next step, and a timeline derived from order and payment records. |
 | 9 — Shop Staff order processing (complete) | Assigned-shop order list/detail, scoped private file download, payment-gated processing actions, and timestamped student tracking. |
 | 10 — Admin management (complete) | Admin dashboard, staff assignment and professor pages, and public payment-instruction editing; existing shop/service/price/fee controls remain in use. |
-| 11 — Student Order History (current) | Owner-only order list with status filters, newest-first pagination, and links to existing detail/tracking. |
-| Later stages (planned) | Payment verification, pickup/delivery, UI refinement, persistent storage, and deployment. |
+| 11 — Student Order History (complete) | Owner-only order list with status filters, newest-first pagination, and links to existing detail/tracking. |
+| 12 — UI/UX implementation (complete) | PDF-inspired mobile-first styling and navigation across student, staff, and admin pages. |
+| 13 — Security & Quality Review (current) | Security and correctness audit, focused fixes, regression tests, and verification. |
+| Later stages (planned) | Payment verification, pickup/delivery, durable private storage, and deployment. |
 
 Orders begin at `PENDING_PAYMENT`. Only a payment record already marked `PAID` by a trusted process permits staff to move the order to `PROCESSING`, then `READY`, then `COMPLETED`. A separate payment record uses `PENDING` when a method is selected and `SUBMITTED` when an online reference awaits manual verification. The schema reserves `PAID` and `REJECTED` for a future authorized verification workflow; no current HTTP route can set them. Admins may manage professor approval for future orders without changing historical recipient snapshots.
 
@@ -129,7 +131,7 @@ For development data only, run `python -m flask --app wsgi:app seed-demo-shops` 
 
 For fictional professor data, run `python -m flask --app wsgi:app seed-demo-professors` explicitly after `db upgrade`. It adds two active, approved professors plus unapproved and inactive examples using `example.edu` addresses. The command is idempotent by email, leaves existing records and approvals unchanged, and refuses to run in production. These records are development/demo data only; admins can subsequently manage them at `/admin/professors`.
 
-`DATABASE_URL` overrides the local SQLite default; `postgres://` URLs are normalized to `postgresql://`. `FLASK_ENV` accepts `development`, `testing`, or `production`. `TESTING=true` also selects the isolated in-memory SQLite configuration; it cannot be enabled with production. Production requires a PostgreSQL `DATABASE_URL` and `SECRET_KEY`, enables secure session cookies, and does not silently use local defaults. Object-storage names in `.env.example` are reserved for a later adapter and are not used yet. Never commit `.env`, passwords, payment receipts, uploaded documents, or production data.
+`DATABASE_URL` overrides the local SQLite default; `postgres://` URLs are normalized to `postgresql://`. `FLASK_ENV` accepts `development`, `testing`, or `production`. `TESTING=true` also selects the isolated in-memory SQLite configuration; it cannot be enabled with production. Production requires a PostgreSQL `DATABASE_URL` and a random `SECRET_KEY` of at least 32 characters, rejects debug mode, enables secure session cookies, and does not silently use local defaults. Configure trusted hosts, HTTPS/HSTS, and durable private uploads before deployment. Object-storage names in `.env.example` are reserved for a later adapter and are not used yet. Never commit `.env`, passwords, payment receipts, uploaded documents, or production data.
 
 ## Deployment target and storage
 
@@ -139,4 +141,4 @@ Local uploads are for development only and must not be assumed durable in produc
 
 ## UI/UX reference
 
-**[PrintsOnDemand Mobile.pdf](docs/references/PrintsOnDemand%20Mobile.pdf)** is the primary student UI reference. [UI reference notes](docs/ui-reference.md) record the review of all nine pages. Stages 6–10 added approved-professor selection, manual payment, tracking, staff processing, and admin management. Stage 11 adds a simple order-history page. The full visual design remains for later stages.
+**[PrintsOnDemand Mobile.pdf](docs/references/PrintsOnDemand%20Mobile.pdf)** is the primary student UI reference. [UI reference notes](docs/ui-reference.md) record the review of all nine pages. Stages 6–11 added approved-professor selection, manual payment, tracking, staff processing, admin management, and order history. Stage 12 applied the mobile-first visual design.

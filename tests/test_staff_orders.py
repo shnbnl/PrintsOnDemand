@@ -4,11 +4,12 @@ from datetime import datetime, timezone
 from decimal import Decimal
 
 from flask import g
+import pytest
 from sqlalchemy import select
 
 from app.extensions import db
 from app.models import Order, OrderStatus, Payment, PaymentStatus, Professor, UploadedFile, User
-from app.services.order_processing import ProcessingError, advance_order, get_staff_order
+from app.services.order_processing import ProcessingError, advance_order, available_action, get_staff_order
 from app.services.tracking import build_tracking
 from test_orders import (
     PDF, approved_professor, file, offer_professor_service, place, professor_place,
@@ -117,6 +118,39 @@ def test_unverified_payment_blocks_processing_and_form_forgery(client, test_app)
         assert order.payment.payment_status == PaymentStatus.SUBMITTED
         assert order.payment.amount == Decimal("6.75")
         assert build_tracking(order).steps[-2].timestamp == order.payment.updated_at
+
+
+@pytest.mark.parametrize("mismatch", ["amount", "currency"])
+def test_paid_payment_must_match_order_total_and_currency(client, test_app, mismatch):
+    _, staff_id, _, student_url, _, _, _, _, _ = setup_orders(client, test_app)
+    staff_order_url = staff_url(student_url)
+    reference = student_url.rsplit("/", 1)[1]
+    with test_app.app_context():
+        order = db.session.scalar(select(Order).where(Order.order_reference == reference))
+        order.payment.payment_status = PaymentStatus.PAID
+        if mismatch == "amount":
+            order.payment.amount = order.total - Decimal("0.01")
+        else:
+            order.payment.currency = "USD"
+        db.session.commit()
+
+    sign_in(client, staff_id)
+    detail = client.get(staff_order_url)
+    assert detail.status_code == 200
+    assert b"Processing is unavailable" in detail.data
+    assert action_post(client, staff_order_url, "start_processing").status_code == 409
+    with test_app.app_context():
+        order = db.session.scalar(select(Order).where(Order.order_reference == reference))
+        assert order.status == OrderStatus.PENDING_PAYMENT
+        assert order.processing_started_at is None
+        order.payment.amount = order.total
+        order.payment.currency = order.currency
+        db.session.commit()
+        assert order.payment.payment_status == PaymentStatus.PAID
+        assert available_action(order) == "start_processing"
+    # The test fixture keeps an application context open across requests.
+    db.session.expire_all()
+    assert action_post(client, staff_order_url, "start_processing").status_code == 302
 
 
 def test_paid_record_allows_only_sequential_processing_and_tracking(client, test_app, monkeypatch):

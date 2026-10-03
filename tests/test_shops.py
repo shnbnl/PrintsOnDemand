@@ -386,7 +386,7 @@ def test_demo_seed_refused_in_production(monkeypatch):
     from app.config import ProductionConfig
 
     monkeypatch.setenv("DATABASE_URL", "postgresql://user:password@localhost:5432/prints")
-    monkeypatch.setenv("SECRET_KEY", "test-only-secret")
+    monkeypatch.setenv("SECRET_KEY", "test-production-key-with-adequate-length")
     production_app = create_app(ProductionConfig)
 
     result = production_app.test_cli_runner().invoke(args=["seed-demo-shops"])

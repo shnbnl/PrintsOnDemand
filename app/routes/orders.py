@@ -29,6 +29,8 @@ from app.services.tracking import build_tracking
 
 orders_bp = Blueprint("orders", __name__, url_prefix="/orders")
 HISTORY_PAGE_SIZE = 20
+MAX_DATABASE_ID = 2**63 - 1
+MAX_HISTORY_PAGE = MAX_DATABASE_ID // HISTORY_PAGE_SIZE
 
 
 @orders_bp.get("")
@@ -46,7 +48,7 @@ def index():
         page = int(raw_page)
     except ValueError:
         abort(400)
-    if page < 1:
+    if not 1 <= page <= MAX_HISTORY_PAGE:
         abort(400)
 
     statement = select(Order).where(Order.user_id == current_user.id)
@@ -73,7 +75,7 @@ def positive_id(value: str | None) -> int | None:
         number = int(value) if value is not None else None
     except (TypeError, ValueError):
         return None
-    return number if number is not None and number > 0 else None
+    return number if number is not None and 0 < number <= MAX_DATABASE_ID else None
 
 
 def choices():

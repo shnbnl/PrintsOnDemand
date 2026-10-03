@@ -90,6 +90,7 @@ def test_history_is_owner_scoped_newest_first_and_payment_truthful(client, test_
     assert client.get("/orders?payment_status=PAID%27").status_code == 400
     assert client.get("/orders?page=0").status_code == 400
     assert client.get("/orders?page=abc").status_code == 400
+    assert client.get("/orders?page=99999999999999999999").status_code == 400
     with test_app.app_context():
         payment = db.session.scalar(select(Payment))
         assert payment.payment_status == PaymentStatus.SUBMITTED

@@ -6,7 +6,7 @@ from io import BytesIO
 from flask import Blueprint, abort, current_app, flash, redirect, render_template, send_file, url_for
 from flask_login import current_user
 from sqlalchemy import select
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from werkzeug.exceptions import RequestEntityTooLarge
 
 from app.authorization import roles_required
@@ -85,8 +85,11 @@ def upload():
             db.session.commit()
         except SQLAlchemyError:
             db.session.rollback()
-            storage.delete(key)
             current_app.logger.exception("Could not record private upload")
+            try:
+                storage.delete(key)
+            except (OSError, StorageError):
+                current_app.logger.error("Could not remove unrecorded private upload")
             abort(500)
         flash("File uploaded successfully. No order has been submitted.", "success")
         return redirect(url_for("files.detail", file_id=record.id))
@@ -114,13 +117,19 @@ def send_private_file(record: UploadedFile):
         data = private_storage().read(record.storage_key)
     except StorageError:
         abort(404)
+    except OSError:
+        current_app.logger.error("Could not read private upload for file %s", record.id)
+        abort(503, description="Private file storage is unavailable.")
     if len(data) != record.file_size or hashlib.sha256(data).hexdigest() != record.sha256:
         current_app.logger.warning("Stored upload failed integrity check for file %s", record.id)
         abort(404)
-    return send_file(
+    response = send_file(
         BytesIO(data), mimetype=record.mime_type, as_attachment=True,
         download_name=record.original_filename,
     )
+    response.headers["Cache-Control"] = "private, no-store"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    return response
 
 
 @files_bp.route("/<int:file_id>/configure", methods=["GET", "POST"])
@@ -147,19 +156,47 @@ def configure(file_id: int):
 @files_bp.post("/<int:file_id>/delete")
 @roles_required(UserRole.STUDENT)
 def delete(file_id: int):
-    record = owned_file(file_id)
+    # Lock the metadata row where supported so an order cannot attach this file
+    # between the reference check and the delete. The FK remains the final guard.
+    record = db.session.scalar(
+        select(UploadedFile).where(
+            UploadedFile.id == file_id, UploadedFile.user_id == current_user.id
+        ).with_for_update()
+    )
+    if record is None:
+        abort(404)
     if record.order_items:
         return render_template(
             "files/detail.html", record=record,
             delete_error="This file belongs to a placed order and cannot be deleted.",
         ), 409
+    storage = private_storage()
+    key = record.storage_key
     try:
-        private_storage().delete(record.storage_key)
+        db.session.delete(record)
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        return render_template(
+            "files/detail.html", record=record,
+            delete_error="This file belongs to a placed order and cannot be deleted.",
+        ), 409
+    except SQLAlchemyError:
+        db.session.rollback()
+        current_app.logger.exception("Could not delete file record %s", file_id)
+        abort(500)
+    # Remove bytes only after the database confirms there are no order references.
+    try:
+        storage.delete(key)
     except (OSError, StorageError):
-        current_app.logger.warning("Could not delete private upload for file %s", file_id)
-        abort(404)
-    db.session.delete(record)
-    db.session.commit()
+        current_app.logger.error("Could not remove private upload for deleted file %s", file_id)
+        return render_template(
+            "main/error.html",
+            message=(
+                "The file was removed from your account, but private storage cleanup "
+                "failed. Contact an administrator."
+            ),
+        ), 503
     flash("File deleted.", "success")
     return redirect(url_for("files.index"))
 

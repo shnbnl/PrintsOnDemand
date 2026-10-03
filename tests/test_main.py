@@ -43,12 +43,50 @@ def test_missing_page(client):
     assert b"Page not found." in response.data
 
 
+@pytest.mark.parametrize("path", [
+    "/shops/9223372036854775808",
+    "/admin/shops/9223372036854775808/edit",
+    "/admin/professors/9223372036854775808/edit",
+    "/admin/staff/9223372036854775808/assignment",
+    "/staff/orders/example/files/9223372036854775808/download",
+])
+def test_oversized_database_ids_are_rejected_by_routing(client, path):
+    assert client.get(path).status_code == 404
+
+
 def test_production_requires_configuration(monkeypatch):
     monkeypatch.delenv("DATABASE_URL", raising=False)
     monkeypatch.delenv("SECRET_KEY", raising=False)
 
     with pytest.raises(RuntimeError, match="PostgreSQL DATABASE_URL"):
         create_app(ProductionConfig)
+
+
+@pytest.mark.parametrize("secret", ["", " ", "short-secret"])
+def test_production_rejects_weak_signing_key(monkeypatch, secret):
+    monkeypatch.setenv("DATABASE_URL", "postgresql://user:password@localhost:5432/prints")
+    monkeypatch.setenv("SECRET_KEY", secret)
+
+    with pytest.raises(RuntimeError, match="SECRET_KEY of at least 32 characters"):
+        create_app(ProductionConfig)
+
+
+@pytest.mark.parametrize("flask_debug", ["1", "off", " false"])
+def test_production_rejects_debug_mode(monkeypatch, flask_debug):
+    monkeypatch.setenv("DATABASE_URL", "postgresql://user:password@localhost:5432/prints")
+    monkeypatch.setenv("SECRET_KEY", "test-production-key-with-adequate-length")
+    monkeypatch.setenv("FLASK_DEBUG", flask_debug)
+
+    with pytest.raises(RuntimeError, match="Debug mode must be disabled"):
+        create_app(ProductionConfig)
+
+
+def test_browser_security_headers(client):
+    response = client.get("/")
+
+    assert response.headers["X-Content-Type-Options"] == "nosniff"
+    assert response.headers["X-Frame-Options"] == "DENY"
+    assert response.headers["Referrer-Policy"] == "same-origin"
 
 
 def test_testing_environment_switch(monkeypatch):
@@ -64,7 +102,7 @@ def test_testing_environment_switch(monkeypatch):
 
 def test_legacy_postgres_url_is_normalized(monkeypatch):
     monkeypatch.setenv("DATABASE_URL", "postgres://user:password@localhost:5432/prints")
-    monkeypatch.setenv("SECRET_KEY", "test-only-secret")
+    monkeypatch.setenv("SECRET_KEY", "test-production-key-with-adequate-length")
 
     app = create_app(ProductionConfig)
 
@@ -72,3 +110,8 @@ def test_legacy_postgres_url_is_normalized(monkeypatch):
         "postgresql://user:password@localhost:5432/prints"
     )
     assert app.config["SESSION_COOKIE_SECURE"] is True
+    assert app.config["SESSION_COOKIE_HTTPONLY"] is True
+    assert app.config["SESSION_COOKIE_SAMESITE"] == "Lax"
+    assert app.config["REMEMBER_COOKIE_SECURE"] is True
+    assert app.config["REMEMBER_COOKIE_HTTPONLY"] is True
+    assert app.config["DEBUG"] is False

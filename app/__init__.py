@@ -6,9 +6,17 @@ from flask import Flask, render_template
 from dotenv import load_dotenv
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
+from werkzeug.routing import IntegerConverter
 
 from app.config import configure_runtime, select_config
 from app.extensions import csrf, db, login_manager, migrate
+
+
+class DatabaseIdConverter(IntegerConverter):
+    """Reject path IDs that cannot fit in the database's signed 64-bit key type."""
+
+    def __init__(self, url_map):
+        super().__init__(url_map, min=1, max=2**63 - 1)
 
 
 @event.listens_for(Engine, "connect")
@@ -25,6 +33,7 @@ def create_app(config_object: object | None = None) -> Flask:
     load_dotenv()
 
     app = Flask(__name__, instance_relative_config=True)
+    app.url_map.converters["int"] = DatabaseIdConverter
     app.config.from_object(config_object or select_config())
     configure_runtime(app)
 
@@ -55,6 +64,14 @@ def create_app(config_object: object | None = None) -> Flask:
     app.register_blueprint(shop_admin_bp)
     app.register_blueprint(staff_orders_bp)
     login_manager.login_view = "auth.login"
+
+    @app.after_request
+    def add_security_headers(response):
+        """Apply low-risk browser protections to every application response."""
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "same-origin"
+        return response
 
     from app.cli import register_commands
 

@@ -6,6 +6,8 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
+from app import create_app
+from app.config import TestingConfig
 from app.extensions import db
 from app.models import User, UserRole
 
@@ -181,6 +183,51 @@ def test_inactive_user_cannot_log_in_or_reuse_session(client, test_app):
     assert client.get("/student").status_code == 302
 
 
+def test_deactivated_user_loses_existing_session(monkeypatch):
+    # Use separate app contexts so each request reloads the user as in production.
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.delenv("SECRET_KEY", raising=False)
+    app = create_app(TestingConfig)
+    with app.app_context():
+        db.create_all()
+        user = User(name="Test User", email="student@example.com", role=UserRole.STUDENT)
+        user.set_password(PASSWORD)
+        db.session.add(user)
+        db.session.commit()
+        user_id = user.id
+
+    client = app.test_client()
+    assert login(client).status_code == 302
+    assert client.get("/student").status_code == 200
+
+    with app.app_context():
+        user = db.session.get(User, user_id)
+        user.is_active = False
+        db.session.commit()
+
+    assert client.get("/student").status_code == 302
+
+
+@pytest.mark.parametrize(
+    "role,email,blocked_paths",
+    [
+        (UserRole.STUDENT, "student@example.com", (
+            "/staff/orders", "/admin/shops", "/admin/staff", "/admin/professors", "/admin/payment",
+        )),
+        (UserRole.SHOP_STAFF, "staff@example.com", (
+            "/admin/shops", "/admin/staff", "/admin/professors", "/admin/payment",
+        )),
+        (UserRole.ADMIN, "admin@example.com", ("/staff/orders", "/files")),
+    ],
+)
+def test_management_routes_enforce_roles(client, test_app, role, email, blocked_paths):
+    add_user(test_app, role=role, email=email)
+    assert login(client, email=email).status_code == 302
+
+    for path in blocked_paths:
+        assert client.get(path).status_code == 403
+
+
 @pytest.mark.parametrize("path", ["/auth/register", "/auth/login", "/auth/logout"])
 def test_post_requires_csrf_token(client, path):
     response = client.post(path, data={})
@@ -190,6 +237,23 @@ def test_post_requires_csrf_token(client, path):
 def test_external_next_url_is_ignored(client, test_app):
     add_user(test_app)
     response = login(client, next_url="//evil.example/path")
+
+    assert response.status_code == 302
+    assert response.headers["Location"].endswith("/student")
+
+
+def test_internal_next_url_is_honored(client, test_app):
+    add_user(test_app)
+    response = login(client, next_url="/files")
+
+    assert response.status_code == 302
+    assert response.headers["Location"].endswith("/files")
+
+
+@pytest.mark.parametrize("next_url", ["https://evil.example/path", "/\\evil.example", "/%0D%0Aevil"])
+def test_other_unsafe_next_urls_are_ignored(client, test_app, next_url):
+    add_user(test_app)
+    response = login(client, next_url=next_url)
 
     assert response.status_code == 302
     assert response.headers["Location"].endswith("/student")

@@ -52,7 +52,12 @@ def get_staff_order(actor, order_reference: str) -> Order:
 
 
 def available_action(order: Order) -> str | None:
-    if order.payment is None or order.payment.payment_status != PaymentStatus.PAID:
+    if (
+        order.payment is None
+        or order.payment.payment_status != PaymentStatus.PAID
+        or order.payment.amount != order.total
+        or order.payment.currency != order.currency
+    ):
         return None
     return NEXT_ACTION.get(order.status)
 
@@ -63,11 +68,12 @@ def advance_order(actor, order_reference: str, action: str) -> Order:
     if transition is None or order.status != transition[0]:
         raise ProcessingError("This processing action is not available for the order's current state.", 409)
     if available_action(order) != action:
-        raise ProcessingError("Payment must be recorded as paid before processing.", 409)
+        raise ProcessingError("Payment must be recorded as paid for this order's total before processing.", 409)
 
     now = utc_now()
     paid_payment = exists(select(Payment.id).where(
         Payment.order_id == Order.id, Payment.payment_status == PaymentStatus.PAID,
+        Payment.amount == Order.total, Payment.currency == Order.currency,
     ))
     result = db.session.execute(
         update(Order).where(

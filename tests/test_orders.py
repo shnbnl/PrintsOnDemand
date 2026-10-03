@@ -193,7 +193,7 @@ def test_professor_checkout_review_confirmation_and_snapshot(client, test_app):
     assert b"Maria Santos" in client.get(response.headers["Location"]).data
 
 
-@pytest.mark.parametrize("invalid", ["999999", "0", "not-an-id", "-1"])
+@pytest.mark.parametrize("invalid", ["999999", "0", "not-an-id", "-1", str(2**63)])
 def test_invalid_professor_id_never_creates_order(client, test_app, invalid):
     user_id = student(test_app)
     shop_id = shop(test_app)
@@ -437,6 +437,7 @@ def test_regular_order_does_not_add_other_fees(client, test_app):
 @pytest.mark.parametrize("variant,expected_status", [
     ("missing_shop", 404), ("inactive_shop", 404),
     ("missing_file", 404), ("unconfigured", 400),
+    ("oversized_file_id", 400), ("oversized_shop_id", 400),
     ("missing_price", 400), ("zero_quantity", 400),
     ("too_many", 400), ("bad_paper", 400), ("bad_color", 400),
     ("missing_bytes", 409),
@@ -471,6 +472,10 @@ def test_invalid_order_inputs_do_not_create_records(client, test_app, variant, e
         shop_id = 9999
     if variant == "missing_file":
         file_id = 9999
+    if variant == "oversized_file_id":
+        file_id = 2**63
+    if variant == "oversized_shop_id":
+        shop_id = 2**63
     sign_in(client, user_id)
     assert review(client, file_id, shop_id).status_code == expected_status
     assert place(client, file_id, shop_id).status_code == expected_status

@@ -8,7 +8,10 @@ from pathlib import Path
 
 import pytest
 from flask import g
+from sqlalchemy import event
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session
 
 from app.extensions import db
 from app.models import ColorMode, PaperSize, PrintConfiguration, UploadedFile, User, UserRole
@@ -78,6 +81,8 @@ def test_upload_metadata_listing_detail_and_download(client, test_app):
     download = client.get("/files/1/download")
     assert download.data == PDF
     assert b"attachment" in download.headers["Content-Disposition"].encode()
+    assert download.headers["Cache-Control"] == "private, no-store"
+    assert download.headers["X-Content-Type-Options"] == "nosniff"
 
     with test_app.app_context():
         record = db.session.get(UploadedFile, 1)
@@ -167,6 +172,24 @@ def test_ownership_role_boundary_and_missing_ids(client, test_app):
     assert client.get("/files").status_code == 302
 
 
+def test_oversized_file_id_does_not_reach_database(client, test_app):
+    sign_in(client, make_user(test_app))
+    oversized = 2**63
+    csrf_token = token(client.get("/files"))
+    for path in (
+        f"/files/{oversized}",
+        f"/files/{oversized}/download",
+        f"/files/{oversized}/configure",
+    ):
+        assert client.get(path).status_code == 404
+    assert client.post(
+        f"/files/{oversized}/configure", data={"csrf_token": csrf_token}
+    ).status_code == 404
+    assert client.post(
+        f"/files/{oversized}/delete", data={"csrf_token": csrf_token}
+    ).status_code == 404
+
+
 @pytest.mark.parametrize("paper_size", [member.value for member in PaperSize])
 @pytest.mark.parametrize("color_mode", [member.value for member in ColorMode])
 def test_configuration_accepts_shared_choices(client, test_app, paper_size, color_mode):
@@ -243,7 +266,12 @@ def test_missing_stored_file_and_corrupt_key_fail_safely(client, test_app):
         record.storage_key = "../outside.pdf"
         db.session.commit()
     assert client.get("/files/1/download").status_code == 404
-    assert client.post("/files/1/delete", data={"csrf_token": token(client.get("/files/1"))}).status_code == 404
+    deleted = client.post("/files/1/delete", data={"csrf_token": token(client.get("/files/1"))})
+    assert deleted.status_code == 503
+    assert b"removed from your account" in deleted.data
+    assert test_app.config["UPLOAD_STORAGE_ROOT"].encode() not in deleted.data
+    with test_app.app_context():
+        assert db.session.get(UploadedFile, 1) is None
 
 
 def test_changed_stored_bytes_are_not_downloaded(client, test_app):
@@ -253,6 +281,19 @@ def test_changed_stored_bytes_are_not_downloaded(client, test_app):
         key = db.session.get(UploadedFile, 1).storage_key
     Path(test_app.config["UPLOAD_STORAGE_ROOT"], key).write_bytes(b"tampered")
     assert client.get("/files/1/download").status_code == 404
+
+
+def test_storage_read_error_does_not_expose_private_path(client, test_app, monkeypatch):
+    sign_in(client, make_user(test_app))
+    assert post_upload(client).status_code == 302
+
+    def fail_read(self, key):
+        raise OSError("C:\\private\\secret")
+
+    monkeypatch.setattr(LocalStorage, "read", fail_read)
+    response = client.get("/files/1/download")
+    assert response.status_code == 503
+    assert b"C:\\private\\secret" not in response.data
 
 
 def test_storage_rejects_traversal_and_public_static_root(test_app, tmp_path):
@@ -299,6 +340,86 @@ def test_delete_removes_file_and_configuration(client, test_app):
         assert db.session.get(UploadedFile, 1) is None
         assert db.session.scalar(select(PrintConfiguration)) is None
     assert client.get("/files/1").status_code == 404
+
+
+def test_failed_database_delete_keeps_private_bytes(client, test_app):
+    sign_in(client, make_user(test_app))
+    assert post_upload(client).status_code == 302
+    with test_app.app_context():
+        key = db.session.get(UploadedFile, 1).storage_key
+
+    def fail_commit(session):
+        raise SQLAlchemyError("simulated database failure")
+
+    event.listen(Session, "before_commit", fail_commit)
+    try:
+        response = client.post(
+            "/files/1/delete", data={"csrf_token": token(client.get("/files/1"))}
+        )
+    finally:
+        event.remove(Session, "before_commit", fail_commit)
+
+    assert response.status_code == 500
+    assert Path(test_app.config["UPLOAD_STORAGE_ROOT"], key).read_bytes() == PDF
+    with test_app.app_context():
+        assert db.session.get(UploadedFile, 1) is not None
+
+
+def test_upload_commit_and_cleanup_failures_still_return_safe_error(
+    client, test_app, monkeypatch
+):
+    sign_in(client, make_user(test_app))
+
+    def fail_commit(session):
+        raise SQLAlchemyError("simulated database failure")
+
+    def fail_delete(self, key):
+        raise OSError("C:\\private\\secret")
+
+    monkeypatch.setattr(LocalStorage, "delete", fail_delete)
+    event.listen(Session, "before_commit", fail_commit)
+    try:
+        response = post_upload(client)
+    finally:
+        event.remove(Session, "before_commit", fail_commit)
+
+    assert response.status_code == 500
+    assert b"C:\\private\\secret" not in response.data
+    with test_app.app_context():
+        assert db.session.scalar(select(UploadedFile)) is None
+
+
+def test_missing_bytes_can_be_removed_and_cleanup_failure_is_reported(
+    client, test_app, monkeypatch
+):
+    sign_in(client, make_user(test_app))
+    assert post_upload(client).status_code == 302
+    with test_app.app_context():
+        key = db.session.get(UploadedFile, 1).storage_key
+    path = Path(test_app.config["UPLOAD_STORAGE_ROOT"], key)
+    path.unlink()
+    assert client.post(
+        "/files/1/delete", data={"csrf_token": token(client.get("/files/1"))}
+    ).status_code == 302
+    with test_app.app_context():
+        assert db.session.get(UploadedFile, 1) is None
+
+    second = post_upload(client)
+    assert second.status_code == 302
+    second_url = second.headers["Location"]
+
+    def fail_delete(self, key):
+        raise OSError("C:\\private\\secret")
+
+    monkeypatch.setattr(LocalStorage, "delete", fail_delete)
+    failed = client.post(
+        second_url + "/delete", data={"csrf_token": token(client.get(second_url))}
+    )
+    assert failed.status_code == 503
+    assert b"removed from your account" in failed.data
+    assert b"C:\\private\\secret" not in failed.data
+    with test_app.app_context():
+        assert db.session.scalar(select(UploadedFile)) is None
 
 
 @pytest.mark.parametrize("extension,path", [("docx", "word/document.xml"), ("pptx", "ppt/presentation.xml")])

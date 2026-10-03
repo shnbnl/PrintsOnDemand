@@ -100,6 +100,49 @@ def test_online_payment_submission_is_unverified_and_idempotent(client, test_app
         assert payment.order.professor_name == "Maria Santos"
 
 
+def test_stale_online_submission_cannot_replace_recorded_reference(client, test_app):
+    configured_online(test_app)
+    _, url = created_order(client, test_app)
+    assert choose(client, url, "ONLINE").status_code == 302
+    # Keep the request-side ORM instance in PENDING while another session records
+    # a reference, as can happen with concurrent browser submissions.
+    payment = db.session.scalar(select(Payment))
+    assert payment.payment_status == PaymentStatus.PENDING
+    with test_app.app_context():
+        current = db.session.get(Payment, payment.id)
+        current.payment_reference = "FIRST-REF-123"
+        current.payment_status = PaymentStatus.SUBMITTED
+        db.session.commit()
+    assert payment.payment_status == PaymentStatus.PENDING
+
+    assert submit(client, url, "SECOND-REF-456").status_code == 409
+    with test_app.app_context():
+        current = db.session.get(Payment, payment.id)
+        assert current.payment_status == PaymentStatus.SUBMITTED
+        assert current.payment_reference == "FIRST-REF-123"
+
+
+def test_stale_method_change_cannot_replace_submitted_payment(client, test_app):
+    configured_online(test_app)
+    _, url = created_order(client, test_app)
+    assert choose(client, url, "ONLINE").status_code == 302
+    payment = db.session.scalar(select(Payment))
+    assert payment.payment_status == PaymentStatus.PENDING
+    with test_app.app_context():
+        current = db.session.get(Payment, payment.id)
+        current.payment_reference = "FIRST-REF-123"
+        current.payment_status = PaymentStatus.SUBMITTED
+        db.session.commit()
+    assert payment.payment_status == PaymentStatus.PENDING
+
+    assert choose(client, url, "ONSITE").status_code == 409
+    with test_app.app_context():
+        current = db.session.get(Payment, payment.id)
+        assert current.payment_method == PaymentMethod.ONLINE
+        assert current.payment_status == PaymentStatus.SUBMITTED
+        assert current.payment_reference == "FIRST-REF-123"
+
+
 def test_onsite_selection_and_pending_method_change(client, test_app):
     configured_online(test_app)
     _, url = created_order(client, test_app)

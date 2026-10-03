@@ -41,6 +41,7 @@ class TestingConfig(Config):
 
 class ProductionConfig(Config):
     ENV_NAME = "production"
+    DEBUG = False
     SESSION_COOKIE_SECURE = True
     REMEMBER_COOKIE_SECURE = True
 
@@ -77,8 +78,14 @@ def configure_runtime(app: Flask) -> None:
     if app.config["ENV_NAME"] == "production":
         if not database_url or not database_url.startswith("postgresql"):
             raise RuntimeError("Production requires a PostgreSQL DATABASE_URL.")
-        if not os.getenv("SECRET_KEY"):
-            raise RuntimeError("Production requires SECRET_KEY.")
+        secret_key = os.getenv("SECRET_KEY", "")
+        if len(secret_key.strip()) < 32:
+            raise RuntimeError("Production requires a SECRET_KEY of at least 32 characters.")
+        flask_debug = os.getenv("FLASK_DEBUG")
+        # Match Flask CLI's parsing: values such as "off" or " false" enable debug.
+        debug_enabled = bool(flask_debug and flask_debug.lower() not in {"0", "false", "no"})
+        if app.config.get("DEBUG") or debug_enabled:
+            raise RuntimeError("Debug mode must be disabled in production.")
 
     app.config["SQLALCHEMY_DATABASE_URI"] = database_url
     app.config["SECRET_KEY"] = (
