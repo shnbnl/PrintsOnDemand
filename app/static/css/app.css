@@ -245,6 +245,18 @@ button:disabled, input[type="submit"]:disabled { opacity: 0.52; cursor: not-allo
 .order-item-card h3 { overflow-wrap: anywhere; }
 .order-item-list { display: grid; gap: 0.6rem; }
 .payment-instructions { border-color: #b9c8d7; background: #eaf0f6; }
+.payment-summary-context, .payment-summary-state { overflow-wrap: anywhere; }
+.payment-summary-context { padding-bottom: 0.8rem; border-bottom: 1px solid var(--border); }
+.payment-summary-items { margin: 0 0 0.8rem; padding: 0; list-style: none; }
+.payment-summary-items li { display: flex; justify-content: space-between; gap: 0.75rem; padding: 0.35rem 0; overflow-wrap: anywhere; }
+.payment-summary-items li span { min-width: 0; }
+.payment-summary-items li strong { flex: none; }
+.payment-summary-state { margin: 1rem 0 0; padding-top: 0.75rem; border-top: 1px solid var(--border); }
+.payment-qr { width: min(100%, 17rem); margin: 0.9rem auto; padding: 0.8rem; border-radius: var(--radius); background: white; text-align: center; }
+.payment-qr img { display: block; width: 100%; max-height: 15rem; margin: 0 auto 0.6rem; object-fit: contain; }
+.payment-qr p { margin: 0; font-size: 0.9rem; }
+.payment-qr-fallback { padding: 0.75rem; border-radius: var(--radius-sm); background: white; }
+.payment-instructions, .payment-panel p { overflow-wrap: anywhere; }
 .payment-reference-form { margin-top: 1rem; }
 .status-badge { display: inline-flex; align-items: center; gap: 0.35rem; max-width: 100%; min-height: 1.75rem; padding: 0.25rem 0.65rem; border: 1px solid #b9c8d7; border-radius: 99px; color: var(--navy); background: #eaf0f6; font-size: 0.76rem; font-weight: 850; letter-spacing: 0.025em; line-height: 1.2; overflow-wrap: anywhere; }
 .status-badge--success, .status-badge[data-status="PAID"], .status-badge[data-status="COMPLETED"], .status-badge[data-status="READY"] { border-color: #a9d5bd; color: var(--success); background: var(--success-bg); }

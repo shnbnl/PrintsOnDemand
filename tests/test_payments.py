@@ -180,7 +180,7 @@ def test_online_requires_complete_configuration_and_valid_method(client, test_ap
     assert choose(client, url, "ONLINE").status_code == 302
 
 
-@pytest.mark.parametrize("reference", ["x", "bad<script>", "x" * 121, " "])
+@pytest.mark.parametrize("reference", ["x", "bad<script>", "x" * 121, " " * 121 + "VALID-REF", " "])
 def test_invalid_reference_is_rejected_without_state_change(client, test_app, reference):
     configured_online(test_app)
     _, url = created_order(client, test_app)
@@ -190,6 +190,56 @@ def test_invalid_reference_is_rejected_without_state_change(client, test_app, re
         payment = db.session.scalar(select(Payment))
         assert payment.payment_status == PaymentStatus.PENDING
         assert payment.payment_reference is None
+
+
+@pytest.mark.parametrize("qr_url,shown", [
+    ("", False),
+    ("/static/payment/qr.png", True),
+    ("https://example.test/qr.png?version=1&size=2", True),
+    ("javascript:alert(1)", False),
+    ("data:image/png;base64,AAAA", False),
+    ("//example.test/qr.png", False),
+    ("http://example.test/qr.png", False),
+    ("/private/uploads/qr.png", False),
+    ("/static/../private/qr.png", False),
+])
+def test_online_qr_is_optional_and_safe(client, test_app, qr_url, shown):
+    configured_online(test_app)
+    test_app.config["PAYMENT_QR_IMAGE_URL"] = qr_url
+    _, url = created_order(client, test_app)
+    assert choose(client, url, "ONLINE").status_code == 302
+    response = client.get(url)
+    assert response.status_code == 200
+    assert (b'alt="Configured payment QR code' in response.data) is shown
+    assert (b"No QR image is configured" in response.data) is not shown
+    assert b"Use the example transfer destination below" in response.data
+    if qr_url.startswith("https:"):
+        assert b"version=1&amp;size=2" in response.data
+
+
+def test_payment_summary_and_normalized_reference_keep_stored_amount(client, test_app):
+    configured_online(test_app)
+    _, url = created_order(client, test_app)
+    assert choose(client, url, "ONLINE").status_code == 302
+    pending = client.get(url)
+    for expected in (b"Payment summary", b"Order items", b"Printing Shop",
+                     b"Fulfillment:", b"Subtotal: PHP 6.75", b"Total: PHP 6.75"):
+        assert expected in pending.data
+    assert submit(client, url, "  DEMO   REF-123  ", amount="0.01", payment_status="PAID").status_code == 302
+    submitted = client.get(url)
+    assert b"Payment reference submitted" in submitted.data
+    assert b"awaiting verification" in submitted.data
+    assert b"Submitted reference: DEMO REF-123" in submitted.data
+    assert b"Payment status: SUBMITTED" in submitted.data
+    assert b"Payment successful" not in submitted.data
+    history = client.get("/orders")
+    assert b"Awaiting payment verification" in history.data
+    with test_app.app_context():
+        payment = db.session.scalar(select(Payment))
+        assert payment.payment_reference == "DEMO REF-123"
+        assert payment.amount == payment.order.total == Decimal("6.75")
+        assert payment.payment_status == PaymentStatus.SUBMITTED
+        assert payment.order.status == OrderStatus.PENDING_PAYMENT
 
 
 def test_payment_ownership_authentication_csrf_and_no_verification_route(client, test_app):

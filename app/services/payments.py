@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from urllib.parse import unquote, urlsplit
 
 from flask import current_app
 from sqlalchemy import exists, select, update
@@ -14,6 +15,29 @@ from app.models.user import utc_now
 
 
 REFERENCE_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9 ._/-]{3,119}\Z")
+STATIC_QR_PATH = re.compile(r"/static/[A-Za-z0-9/_-]+\.(?:png|jpe?g|webp|svg)\Z", re.IGNORECASE)
+
+
+def payment_qr_image_url() -> str | None:
+    """Return only a safe public QR image URL; never use private upload paths."""
+    value = current_app.config.get("PAYMENT_QR_IMAGE_URL", "")
+    if not isinstance(value, str):
+        return None
+    value = value.strip()
+    if not value or any(char.isspace() or ord(char) < 32 for char in value) or "\\" in value:
+        return None
+    try:
+        parsed = urlsplit(value)
+        if parsed.scheme == "https":
+            return value if parsed.hostname and not parsed.username and not parsed.password and not parsed.fragment else None
+        if parsed.scheme or parsed.netloc or parsed.query or parsed.fragment:
+            return None
+        path = unquote(parsed.path)
+        if ".." in path.split("/"):
+            return None
+        return value if STATIC_QR_PATH.fullmatch(path) else None
+    except ValueError:
+        return None
 
 
 def pending_order_for_payment():
@@ -133,7 +157,9 @@ def submit_online_reference(*, order_reference: str, user_id: int, reference: st
         raise PaymentError("Payment amount no longer matches the order.", 409)
     if online_payment_details() is None:
         raise PaymentError("Online payment is currently unavailable.", 409)
-    cleaned = reference.strip() if isinstance(reference, str) else ""
+    if isinstance(reference, str) and len(reference) > 120:
+        raise PaymentError("Enter a payment reference of 4–120 permitted characters.")
+    cleaned = " ".join(reference.split()) if isinstance(reference, str) else ""
     if not REFERENCE_PATTERN.fullmatch(cleaned):
         raise PaymentError("Enter a payment reference of 4–120 permitted characters.")
     if payment.payment_status == PaymentStatus.SUBMITTED and payment.payment_reference == cleaned:

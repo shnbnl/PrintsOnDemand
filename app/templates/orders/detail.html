@@ -77,14 +77,21 @@
   </section>
   <section class="content-card price-summary order-total">
     <p class="page-eyebrow">Price summary</p>
-    <h2>Total</h2>
+    <h2>Payment summary</h2>
+    <p class="payment-summary-context"><strong>{{ order.shop_name }}</strong><br>Order reference: {{ order.order_reference }}<br>Fulfillment: {{ order.destination.label if order.destination else 'Not selected' }}</p>
+    <h3>Order items</h3>
+    <ul class="payment-summary-items">
+      {% for item in order.items %}<li><span>{{ item.original_filename }} ({{ item.quantity }} {{ 'print' if item.quantity == 1 else 'prints' }})</span><strong>{{ order.currency }} {{ item.line_total }}</strong></li>{% endfor %}
+    </ul>
     <div class="summary-list">
       <p class="summary-row">Subtotal: {{ order.currency }} {{ order.subtotal }}</p>
       {% if order.items | selectattr('is_rush') | list %}<p class="summary-row">Rush printing fee: {{ order.currency }} {{ order.rush_fee }}</p>{% endif %}
       {% if order.destination and order.destination.value == 'DELIVERY' %}<p class="summary-row">Delivery fee: {{ order.currency }} {{ order.delivery_fee }}</p>{% endif %}
+      {% if order.fees_total > order.rush_fee + order.delivery_fee %}<p class="summary-row">Other fees: {{ order.currency }} {{ order.fees_total - order.rush_fee - order.delivery_fee }}</p>{% endif %}
       <p class="summary-row">Fees total: {{ order.currency }} {{ order.fees_total }}</p>
       <p class="summary-row summary-total"><strong>Total: {{ order.currency }} {{ order.total }}</strong></p>
     </div>
+    <p class="payment-summary-state">Payment method: {{ tracking.payment_method }}<br>Payment status: {{ tracking.payment_status }}{% if order.payment and order.payment.payment_status.value == 'SUBMITTED' %} (awaiting verification){% endif %}</p>
   </section>
   <section class="content-card payment-panel">
     <p class="page-eyebrow">Choose or review your method</p>
@@ -98,16 +105,20 @@
       <p>Order reference: {{ order.order_reference }}</p>
       {% if order.payment.payment_method.value == 'ONSITE' %}
         {% if order.payment.payment_status.value == 'PENDING' %}
-          <div class="payment-instructions"><h3>Pay onsite</h3><p>Order created. Payment will be made onsite.</p><p>{{ onsite_instructions }}</p></div>
+          <div class="payment-instructions"><h3>Pay onsite</h3><p>Order created. Payment will be made onsite. Your payment remains pending.</p><p>{{ onsite_instructions }}</p></div>
         {% elif order.payment.payment_status.value == 'PAID' %}
           <p>Onsite payment was recorded as paid.</p>
         {% endif %}
       {% elif order.payment.payment_method.value == 'ONLINE' %}
         {% if order.payment.payment_status.value == 'SUBMITTED' %}
-          <div class="payment-instructions"><h3>Awaiting verification</h3><p>Payment submitted for verification. It has not been verified or completed.</p><p>Submitted reference: {{ order.payment.payment_reference }}</p></div>
+          <div class="payment-instructions" role="status"><h3>Payment reference submitted</h3><p>Your payment reference has been received and is awaiting verification. Payment submitted for verification. It has not been verified or completed.</p><p>Submitted reference: {{ order.payment.payment_reference }}</p><p><strong>Next step:</strong> Wait for payment verification before shop processing.</p></div>
         {% elif order.payment.payment_status.value == 'PENDING' %}
           {% if online_details %}
-            <div class="payment-instructions"><h3>Online payment instructions</h3><p>Use these configured manual payment instructions. Selecting online payment does not confirm a transfer.</p><p>Instructions: {{ online_details.instructions }}</p><p>Account/name: {{ online_details.account_name }}</p><p>Payment destination: {{ online_details.destination }}</p></div>
+            <div class="payment-instructions"><h3>Online payment instructions</h3><p>Use these configured manual payment instructions. Selecting online payment does not confirm a transfer.</p>
+              {% if payment_qr_image_url %}<div class="payment-qr"><img src="{{ payment_qr_image_url }}" alt="Configured payment QR code for this order's online payment" loading="lazy"><p>Scan using the configured payment app, then enter your payment reference below.</p></div>
+              {% else %}<p class="payment-qr-fallback">No QR image is configured. Use the payment details below, then enter your payment reference.</p>{% endif %}
+              <p>Instructions: {{ online_details.instructions }}</p><p>Account/name: {{ online_details.account_name }}</p><p>Payment destination: {{ online_details.destination }}</p>
+            </div>
           {% else %}
             <p>Online payment instructions are currently unavailable. Contact the shop before making a transfer.</p>
           {% endif %}
@@ -138,7 +149,7 @@
     {% if reference_form %}
       <form class="form-stack payment-reference-form" method="post" action="{{ url_for('orders.submit_payment', order_reference=order.order_reference) }}">
         {{ reference_form.hidden_tag() }}
-        <div class="field">{{ reference_form.payment_reference.label }} {{ reference_form.payment_reference(placeholder="Reference from your transfer") }}{% for error in reference_form.payment_reference.errors %}<p class="field-error" role="alert">{{ error }}</p>{% endfor %}</div>
+        <div class="field">{{ reference_form.payment_reference.label }} {{ reference_form.payment_reference(placeholder="Reference from your transfer", maxlength="120", autocomplete="off", required=true, aria_describedby="payment-reference-hint") }}<small id="payment-reference-hint">Enter the 4–120 character reference from your payment. It will be sent for verification.</small>{% for error in reference_form.payment_reference.errors %}<p class="field-error" role="alert">{{ error }}</p>{% endfor %}</div>
         {{ reference_form.submit(class_="button button-primary") }}
       </form>
     {% endif %}

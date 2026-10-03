@@ -33,6 +33,7 @@ class Config:
     ONLINE_PAYMENT_INSTRUCTIONS = ""
     ONLINE_PAYMENT_ACCOUNT_NAME = ""
     ONLINE_PAYMENT_DESTINATION = ""
+    PAYMENT_QR_IMAGE_URL = ""
     ONSITE_PAYMENT_INSTRUCTIONS = "Pay at the printing shop. Your order remains unpaid until payment is recorded."
     GOOGLE_MAPS_API_KEY = ""
     GOOGLE_MAPS_MAP_ID = "DEMO_MAP_ID"
@@ -132,6 +133,7 @@ def configure_runtime(app: Flask) -> None:
     for name in (
         "ONLINE_PAYMENT_INSTRUCTIONS", "ONLINE_PAYMENT_ACCOUNT_NAME",
         "ONLINE_PAYMENT_DESTINATION", "ONSITE_PAYMENT_INSTRUCTIONS",
+        "PAYMENT_QR_IMAGE_URL",
     ):
         value = os.getenv(name)
         if value:

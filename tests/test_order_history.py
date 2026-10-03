@@ -72,7 +72,7 @@ def test_history_is_owner_scoped_newest_first_and_payment_truthful(client, test_
     assert b"Campus Prints" in listing.data
     assert b"PHP 6.75" in listing.data
     assert b"PENDING_PAYMENT" in listing.data
-    assert b"SUBMITTED (awaiting verification)" in listing.data
+    assert b"Awaiting payment verification" in listing.data
     assert b"Not selected" in listing.data
     assert b"REF-SECOND-123" not in listing.data
     assert client.get(first_url).status_code == 200

@@ -21,6 +21,7 @@ from app.services.fulfillment import (
 )
 from app.services.payments import (
     PaymentError, online_payment_details, owned_order, payment_configuration,
+    payment_qr_image_url,
     select_payment_method, submit_online_reference,
 )
 from app.services.pricing import PricingError, PrintOptions, quote_cart
@@ -372,7 +373,8 @@ def render_order_detail(order, *, payment_error=None, professor_error=None, stat
     return render_template(
         "orders/detail.html", order=order, professor_form=professor_form(order),
         method_form=method_form, reference_form=reference_form,
-        online_details=online_details, payment_error=payment_error,
+        online_details=online_details, payment_qr_image_url=payment_qr_image_url(),
+        payment_error=payment_error,
         professor_error=professor_error,
         onsite_instructions=payment_configuration()["onsite_instructions"],
         tracking=build_tracking(order),
