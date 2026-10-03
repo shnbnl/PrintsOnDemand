@@ -31,10 +31,10 @@ DEMO_FEES = {FeeType.RUSH_PRINTING: "25.00", FeeType.DELIVERY: "30.00"}
 DEMO_ADDRESS = "Demo location near Mapúa Malayan Colleges Laguna"
 # User-provided coordinates for these seeded demo-shop records.
 DEMO_SHOP_COORDINATES = {
-    "Blue and Silver Bookstore": (Decimal("14.243034885614946"), Decimal("121.1129526948974")),
-    "CHALECOSPOT": (Decimal("14.24264686747224"), Decimal("121.11376032373335")),
-    "Iced Design and Prints": (Decimal("14.243072562326358"), Decimal("121.11352762558575")),
-    "Pixels Print and Press": (Decimal("14.242065977086666"), Decimal("121.11273536791352")),
+    "Blue and Silver Bookstore": (Decimal("14.243257164979285"), Decimal("121.11300634061479")),
+    "CHALECOSPOT": (Decimal("14.242503893301787"), Decimal("121.1137415531051")),
+    "Iced Design and Prints": (Decimal("14.243062163277235"), Decimal("121.11345252527298")),
+    "Pixels Print and Press": (Decimal("14.241960049308364"), Decimal("121.11268038748165")),
 }
 
 DEMO_SHOPS = (

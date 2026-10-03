@@ -15,6 +15,20 @@ from app.models import (ColorMode, FeeType, PaperSize, PrintPrice, PrintingShop,
 from tests.test_shops import add_shop, add_user, login, token
 
 
+FINAL_DEMO_COORDINATES = {
+    "Blue and Silver Bookstore": (Decimal("14.243257164979285"), Decimal("121.11300634061479")),
+    "CHALECOSPOT": (Decimal("14.242503893301787"), Decimal("121.1137415531051")),
+    "Iced Design and Prints": (Decimal("14.243062163277235"), Decimal("121.11345252527298")),
+    "Pixels Print and Press": (Decimal("14.241960049308364"), Decimal("121.11268038748165")),
+}
+PREVIOUS_DEMO_COORDINATES = {
+    "Blue and Silver Bookstore": (Decimal("14.243034885614946"), Decimal("121.1129526948974")),
+    "CHALECOSPOT": (Decimal("14.24264686747224"), Decimal("121.11376032373335")),
+    "Iced Design and Prints": (Decimal("14.243072562326358"), Decimal("121.11352762558575")),
+    "Pixels Print and Press": (Decimal("14.242065977086666"), Decimal("121.11273536791352")),
+}
+
+
 def map_data(response):
     match = re.search(rb'<script id="map-shop-data" type="application/json">(.*?)</script>', response.data, re.S)
     assert match
@@ -201,10 +215,16 @@ def test_database_rejects_out_of_range_coordinate(test_app):
 def test_demo_seed_corrects_only_coordinates_for_existing_demo_shops(test_app):
     from app.seed import DEMO_SHOP_COORDINATES
 
+    assert DEMO_SHOP_COORDINATES == FINAL_DEMO_COORDINATES
     runner = test_app.test_cli_runner()
     seeded = runner.invoke(args=["seed-demo-shops"])
     assert seeded.exit_code == 0
     assert "Added 4 demo shops; refreshed verified coordinates on 0 existing demo shops." in seeded.output
+    with test_app.app_context():
+        assigned_shop_id = db.session.scalar(
+            select(PrintingShop.id).where(PrintingShop.name == "Blue and Silver Bookstore")
+        )
+    staff_id = add_user(test_app, UserRole.SHOP_STAFF, "seed.staff@example.com", assigned_shop_id)
     with test_app.app_context():
         shops = db.session.scalars(select(PrintingShop).order_by(PrintingShop.name)).all()
         assert len(shops) == 4
@@ -212,12 +232,17 @@ def test_demo_seed_corrects_only_coordinates_for_existing_demo_shops(test_app):
         original_data = {
             shop.name: (shop.description, shop.address, shop.opening_time,
                         shop.closing_time, shop.is_active, shop.is_demo,
-                        len(shop.services), len(shop.prices), len(shop.fees))
+                        tuple(sorted((service.service_type.value, service.enabled)
+                                     for service in shop.services)),
+                        tuple(sorted((price.paper_size.value, price.color_mode.value,
+                                      price.price, price.is_demo) for price in shop.prices)),
+                        tuple(sorted((fee.fee_type.value, fee.amount, fee.is_demo)
+                                     for fee in shop.fees)),
+                        tuple(sorted(staff.id for staff in shop.staff)))
             for shop in shops
         }
         for shop in shops:
-            shop.latitude = Decimal("14.000000000000000")
-            shop.longitude = Decimal("121.000000000000000")
+            shop.latitude, shop.longitude = PREVIOUS_DEMO_COORDINATES[shop.name]
         db.session.commit()
     refreshed = runner.invoke(args=["seed-demo-shops"])
     assert refreshed.exit_code == 0
@@ -227,10 +252,17 @@ def test_demo_seed_corrects_only_coordinates_for_existing_demo_shops(test_app):
         assert len(shops) == 4
         for shop in shops:
             assert shop.id == original_ids[shop.name]
-            assert (shop.latitude, shop.longitude) == DEMO_SHOP_COORDINATES[shop.name]
+            assert (shop.latitude, shop.longitude) == FINAL_DEMO_COORDINATES[shop.name]
             assert (shop.description, shop.address, shop.opening_time,
                     shop.closing_time, shop.is_active, shop.is_demo,
-                    len(shop.services), len(shop.prices), len(shop.fees)) == original_data[shop.name]
+                    tuple(sorted((service.service_type.value, service.enabled)
+                                 for service in shop.services)),
+                    tuple(sorted((price.paper_size.value, price.color_mode.value,
+                                  price.price, price.is_demo) for price in shop.prices)),
+                    tuple(sorted((fee.fee_type.value, fee.amount, fee.is_demo)
+                                 for fee in shop.fees)),
+                    tuple(sorted(staff.id for staff in shop.staff))) == original_data[shop.name]
+        assert staff_id in tuple(staff.id for staff in shops[0].staff)
     unchanged = runner.invoke(args=["seed-demo-shops"])
     assert unchanged.exit_code == 0
     assert "Added 0 demo shops; refreshed verified coordinates on 0 existing demo shops." in unchanged.output
@@ -239,14 +271,15 @@ def test_demo_seed_corrects_only_coordinates_for_existing_demo_shops(test_app):
 def test_exact_demo_coordinates_are_persisted_and_sent_to_map(client, test_app):
     from app.seed import DEMO_SHOP_COORDINATES
 
+    assert DEMO_SHOP_COORDINATES == FINAL_DEMO_COORDINATES
     assert test_app.test_cli_runner().invoke(args=["seed-demo-shops"]).exit_code == 0
     add_user(test_app, UserRole.STUDENT, "exact-map@example.com")
     login(client, "exact-map@example.com")
     markers = map_data(client.get("/shops/map"))
-    assert len(markers) == len(DEMO_SHOP_COORDINATES) == 4
-    assert {marker["name"] for marker in markers} == set(DEMO_SHOP_COORDINATES)
+    assert len(markers) == len(FINAL_DEMO_COORDINATES) == 4
+    assert {marker["name"] for marker in markers} == set(FINAL_DEMO_COORDINATES)
     for marker in markers:
-        latitude, longitude = DEMO_SHOP_COORDINATES[marker["name"]]
+        latitude, longitude = FINAL_DEMO_COORDINATES[marker["name"]]
         assert marker["position"] == {"lat": float(latitude), "lng": float(longitude)}
         with test_app.app_context():
             shop = db.session.get(PrintingShop, marker["id"])
@@ -255,8 +288,9 @@ def test_exact_demo_coordinates_are_persisted_and_sent_to_map(client, test_app):
 
 def test_demo_seed_does_not_locate_existing_non_demo_shop(test_app):
     existing_id = add_shop(test_app, "Blue and Silver Bookstore")
+    set_location(test_app, existing_id, "14.240001", "121.110001")
     assert test_app.test_cli_runner().invoke(args=["seed-demo-shops"]).exit_code == 0
     with test_app.app_context():
         existing = db.session.get(PrintingShop, existing_id)
         assert existing.is_demo is False
-        assert existing.latitude is existing.longitude is None
+        assert (existing.latitude, existing.longitude) == (Decimal("14.240001"), Decimal("121.110001"))
