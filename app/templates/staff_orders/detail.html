@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_status.html" import payment_badge, order_badge %}
 
 {% block title %}Shop order {{ order.order_reference }} | Prints On Demand{% endblock %}
 
@@ -9,8 +10,8 @@
     <h1>Order {{ order.order_reference }}</h1>
     <p class="page-lead">Placed by {{ order.user.name }} for {{ order.shop_name }}.</p>
     <p class="status-group">
-      <span class="status-badge" data-status="{{ order.status.value }}">{{ order.status.value }}</span>
-      <span class="status-badge"{% if order.payment %} data-status="{{ order.payment.payment_status.value }}"{% endif %}>Payment: {{ order.payment.payment_status.value if order.payment else 'Not selected' }}</span>
+      {{ order_badge(order) }}
+      {{ payment_badge(order.payment) }}
     </p>
   </header>
 
@@ -20,7 +21,7 @@
       <div class="summary-row"><dt>Created</dt><dd><time datetime="{{ order.created_at.isoformat() }}">{{ order.created_at.strftime('%Y-%m-%d %H:%M UTC') }}</time></dd></div>
       <div class="summary-row"><dt>Printing shop</dt><dd>{{ order.shop_name }}</dd></div>
       <div class="summary-row"><dt>Customer</dt><dd>{{ order.user.name }}</dd></div>
-      <div class="summary-row"><dt>Order status</dt><dd>{{ order.status.value }}</dd></div>
+      <div class="summary-row"><dt>Order status</dt><dd>{{ order_badge(order) }}</dd></div>
     </dl>
   </section>
 
@@ -56,7 +57,7 @@
     {% if order.payment %}
       <dl class="summary-list">
         <div class="summary-row"><dt>Method</dt><dd>{{ order.payment.payment_method.value }}</dd></div>
-        <div class="summary-row"><dt>Status</dt><dd><span class="status-badge" data-status="{{ order.payment.payment_status.value }}">{{ order.payment.payment_status.value }}</span></dd></div>
+        <div class="summary-row"><dt>Status</dt><dd>{{ payment_badge(order.payment) }}</dd></div>
         <div class="summary-row"><dt>Amount</dt><dd>{{ order.payment.currency }} {{ order.payment.amount }}</dd></div>
         {% if order.payment.payment_reference %}<div class="summary-row"><dt>Payment reference</dt><dd>{{ order.payment.payment_reference }}</dd></div>{% endif %}
       </dl>
@@ -90,7 +91,7 @@
 
   <section class="section-card">
     <h2>Processing</h2>
-    <p>Current status: <span class="status-badge" data-status="{{ order.status.value }}">{{ order.status.value }}</span></p>
+    <p>Current status: {{ order_badge(order) }}</p>
     {% if order.processing_started_at or order.ready_at or order.completed_at %}
       <dl class="summary-list">
         {% if order.processing_started_at %}<div class="summary-row"><dt>Processing started</dt><dd><time datetime="{{ order.processing_started_at.isoformat() }}">{{ order.processing_started_at.strftime('%Y-%m-%d %H:%M UTC') }}</time></dd></div>{% endif %}

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_status.html" import payment_badge, order_badge %}
 
 {% block title %}Order {{ order.order_reference }} | Prints On Demand{% endblock %}
 
@@ -8,28 +9,30 @@
     <span class="success-mark" aria-hidden="true">✓</span>
     <div>
       <p class="page-eyebrow">Your print order</p>
-      <h1>Order created successfully.</h1>
+      <h1>Order {{ order.order_reference }}</h1>
+      <p>Your order was created successfully. Keep this reference to follow its progress.</p>
   {% if order.payment and order.payment.payment_status.value == 'PAID' %}
-      <p>Your order has been created. Payment was recorded as paid by an authorized process.</p>
+      <p>Payment verified. Check tracking for the shop's progress.</p>
   {% elif order.payment and order.payment.payment_status.value == 'REJECTED' %}
-      <p>Your order has been created, but the submitted payment was rejected. Check the reason and contact the printing shop.</p>
+      <p>Payment rejected. Review the reason below and contact the printing shop about this order.</p>
+  {% elif order.payment and order.payment.payment_status.value == 'SUBMITTED' %}
+      <p>Payment submitted for verification. The shop has not confirmed receipt yet.</p>
   {% else %}
-      <p>Your order has been created and is awaiting payment. Payment has not been completed.</p>
+      <p>Payment is pending. Choose a method below or follow the selected method's instructions.</p>
   {% endif %}
     </div>
   </header>
   <section class="content-card order-confirmation" aria-label="Order confirmation">
     <div class="order-confirmation-main">
       <p class="page-eyebrow">Keep this reference</p>
-      <h2>Order reference: {{ order.order_reference }}</h2>
+      <h2>{{ order.order_reference }}</h2>
       <p>Printing shop: {{ order.shop_name }}</p>
       <p><strong>Order total: {{ order.currency }} {{ order.total }}</strong></p>
     </div>
     <div class="order-confirmation-status">
-      <p>Payment method: {{ tracking.payment_method }}</p>
-      <p>Payment status: {{ tracking.payment_status }}</p>
-      <p>Order status: {{ order.status.value }}</p>
-      <span class="status-badge status-{{ order.status.value|lower }}">{{ order.status.value }}</span>
+      <p class="detail-label">Payment method</p><p>{{ tracking.payment_method }}</p>
+      <p class="detail-label">Payment</p><p>{{ payment_badge(order.payment) }}</p>
+      <p class="detail-label">Order status</p><p>{{ order_badge(order) }}</p>
     </div>
     <div class="order-next-step"><p><strong>Next step:</strong> {{ tracking.next_step }}</p><a href="#tracking">View order tracking</a></div>
   </section>
@@ -41,7 +44,6 @@
       <div class="detail-row"><dt>Created</dt><dd>{{ order.created_at.strftime('%Y-%m-%d %H:%M UTC') }}</dd></div>
       <div class="detail-row"><dt>Printing shop</dt><dd>{{ order.shop_name }}</dd></div>
     </dl>
-    <p>Status: {{ order.status.value }}{% if order.status.value == 'PENDING_PAYMENT' and (not order.payment or order.payment.payment_status.value != 'PAID') %} (awaiting payment){% endif %}</p>
     {% if order.destination and order.destination.value == 'PROFESSOR' %}
       <div class="destination-panel">
         <h3>Direct-to-Professor</h3>
@@ -93,18 +95,15 @@
       <p class="summary-row">Fees total: {{ order.currency }} {{ order.fees_total }}</p>
       <p class="summary-row summary-total"><strong>Total: {{ order.currency }} {{ order.total }}</strong></p>
     </div>
-    <p class="payment-summary-state">Payment method: {{ tracking.payment_method }}<br>Payment status: {{ tracking.payment_status }}{% if order.payment and order.payment.payment_status.value == 'SUBMITTED' %} (awaiting verification){% endif %}</p>
+    <div class="payment-summary-state"><p>Payment method: <strong>{{ tracking.payment_method }}</strong></p><p>Payment status: {{ payment_badge(order.payment) }}</p></div>
   </section>
   <section class="content-card payment-panel">
     <p class="page-eyebrow">Choose or review your method</p>
     <h2>Payment</h2>
     {% if payment_error %}<p class="notice notice-error" role="alert">{{ payment_error }}</p>{% endif %}
     {% if order.payment %}
-      <p>Method selected: {{ order.payment.payment_method.value }}</p>
-      <p>Payment status: {{ order.payment.payment_status.value }}</p>
-      <span class="status-badge status-{{ order.payment.payment_status.value|lower }}">{{ order.payment.payment_status.value }}{% if order.payment.payment_status.value == 'SUBMITTED' %} · awaiting verification{% endif %}</span>
-      <p>{% if order.payment.payment_status.value == 'PAID' %}Payment amount{% else %}Amount to pay{% endif %}: {{ order.payment.currency }} {{ order.payment.amount }}</p>
-      <p>Order reference: {{ order.order_reference }}</p>
+      <p>Payment status: {{ payment_badge(order.payment) }}</p>
+      <p>{% if order.payment.payment_status.value == 'PAID' %}Payment amount{% elif order.payment.payment_status.value == 'PENDING' %}Amount due{% else %}Order amount{% endif %}: {{ order.payment.currency }} {{ order.payment.amount }}</p>
       {% if order.payment.payment_method.value == 'ONSITE' %}
         {% if order.payment.payment_status.value == 'PENDING' %}
           <div class="payment-instructions"><h3>Pay onsite</h3><p>Order created. Payment will be made onsite. Your payment remains pending.</p><p>{{ onsite_instructions }}</p></div>
@@ -117,7 +116,7 @@
         {% elif order.payment.payment_status.value == 'REJECTED' %}
           <div class="payment-instructions"><h3>Payment rejected</h3><p>The submitted reference was rejected. Contact the printing shop about this order.</p>{% if order.payment.rejection_reason %}<p><strong>Reason:</strong> {{ order.payment.rejection_reason }}</p>{% endif %}</div>
         {% elif order.payment.payment_status.value == 'SUBMITTED' %}
-          <div class="payment-instructions" role="status"><h3>Payment reference submitted</h3><p>Your payment reference has been received and is awaiting verification. Payment submitted for verification. It has not been verified or completed.</p><p>Submitted reference: {{ order.payment.payment_reference }}</p><p><strong>Next step:</strong> Wait for payment verification before shop processing.</p></div>
+          <div class="payment-instructions" role="status"><h3>Payment reference submitted</h3><p>Payment submitted for verification. A staff member will check the transfer before printing starts.</p><p>Submitted reference: {{ order.payment.payment_reference }}</p></div>
         {% elif order.payment.payment_status.value == 'PENDING' %}
           {% if online_details %}
             <div class="payment-instructions"><h3>Online payment instructions</h3><p>Use these configured manual payment instructions. Selecting online payment does not confirm a transfer.</p>

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_status.html" import payment_badge, order_badge %}
 
 {% block title %}Order History | Prints On Demand{% endblock %}
 
@@ -39,8 +40,8 @@
               <td data-label="Placed"><time datetime="{{ order.created_at.isoformat() }}">{{ order.created_at.strftime('%Y-%m-%d %H:%M UTC') }}</time></td>
               <td data-label="Printing shop">{{ order.shop_name }}</td>
               <td data-label="Total" class="order-card-total">{{ order.currency }} {{ order.total }}</td>
-              <td data-label="Order status"><span class="status-badge status-{{ order.status.value|lower }}">{{ order.status.value }}</span></td>
-              <td data-label="Payment status">{% if order.payment %}<span class="status-badge status-{{ order.payment.payment_status.value|lower }}">{{ {'PENDING': 'Payment pending', 'SUBMITTED': 'Awaiting payment verification', 'PAID': 'Paid', 'REJECTED': 'Payment rejected'}[order.payment.payment_status.value] }}</span>{% else %}<span class="status-badge status-muted">Not selected</span>{% endif %}</td>
+              <td data-label="Order status">{{ order_badge(order) }}</td>
+              <td data-label="Payment status">{{ payment_badge(order.payment) }}</td>
               <td data-label="Fulfillment"><span class="order-destination">{% if order.destination and order.destination.value == 'PROFESSOR' %}Direct-to-Professor: {{ order.professor_name }}{% elif order.destination and order.destination.value == 'PICKUP' %}Scheduled Pickup: {{ order.pickup_date }} {{ order.pickup_slot }}{% elif order.destination and order.destination.value == 'DELIVERY' %}Delivery: {{ order.delivery_date }} {{ order.delivery_slot }}{% else %}Not selected{% endif %}</span><a class="order-card-link" href="{{ url_for('orders.detail', order_reference=order.order_reference) }}">View order <span aria-hidden="true">→</span></a></td>
             </tr>
           {% endfor %}

@@ -28,12 +28,12 @@ def test_new_order_confirmation_and_timeline_without_payment(client, test_app):
         assert tracking.steps[1].timestamp is None
         assert tracking.steps[2].timestamp is None
     assert response.status_code == 200
-    assert b"Order created successfully." in response.data
+    assert b"Your order was created successfully." in response.data
     assert f"Order reference: {reference}".encode() in response.data
     assert f"Order total: PHP {total}".encode() in response.data
-    assert b"Payment method: Not selected" in response.data
-    assert b"Payment status: Not started" in response.data
-    assert b"Order status: PENDING_PAYMENT" in response.data
+    assert b"Payment not selected" in response.data
+    assert b"Payment not selected" in response.data
+    assert b"Awaiting payment" in response.data
     assert b"Choose online or onsite payment for this order" in response.data
     assert b"Order tracking" in response.data
     assert b"Order created" in response.data
@@ -55,8 +55,8 @@ def test_online_tracking_changes_only_with_recorded_payment(client, test_app):
         payment = db.session.scalar(select(Payment))
         selected_at = payment.updated_at.isoformat()
         assert build_tracking(payment.order).steps[1].timestamp == payment.updated_at
-    assert b"Payment method: Online" in pending.data
-    assert b"Payment status: PENDING" in pending.data
+    assert b"Payment method: <strong>Online</strong>" in pending.data
+    assert b"Payment pending" in pending.data
     assert b"no reference submitted" in pending.data
     assert b"submit your payment reference" in pending.data
     assert pending.data.count(b"<time ") == 2
@@ -69,8 +69,8 @@ def test_online_tracking_changes_only_with_recorded_payment(client, test_app):
         submitted_at = payment.updated_at.isoformat()
         assert build_tracking(payment.order).steps[1].timestamp == payment.updated_at
         assert payment.order.status.value == "PENDING_PAYMENT"
-    assert b"Payment method: Online" in submitted.data
-    assert b"Payment status: SUBMITTED" in submitted.data
+    assert b"Payment method: <strong>Online</strong>" in submitted.data
+    assert b"Payment submitted" in submitted.data
     assert b"Payment submitted for verification" in submitted.data
     assert b"awaiting manual verification" in submitted.data
     assert b"Submitted reference: DEMO-REF-1234" in submitted.data
@@ -94,12 +94,12 @@ def test_onsite_confirmation_and_tracking_remain_pending(client, test_app):
         payment = db.session.scalar(select(Payment))
         selected_at = payment.updated_at.isoformat()
         assert build_tracking(payment.order).steps[1].timestamp == payment.updated_at
-    assert b"Payment method: Onsite" in response.data
-    assert b"Payment status: PENDING" in response.data
+    assert b"Payment method: <strong>Onsite</strong>" in response.data
+    assert b"Payment pending" in response.data
     assert b"Payment will be made onsite" in response.data
     assert b"Pay at the shop counter" in response.data
     assert b"Onsite payment selected; payment is pending" in response.data
-    assert b"Payment has not been completed" in response.data
+    assert b"Payment is pending" in response.data
     assert f'datetime="{selected_at}"'.encode() in response.data
     assert b"Payment successful" not in response.data
 
@@ -118,7 +118,7 @@ def test_pending_method_change_tracks_current_recorded_method(client, test_app):
         assert payment.updated_at >= first_updated_at
         assert "Online payment method selected" in tracking.steps[1].detail
     response = client.get(url)
-    assert b"Payment method: Online" in response.data
+    assert b"Payment method: <strong>Online</strong>" in response.data
     assert b"Onsite payment selected" not in response.data
 
 
@@ -189,4 +189,4 @@ def test_professor_validation_error_still_renders_tracking(client, test_app):
     })
     assert response.status_code == 400
     assert b"Order tracking" in response.data
-    assert b"Payment status: Not started" in response.data
+    assert b"Payment not selected" in response.data

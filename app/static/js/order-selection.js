@@ -30,6 +30,19 @@
   update();
 
   const shop = document.querySelector("#shop_id");
+  const professor = document.querySelector("#professor_id");
+  const professorPreview = document.querySelector("#professor-preview");
+  function updateProfessorPreview() {
+    if (!professor || !professorPreview) return;
+    const selected = professor.selectedOptions[0];
+    professorPreview.hidden = !selected?.value;
+    if (!selected?.value) return;
+    for (const field of ["name", "department", "office", "email"]) {
+      professorPreview.querySelector(`[data-professor-${field}]`).textContent = selected.dataset[field];
+    }
+  }
+  professor?.addEventListener("change", updateProfessorPreview);
+  updateProfessorPreview();
   const methods = [...document.querySelectorAll('input[name="destination"]')];
   const panels = [...document.querySelectorAll("[data-method-fields]")];
   function updateFulfillment() {

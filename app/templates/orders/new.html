@@ -84,13 +84,19 @@
           </fieldset>
           <div class="field fulfillment-fields" data-method-fields="PROFESSOR" {% if selected_destination != 'PROFESSOR' %}hidden{% endif %}>
             <label for="professor_id">Approved professor</label>
-            <select id="professor_id" name="professor_id">
+            <select id="professor_id" name="professor_id" aria-describedby="professor-hint">
               <option value="">Select a professor</option>
               {% for professor in professors %}
-                <option value="{{ professor.id }}" {% if selected_professor_id == professor.id|string %}selected{% endif %}>{{ professor.name }} — {{ professor.department or 'Department not listed' }}{% if professor.office %} · {{ professor.office }}{% endif %}</option>
+                <option value="{{ professor.id }}" data-name="{{ professor.name }}" data-department="{{ professor.department or 'Not listed' }}" data-office="{{ professor.office or 'Not listed' }}" data-email="{{ professor.email }}" {% if selected_professor_id == professor.id|string %}selected{% endif %}>{{ professor.name }} — {{ professor.department or 'Department not listed' }}{% if professor.office %} · {{ professor.office }}{% endif %}</option>
               {% endfor %}
             </select>
-            <p class="hint">The professor is an intended recipient. No file or email is sent automatically.</p>
+            <p class="hint" id="professor-hint">Select an approved professor as the intended recipient. No file or email is sent automatically.</p>
+            <dl class="professor-preview summary-list" id="professor-preview" aria-live="polite" hidden>
+              <div class="summary-row"><dt>Name</dt><dd data-professor-name></dd></div>
+              <div class="summary-row"><dt>Department</dt><dd data-professor-department></dd></div>
+              <div class="summary-row"><dt>Office</dt><dd data-professor-office></dd></div>
+              <div class="summary-row"><dt>Email</dt><dd data-professor-email></dd></div>
+            </dl>
           </div>
           <div class="fulfillment-fields" data-method-fields="PICKUP" {% if selected_destination != 'PICKUP' %}hidden{% endif %}>
             <div class="field"><label for="pickup_date">Pickup date</label><input id="pickup_date" name="pickup_date" type="date" min="{{ pickup_min }}" max="{{ pickup_max }}" value="{{ fulfillment_fields.get('pickup_date', '') }}"></div>
@@ -98,6 +104,7 @@
           </div>
           <div class="fulfillment-fields" data-method-fields="DELIVERY" {% if selected_destination != 'DELIVERY' %}hidden{% endif %}>
             <p class="hint">Delivery is a request for the shop. A courier is not booked automatically.</p>
+            <p class="hint">The shop's delivery fee appears on the review page before you place the order.</p>
             <div class="field"><label for="delivery_recipient_name">Recipient name</label><input id="delivery_recipient_name" name="delivery_recipient_name" maxlength="120" value="{{ fulfillment_fields.get('delivery_recipient_name', '') }}"></div>
             <div class="field"><label for="delivery_recipient_phone">Recipient phone</label><input id="delivery_recipient_phone" name="delivery_recipient_phone" type="tel" maxlength="32" value="{{ fulfillment_fields.get('delivery_recipient_phone', '') }}"></div>
             <div class="field"><label for="delivery_address">Delivery address</label><textarea id="delivery_address" name="delivery_address" maxlength="500" rows="3">{{ fulfillment_fields.get('delivery_address', '') }}</textarea></div>

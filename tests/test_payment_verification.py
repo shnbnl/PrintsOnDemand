@@ -73,7 +73,7 @@ def test_admin_queue_verify_audit_and_processing_gate(client, test_app):
     sign_in(client, owner)
     student_page = client.get(url_a)
     assert b"Payment verified" in student_page.data
-    assert b"Payment status: PAID" in student_page.data
+    assert b"Payment verified" in student_page.data
     assert b"Paid" in client.get("/orders").data
 
 

@@ -64,9 +64,9 @@ def test_online_payment_submission_is_unverified_and_idempotent(client, test_app
     assert b"DEMO-ACCOUNT-123" in detail.data
     assert b"Use the example transfer destination below" in detail.data
     assert b"Maria Santos" in detail.data
-    assert b"Payment status: PENDING" in detail.data
-    assert b"Amount to pay: PHP 6.75" in detail.data
-    assert b"Payment has not been completed" in detail.data
+    assert b"Payment pending" in detail.data
+    assert b"Amount due: PHP 6.75" in detail.data
+    assert b"Payment is pending" in detail.data
     with test_app.app_context():
         payment = db.session.scalar(select(Payment))
         order = db.session.scalar(select(Order))
@@ -83,9 +83,9 @@ def test_online_payment_submission_is_unverified_and_idempotent(client, test_app
     ).status_code == 302
     detail = client.get(url)
     assert b"Payment submitted for verification" in detail.data
-    assert b"Payment status: SUBMITTED" in detail.data
+    assert b"Payment submitted" in detail.data
     assert b"DEMO-REF-1234" in detail.data
-    assert b"Payment has not been completed" in detail.data
+    assert b"Payment submitted for verification" in detail.data
     assert b"Payment successful" not in detail.data
     assert submit(client, url, "DEMO-REF-1234").status_code == 302
     assert submit(client, url, "DIFFERENT-REF").status_code == 409
@@ -150,8 +150,8 @@ def test_onsite_selection_and_pending_method_change(client, test_app):
     detail = client.get(url)
     assert b"Order created. Payment will be made onsite." in detail.data
     assert b"Pay at the shop counter" in detail.data
-    assert b"Payment status: PENDING" in detail.data
-    assert b"Payment has not been completed" in detail.data
+    assert b"Payment pending" in detail.data
+    assert b"Payment is pending" in detail.data
     assert choose(client, url, "ONSITE").status_code == 302
     assert submit(client, url, "DEMO-REF-1234").status_code == 409
     assert choose(client, url, "ONLINE").status_code == 302
@@ -230,7 +230,7 @@ def test_payment_summary_and_normalized_reference_keep_stored_amount(client, tes
     assert b"Payment reference submitted" in submitted.data
     assert b"awaiting verification" in submitted.data
     assert b"Submitted reference: DEMO REF-123" in submitted.data
-    assert b"Payment status: SUBMITTED" in submitted.data
+    assert b"Payment submitted" in submitted.data
     assert b"Payment successful" not in submitted.data
     history = client.get("/orders")
     assert b"Awaiting payment verification" in history.data

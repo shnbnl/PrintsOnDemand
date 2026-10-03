@@ -1,0 +1,18 @@
+{% macro payment_badge(payment) -%}
+  {% if payment %}
+    {% set labels = {'PENDING': 'Payment pending', 'SUBMITTED': 'Payment submitted — awaiting verification', 'PAID': 'Payment verified', 'REJECTED': 'Payment rejected'} %}
+    <span class="status-badge" data-status="{{ payment.payment_status.value }}">{{ labels[payment.payment_status.value] }}</span>
+  {% else %}
+    <span class="status-badge status-muted">Payment not selected</span>
+  {% endif %}
+{%- endmacro %}
+
+{% macro order_badge(order) -%}
+  {% set labels = {'PENDING_PAYMENT': 'Awaiting payment', 'PROCESSING': 'Printing', 'COMPLETED': 'Completed'} %}
+  {% if order.status.value == 'READY' %}
+    {% set label = 'Ready for pickup' if order.destination and order.destination.value == 'PICKUP' else 'Ready for fulfillment' %}
+  {% else %}
+    {% set label = labels.get(order.status.value, order.status.value.replace('_', ' ').title()) %}
+  {% endif %}
+  <span class="status-badge" data-status="{{ order.status.value }}">{{ label }}</span>
+{%- endmacro %}

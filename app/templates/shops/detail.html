@@ -56,9 +56,9 @@
     <section class="content-card action-panel">
       <div><h2>Ready to continue?</h2><p>Choose a configured file and review the live price before placing an order.</p></div>
       {% if can_order %}
-        <a class="button button-primary" href="{{ url_for('orders.new', shop_id=shop.id) }}">Proceed to order review <span aria-hidden="true">→</span></a>
+        <a class="button button-primary" href="{{ url_for('orders.new', shop_id=shop.id) }}">Proceed to file selection <span aria-hidden="true">→</span></a>
       {% else %}
-        <div><button type="button" disabled>Proceed</button><p class="hint"><a href="{{ url_for('files.index') }}">Upload and configure a file</a> before ordering.</p></div>
+        <div><a class="button button-primary" href="{{ url_for('files.index') }}">Select files to print <span aria-hidden="true">→</span></a><p class="hint">Upload and configure a file before placing an order.</p></div>
       {% endif %}
     </section>
   {% endif %}

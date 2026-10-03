@@ -5,12 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#052448">
     <title>{% block title %}Prints On Demand{% endblock %}</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/favicon.svg') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
     <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
   </head>
   <body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
     {% macro navigation() %}
-      <a href="{{ url_for('main.index') }}">Home</a>
       {% if current_user.is_authenticated %}
         {% if current_user.role.value == 'STUDENT' %}
           <a href="{{ url_for('shops.index') }}">Printing Shops</a>
@@ -28,12 +29,13 @@
           <a href="{{ url_for('admin_management.payment') }}">Payment settings</a>
           <a href="{{ url_for('payment_verification.index') }}">Payment verification</a>
         {% endif %}
-        <span class="nav-account">{{ current_user.name }}</span>
+        <span class="nav-account" title="{{ current_user.name }}">{{ current_user.name }}</span>
         <form class="inline-form" method="post" action="{{ url_for('auth.logout') }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button class="nav-logout" type="submit">Log out</button>
         </form>
       {% else %}
+        <a href="{{ url_for('main.index') }}">Home</a>
         <a href="{{ url_for('auth.login') }}">Log-in</a>
         <a class="nav-register" href="{{ url_for('auth.register') }}">Register</a>
       {% endif %}

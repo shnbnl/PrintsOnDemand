@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_status.html" import payment_badge, order_badge %}
 
 {% block title %}Payment review {{ payment.order.order_reference }} | Prints On Demand{% endblock %}
 
@@ -8,7 +9,7 @@
     <p class="page-eyebrow">Manual payment review</p>
     <h1>Payment review</h1>
     <p class="page-lead">Order {{ payment.order.order_reference }} · {{ payment.order.shop_name }}</p>
-    <span class="status-badge" data-status="{{ payment.payment_status.value }}">{{ payment.payment_status.value }}</span>
+    {{ payment_badge(payment) }}
   </header>
   {% if error %}<p class="notice notice-error" role="alert">{{ error }}</p>{% endif %}
   <div class="review-grid">
@@ -19,11 +20,11 @@
         <div class="summary-row"><dt>Student</dt><dd>{{ payment.order.user.name }} ({{ payment.order.user.email }})</dd></div>
         <div class="summary-row"><dt>Shop</dt><dd>{{ payment.order.shop_name }}</dd></div>
         <div class="summary-row"><dt>Fulfillment</dt><dd>{{ payment.order.destination.label if payment.order.destination else 'Not selected' }}</dd></div>
-        <div class="summary-row"><dt>Order status</dt><dd>{{ payment.order.status.value }}</dd></div>
+        <div class="summary-row"><dt>Order status</dt><dd>{{ order_badge(payment.order) }}</dd></div>
         <div class="summary-row"><dt>Order total</dt><dd>{{ payment.order.currency }} {{ payment.order.total }}</dd></div>
         <div class="summary-row"><dt>Payment amount</dt><dd>{{ payment.currency }} {{ payment.amount }}</dd></div>
         <div class="summary-row"><dt>Payment method</dt><dd>{{ payment.payment_method.value }}</dd></div>
-        <div class="summary-row"><dt>Payment status</dt><dd><span class="status-badge" data-status="{{ payment.payment_status.value }}">{{ payment.payment_status.value }}</span></dd></div>
+        <div class="summary-row"><dt>Payment status</dt><dd>{{ payment_badge(payment) }}</dd></div>
         <div class="summary-row"><dt>Payment reference</dt><dd>{{ payment.payment_reference or 'Not submitted' }}</dd></div>
         <div class="summary-row"><dt>Submitted</dt><dd>{% if payment.submitted_at %}<time datetime="{{ payment.submitted_at.isoformat() }}">{{ payment.submitted_at.strftime('%Y-%m-%d %H:%M UTC') }}</time>{% else %}Not recorded{% endif %}</dd></div>
       </dl>
