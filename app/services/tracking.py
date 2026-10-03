@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 
-from app.models import Order, PaymentMethod, PaymentStatus
+from app.models import Order, OrderStatus, PaymentMethod, PaymentStatus
 
 
 @dataclass(frozen=True)
@@ -18,7 +18,7 @@ class OrderTracking:
     payment_method: str
     payment_status: str
     next_step: str
-    steps: tuple[TrackingStep, TrackingStep, TrackingStep]
+    steps: tuple[TrackingStep, ...]
 
 
 def build_tracking(order: Order) -> OrderTracking:
@@ -32,8 +32,13 @@ def build_tracking(order: Order) -> OrderTracking:
     elif payment.payment_status == PaymentStatus.PAID:
         method = payment.payment_method.value.title()
         status = PaymentStatus.PAID.value
-        payment_step = TrackingStep("Payment", "Payment recorded as paid.")
-        next_step = "Payment was recorded. Shop processing is not tracked in this stage."
+        payment_step = TrackingStep("Payment", "Payment recorded as paid.", payment.updated_at)
+        next_step = {
+            OrderStatus.PENDING_PAYMENT: "Wait for the printing shop to start processing.",
+            OrderStatus.PROCESSING: "The printing shop is processing your order.",
+            OrderStatus.READY: "The print job is ready for the applicable next step.",
+            OrderStatus.COMPLETED: "The shop processing workflow is complete.",
+        }[order.status]
     elif payment.payment_status == PaymentStatus.REJECTED:
         method = payment.payment_method.value.title()
         status = PaymentStatus.REJECTED.value
@@ -68,17 +73,20 @@ def build_tracking(order: Order) -> OrderTracking:
         else f"{order.status.value} is the recorded order status."
     )
 
+    steps = [TrackingStep(
+        "Order created", f"Order {order.order_reference} was created.", order.created_at
+    ), payment_step]
+    if order.processing_started_at:
+        steps.append(TrackingStep("Processing started", "The shop began processing the print job.", order.processing_started_at))
+    if order.ready_at:
+        steps.append(TrackingStep("Order ready", "The shop finished the print job.", order.ready_at))
+    if order.completed_at:
+        steps.append(TrackingStep("Order completed", "The shop completed its processing workflow.", order.completed_at))
+    steps.append(TrackingStep("Current order status", order_detail))
+
     return OrderTracking(
         payment_method=method,
         payment_status=status,
         next_step=next_step,
-        steps=(
-            TrackingStep(
-                "Order created", f"Order {order.order_reference} was created.", order.created_at
-            ),
-            payment_step,
-            TrackingStep(
-                "Current order status", order_detail
-            ),
-        ),
+        steps=tuple(steps),
     )

@@ -6,6 +6,7 @@
   {% if not staff_view %}<p><a href="{{ url_for('shops.index') }}">← Printing shops</a></p>{% endif %}
   <h1>{{ shop.name }}</h1>
   {% if staff_view %}<p class="notice">Your assigned shop{% if not shop.is_active %} — inactive{% endif %}</p>{% endif %}
+  {% if staff_view %}<p><a href="{{ url_for('staff_orders.index') }}">View this shop's orders</a></p>{% endif %}
   {% if shop.is_demo %}<p class="demo-label">Demo shop information and pricing — not final business rates.</p>{% endif %}
   {% if shop.description %}<p>{{ shop.description }}</p>{% endif %}
   <p><strong>Address:</strong> {{ shop.address }}</p>

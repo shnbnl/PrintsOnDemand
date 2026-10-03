@@ -16,6 +16,9 @@ from app.models.user import utc_now
 
 class OrderStatus(StrEnum):
     PENDING_PAYMENT = "PENDING_PAYMENT"
+    PROCESSING = "PROCESSING"
+    READY = "READY"
+    COMPLETED = "COMPLETED"
 
 
 class OrderDestination(StrEnum):
@@ -69,6 +72,9 @@ class Order(db.Model):
     updated_at: Mapped[datetime] = mapped_column(
         db.DateTime(timezone=True), nullable=False, default=utc_now, onupdate=utc_now
     )
+    processing_started_at: Mapped[datetime | None] = mapped_column(db.DateTime(timezone=True))
+    ready_at: Mapped[datetime | None] = mapped_column(db.DateTime(timezone=True))
+    completed_at: Mapped[datetime | None] = mapped_column(db.DateTime(timezone=True))
 
     user: Mapped[User] = relationship(back_populates="orders")
     shop: Mapped[PrintingShop] = relationship(back_populates="orders")

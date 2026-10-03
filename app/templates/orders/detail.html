@@ -23,7 +23,7 @@
     <h2>Order information</h2>
     <p>Created: {{ order.created_at.strftime('%Y-%m-%d %H:%M UTC') }}</p>
     <p>Printing shop: {{ order.shop_name }}</p>
-    <p>Status: {{ order.status.value }}{% if not order.payment or order.payment.payment_status.value != 'PAID' %} (awaiting payment){% endif %}</p>
+    <p>Status: {{ order.status.value }}{% if order.status.value == 'PENDING_PAYMENT' and (not order.payment or order.payment.payment_status.value != 'PAID') %} (awaiting payment){% endif %}</p>
     {% if order.destination and order.destination.value == 'PROFESSOR' %}
       <section>
         <h3>Send to professor</h3>
@@ -134,7 +134,9 @@
       </form>
     </section>
   {% endif %}
-  {% if not order.payment or order.payment.payment_status.value != 'PAID' %}
+  {% if order.processing_started_at %}
+    <p>Shop processing is reflected in the tracking timeline above.</p>
+  {% elif not order.payment or order.payment.payment_status.value != 'PAID' %}
     <p>No payment or shop processing has been confirmed.</p>
   {% else %}
     <p>No shop processing has been confirmed.</p>

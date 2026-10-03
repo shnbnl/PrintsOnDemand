@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Shop orders | Prints On Demand{% endblock %}
+
+{% block content %}
+  <p><a href="{{ url_for('access.shop') }}">← Assigned shop</a></p>
+  <h1>Shop orders</h1>
+  {% if orders %}
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Reference</th><th>Created</th><th>Customer</th><th>Order status</th><th>Payment</th><th>Total</th><th>Destination</th><th>Latest processing event</th></tr></thead>
+        <tbody>
+          {% for order in orders %}
+            <tr>
+              <td><a href="{{ url_for('staff_orders.detail', order_reference=order.order_reference) }}">{{ order.order_reference }}</a></td>
+              <td><time datetime="{{ order.created_at.isoformat() }}">{{ order.created_at.strftime('%Y-%m-%d %H:%M UTC') }}</time></td>
+              <td>{{ order.user.name }}</td>
+              <td>{{ order.status.value }}</td>
+              <td>{{ order.payment.payment_status.value if order.payment else 'Not selected' }}</td>
+              <td>{{ order.currency }} {{ order.total }}</td>
+              <td>{{ order.destination.value if order.destination else 'Not selected' }}</td>
+              <td>
+                {% set latest = order.completed_at or order.ready_at or order.processing_started_at %}
+                {% if latest %}<time datetime="{{ latest.isoformat() }}">{{ latest.strftime('%Y-%m-%d %H:%M UTC') }}</time>{% else %}—{% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p>No orders have been placed for your assigned shop.</p>
+  {% endif %}
+{% endblock %}

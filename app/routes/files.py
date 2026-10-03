@@ -105,13 +105,17 @@ def detail(file_id: int):
 @files_bp.get("/<int:file_id>/download")
 @roles_required(UserRole.STUDENT)
 def download(file_id: int):
-    record = owned_file(file_id)
+    return send_private_file(owned_file(file_id))
+
+
+def send_private_file(record: UploadedFile):
+    """Serve an already-authorized upload with the same integrity checks for both roles."""
     try:
         data = private_storage().read(record.storage_key)
     except StorageError:
         abort(404)
     if len(data) != record.file_size or hashlib.sha256(data).hexdigest() != record.sha256:
-        current_app.logger.warning("Stored upload failed integrity check for file %s", file_id)
+        current_app.logger.warning("Stored upload failed integrity check for file %s", record.id)
         abort(404)
     return send_file(
         BytesIO(data), mimetype=record.mime_type, as_attachment=True,

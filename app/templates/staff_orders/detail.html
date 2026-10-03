@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Shop order {{ order.order_reference }} | Prints On Demand{% endblock %}
+
+{% block content %}
+  <p><a href="{{ url_for('staff_orders.index') }}">← Shop orders</a></p>
+  <h1>Order {{ order.order_reference }}</h1>
+  <section>
+    <h2>Order and customer</h2>
+    <p>Created: <time datetime="{{ order.created_at.isoformat() }}">{{ order.created_at.strftime('%Y-%m-%d %H:%M UTC') }}</time></p>
+    <p>Printing shop: {{ order.shop_name }}</p>
+    <p>Customer: {{ order.user.name }}</p>
+    <p>Order status: {{ order.status.value }}</p>
+  </section>
+  <section>
+    <h2>Print job</h2>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>File</th><th>Paper size</th><th>Color mode</th><th>Quantity</th><th>Rush</th><th>Unit price</th><th>Line total</th></tr></thead>
+        <tbody>
+          {% for item in order.items %}
+            <tr>
+              <td><a href="{{ url_for('staff_orders.download_file', order_reference=order.order_reference, item_id=item.id) }}">{{ item.original_filename }}</a></td>
+              <td>{{ item.paper_size.label }}</td><td>{{ item.color_mode.label }}</td>
+              <td>{{ item.quantity }}</td><td>{{ 'Yes' if item.is_rush else 'No' }}</td>
+              <td>{{ order.currency }} {{ item.unit_price }}</td>
+              <td>{{ order.currency }} {{ item.line_total }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p>Subtotal: {{ order.currency }} {{ order.subtotal }}</p>
+    <p>Fees total: {{ order.currency }} {{ order.fees_total }}</p>
+    <p><strong>Total: {{ order.currency }} {{ order.total }}</strong></p>
+  </section>
+  <section>
+    <h2>Payment</h2>
+    {% if order.payment %}
+      <p>Method: {{ order.payment.payment_method.value }}</p>
+      <p>Status: {{ order.payment.payment_status.value }}</p>
+      <p>Amount: {{ order.payment.currency }} {{ order.payment.amount }}</p>
+      {% if order.payment.payment_reference %}<p>Payment reference: {{ order.payment.payment_reference }}</p>{% endif %}
+    {% else %}<p>No payment method selected. Payment has not been recorded as paid.</p>{% endif %}
+  </section>
+  <section>
+    <h2>Destination</h2>
+    <p>Type: {{ order.destination.value if order.destination else 'Not selected' }}</p>
+    {% if order.destination and order.destination.value == 'PROFESSOR' %}
+      <p>Professor: {{ order.professor_name }}</p>
+      <p>Department: {{ order.professor_department or 'Not listed' }}</p>
+      <p>Office: {{ order.professor_office or 'Not listed' }}</p>
+      <p>Email: {{ order.professor_email }}</p>
+    {% endif %}
+  </section>
+  <section>
+    <h2>Processing</h2>
+    <p>Current status: {{ order.status.value }}</p>
+    {% if order.processing_started_at %}<p>Processing started: <time datetime="{{ order.processing_started_at.isoformat() }}">{{ order.processing_started_at.strftime('%Y-%m-%d %H:%M UTC') }}</time></p>{% endif %}
+    {% if order.ready_at %}<p>Ready: <time datetime="{{ order.ready_at.isoformat() }}">{{ order.ready_at.strftime('%Y-%m-%d %H:%M UTC') }}</time></p>{% endif %}
+    {% if order.completed_at %}<p>Completed: <time datetime="{{ order.completed_at.isoformat() }}">{{ order.completed_at.strftime('%Y-%m-%d %H:%M UTC') }}</time></p>{% endif %}
+    {% if action %}
+      <form method="post" action="{{ url_for('staff_orders.advance', order_reference=order.order_reference) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" name="action" value="{{ action }}">{% if action == 'start_processing' %}Start processing{% elif action == 'mark_ready' %}Mark ready{% else %}Complete order{% endif %}</button>
+      </form>
+    {% elif order.status.value == 'PENDING_PAYMENT' %}
+      <p>Processing is unavailable until payment is recorded as paid by an authorized process.</p>
+    {% endif %}
+  </section>
+{% endblock %}
