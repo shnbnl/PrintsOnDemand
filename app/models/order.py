@@ -73,6 +73,7 @@ class Order(db.Model):
     user: Mapped[User] = relationship(back_populates="orders")
     shop: Mapped[PrintingShop] = relationship(back_populates="orders")
     professor: Mapped[Professor | None] = relationship(back_populates="orders")
+    payment: Mapped[Payment | None] = relationship(back_populates="order", uselist=False)
     items: Mapped[list[OrderItem]] = relationship(
         back_populates="order", cascade="all, delete-orphan", order_by="OrderItem.id"
     )

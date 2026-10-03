@@ -5,6 +5,7 @@ from app.models.shop import ColorMode, FeeType, PaperSize, PrintPrice, PrintingS
 from app.models.file import PrintConfiguration, UploadedFile
 from app.models.order import Order, OrderDestination, OrderItem, OrderStatus
 from app.models.professor import Professor
+from app.models.payment import Payment, PaymentMethod, PaymentStatus
 
 __all__ = [
     "ColorMode",
@@ -13,6 +14,9 @@ __all__ = [
     "OrderDestination",
     "OrderItem",
     "OrderStatus",
+    "Payment",
+    "PaymentMethod",
+    "PaymentStatus",
     "PaperSize",
     "PrintPrice",
     "Professor",

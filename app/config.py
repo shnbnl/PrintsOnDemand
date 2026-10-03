@@ -21,6 +21,11 @@ class Config:
     UPLOAD_STORAGE_ROOT = None
     STORAGE_BACKEND = "local"
     ORDER_CURRENCY = "PHP"
+    ONLINE_PAYMENT_ENABLED = False
+    ONLINE_PAYMENT_INSTRUCTIONS = ""
+    ONLINE_PAYMENT_ACCOUNT_NAME = ""
+    ONLINE_PAYMENT_DESTINATION = ""
+    ONSITE_PAYMENT_INSTRUCTIONS = "Pay at the printing shop. Your order remains unpaid until payment is recorded."
 
 
 class DevelopmentConfig(Config):
@@ -96,5 +101,18 @@ def configure_runtime(app: Flask) -> None:
         or os.path.join(app.instance_path, "uploads")
     )
     app.config["STORAGE_BACKEND"] = os.getenv("STORAGE_BACKEND") or app.config["STORAGE_BACKEND"]
+    online_enabled = os.getenv("ONLINE_PAYMENT_ENABLED")
+    if online_enabled:
+        normalized = online_enabled.strip().lower()
+        if normalized not in {"true", "false", "1", "0", "yes", "no", "on", "off"}:
+            raise ValueError("ONLINE_PAYMENT_ENABLED must be a boolean value.")
+        app.config["ONLINE_PAYMENT_ENABLED"] = normalized in {"true", "1", "yes", "on"}
+    for name in (
+        "ONLINE_PAYMENT_INSTRUCTIONS", "ONLINE_PAYMENT_ACCOUNT_NAME",
+        "ONLINE_PAYMENT_DESTINATION", "ONSITE_PAYMENT_INSTRUCTIONS",
+    ):
+        value = os.getenv(name)
+        if value:
+            app.config[name] = value.strip()
     # Allow room for multipart headers while enforcing the file's own limit separately.
     app.config["MAX_CONTENT_LENGTH"] = app.config["UPLOAD_MAX_SIZE"] + 64 * 1024

@@ -4,7 +4,11 @@
 
 {% block content %}
   <h1>Order created successfully.</h1>
-  <p>Your order has been created and is awaiting payment. Payment has not been completed.</p>
+  {% if order.payment and order.payment.payment_status.value == 'PAID' %}
+    <p>Your order has been created. Payment was recorded as paid by an authorized process.</p>
+  {% else %}
+    <p>Your order has been created and is awaiting payment. Payment has not been completed.</p>
+  {% endif %}
   <section>
     <h2>Order {{ order.order_reference }}</h2>
     <p>Created: {{ order.created_at.strftime('%Y-%m-%d %H:%M UTC') }}</p>
@@ -42,6 +46,50 @@
     <p>Fees total: {{ order.currency }} {{ order.fees_total }}</p>
     <p><strong>Total: {{ order.currency }} {{ order.total }}</strong></p>
   </section>
+  <section>
+    <h2>Payment</h2>
+    {% if payment_error %}<p class="field-error" role="alert">{{ payment_error }}</p>{% endif %}
+    {% if order.payment %}
+      <p>Method selected: {{ order.payment.payment_method.value }}</p>
+      <p>Payment status: {{ order.payment.payment_status.value }}</p>
+      <p>Amount to pay: {{ order.payment.currency }} {{ order.payment.amount }}</p>
+      <p>Order reference: {{ order.order_reference }}</p>
+      {% if order.payment.payment_method.value == 'ONSITE' %}
+        <p>Order created. Payment will be made onsite.</p>
+        <p>{{ onsite_instructions }}</p>
+      {% elif order.payment.payment_method.value == 'ONLINE' %}
+        {% if order.payment.payment_status.value == 'SUBMITTED' %}
+          <p>Payment submitted for verification. It has not been verified or completed.</p>
+          <p>Submitted reference: {{ order.payment.payment_reference }}</p>
+        {% elif order.payment.payment_status.value == 'PENDING' %}
+          {% if online_details %}
+            <p>Use these configured manual payment instructions. Selecting online payment does not confirm a transfer.</p>
+            <p>Instructions: {{ online_details.instructions }}</p>
+            <p>Account/name: {{ online_details.account_name }}</p>
+            <p>Payment destination: {{ online_details.destination }}</p>
+          {% else %}
+            <p>Online payment instructions are currently unavailable. Contact the shop before making a transfer.</p>
+          {% endif %}
+        {% endif %}
+      {% endif %}
+    {% else %}
+      <p>No payment method has been selected.</p>
+    {% endif %}
+    {% if method_form %}
+      <form method="post" action="{{ url_for('orders.choose_payment', order_reference=order.order_reference) }}">
+        {{ method_form.hidden_tag() }}
+        <div class="field">{{ method_form.payment_method.label }} {{ method_form.payment_method() }}</div>
+        {{ method_form.submit() }}
+      </form>
+    {% endif %}
+    {% if reference_form %}
+      <form method="post" action="{{ url_for('orders.submit_payment', order_reference=order.order_reference) }}">
+        {{ reference_form.hidden_tag() }}
+        <div class="field">{{ reference_form.payment_reference.label }} {{ reference_form.payment_reference() }}</div>
+        {{ reference_form.submit() }}
+      </form>
+    {% endif %}
+  </section>
   {% if professor_form %}
     <section>
       <h2>{% if order.professor_id %}Change intended professor{% else %}Select intended professor{% endif %}</h2>
@@ -53,5 +101,9 @@
       </form>
     </section>
   {% endif %}
-  <p>No payment or shop processing has been confirmed.</p>
+  {% if not order.payment or order.payment.payment_status.value != 'PAID' %}
+    <p>No payment or shop processing has been confirmed.</p>
+  {% else %}
+    <p>No shop processing has been confirmed.</p>
+  {% endif %}
 {% endblock %}

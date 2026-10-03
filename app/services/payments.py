@@ -1,0 +1,107 @@
+"""Student payment intent and manual-reference submission."""
+
+from __future__ import annotations
+
+import re
+
+from flask import current_app
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
+
+from app.extensions import db
+from app.models import Order, OrderStatus, Payment, PaymentMethod, PaymentStatus
+
+
+REFERENCE_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9 ._/-]{3,119}\Z")
+
+
+class PaymentError(ValueError):
+    def __init__(self, message: str, status_code: int = 400):
+        super().__init__(message)
+        self.status_code = status_code
+
+
+def online_payment_details() -> dict[str, str] | None:
+    """Only advertise online payment when every public instruction is configured."""
+    config = current_app.config
+    if not config["ONLINE_PAYMENT_ENABLED"]:
+        return None
+    details = {
+        "instructions": config["ONLINE_PAYMENT_INSTRUCTIONS"].strip(),
+        "account_name": config["ONLINE_PAYMENT_ACCOUNT_NAME"].strip(),
+        "destination": config["ONLINE_PAYMENT_DESTINATION"].strip(),
+    }
+    return details if all(details.values()) else None
+
+
+def owned_order(order_reference: str, user_id: int) -> Order:
+    order = db.session.scalar(select(Order).where(
+        Order.order_reference == order_reference, Order.user_id == user_id,
+    ))
+    if order is None:
+        raise PaymentError("Order not found.", 404)
+    return order
+
+
+def select_payment_method(*, order_reference: str, user_id: int, method: str) -> Payment:
+    order = owned_order(order_reference, user_id)
+    if order.status != OrderStatus.PENDING_PAYMENT:
+        raise PaymentError("This order cannot accept payment selection.", 409)
+    try:
+        selected = PaymentMethod(method)
+    except ValueError as error:
+        raise PaymentError("Select a valid payment method.") from error
+    if selected == PaymentMethod.ONLINE and online_payment_details() is None:
+        raise PaymentError("Online payment is not configured for this service.")
+
+    payment = order.payment
+    if payment is not None:
+        if payment.amount != order.total or payment.currency != order.currency:
+            raise PaymentError("Payment amount no longer matches the order.", 409)
+        if payment.payment_method == selected:
+            return payment  # Repeated selection is harmless, including after submission.
+        if payment.payment_status != PaymentStatus.PENDING:
+            raise PaymentError("A submitted payment method cannot be changed.", 409)
+        payment.payment_method = selected
+        payment.payment_reference = None
+    else:
+        payment = Payment(
+            order_id=order.id, payment_method=selected,
+            payment_status=PaymentStatus.PENDING,
+            amount=order.total, currency=order.currency,
+        )
+        db.session.add(payment)
+    try:
+        db.session.commit()
+    except IntegrityError as error:
+        db.session.rollback()
+        # The unique order constraint also guards concurrent first selections.
+        existing = owned_order(order_reference, user_id).payment
+        if existing is not None and existing.payment_method == selected:
+            return existing
+        raise PaymentError("Payment selection changed. Reload this order.", 409) from error
+    return payment
+
+
+def submit_online_reference(*, order_reference: str, user_id: int, reference: str) -> Payment:
+    order = owned_order(order_reference, user_id)
+    payment = order.payment
+    if payment is None or payment.payment_method != PaymentMethod.ONLINE:
+        raise PaymentError("Select online payment first.", 409)
+    if order.status != OrderStatus.PENDING_PAYMENT:
+        raise PaymentError("This order cannot accept payment information.", 409)
+    if payment.amount != order.total or payment.currency != order.currency:
+        raise PaymentError("Payment amount no longer matches the order.", 409)
+    if online_payment_details() is None:
+        raise PaymentError("Online payment is currently unavailable.", 409)
+    cleaned = reference.strip() if isinstance(reference, str) else ""
+    if not REFERENCE_PATTERN.fullmatch(cleaned):
+        raise PaymentError("Enter a payment reference of 4–120 permitted characters.")
+    if payment.payment_status == PaymentStatus.SUBMITTED and payment.payment_reference == cleaned:
+        return payment  # Browser retry must not create another submission.
+    if payment.payment_status != PaymentStatus.PENDING:
+        raise PaymentError("Payment information was already submitted.", 409)
+    payment.payment_reference = cleaned
+    payment.payment_status = PaymentStatus.SUBMITTED
+    db.session.commit()
+    return payment

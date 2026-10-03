@@ -7,9 +7,17 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from app.authorization import roles_required
 from app.extensions import db
-from app.models import Order, OrderDestination, OrderStatus, PrintConfiguration, PrintingShop, UploadedFile, UserRole
+from app.models import (
+    Order, OrderDestination, OrderStatus, PaymentMethod, PaymentStatus,
+    PrintConfiguration, PrintingShop, UploadedFile, UserRole,
+)
 from app.order_forms import PlaceOrderForm, SelectProfessorForm
+from app.payment_forms import PaymentMethodForm, PaymentReferenceForm
 from app.services.orders import create_order
+from app.services.payments import (
+    PaymentError, online_payment_details, owned_order,
+    select_payment_method, submit_online_reference,
+)
 from app.services.pricing import PricingError, quote_order
 from app.services.professors import (
     ProfessorSelectionError, assign_professor, professor_service_available,
@@ -174,8 +182,82 @@ def detail(order_reference: str):
     )
     if order is None:
         abort(404)
-    form = professor_form(order)
-    return render_template("orders/detail.html", order=order, professor_form=form)
+    return render_order_detail(order)
+
+
+def render_order_detail(order, *, payment_error=None, status=200):
+    online_details = online_payment_details()
+    method_form = None
+    if order.status == OrderStatus.PENDING_PAYMENT and (
+        order.payment is None or order.payment.payment_status == PaymentStatus.PENDING
+    ):
+        method_form = PaymentMethodForm()
+        method_form.payment_method.choices = [(PaymentMethod.ONSITE.value, "Onsite payment")]
+        if online_details is not None:
+            method_form.payment_method.choices.append((PaymentMethod.ONLINE.value, "Online payment"))
+        if request.method == "GET" and order.payment is not None:
+            method_form.payment_method.data = order.payment.payment_method.value
+    reference_form = None
+    if (
+        order.payment is not None
+        and order.payment.payment_method == PaymentMethod.ONLINE
+        and order.payment.payment_status == PaymentStatus.PENDING
+        and online_details is not None
+    ):
+        reference_form = PaymentReferenceForm()
+    return render_template(
+        "orders/detail.html", order=order, professor_form=professor_form(order),
+        method_form=method_form, reference_form=reference_form,
+        online_details=online_details, payment_error=payment_error,
+        onsite_instructions=current_app.config["ONSITE_PAYMENT_INSTRUCTIONS"],
+    ), status
+
+
+@orders_bp.post("/<order_reference>/payment")
+@roles_required(UserRole.STUDENT)
+def choose_payment(order_reference: str):
+    try:
+        order = owned_order(order_reference, current_user.id)
+    except PaymentError:
+        abort(404)
+    form = PaymentMethodForm()
+    form.payment_method.choices = [(PaymentMethod.ONSITE.value, "Onsite payment")]
+    if online_payment_details() is not None:
+        form.payment_method.choices.append((PaymentMethod.ONLINE.value, "Online payment"))
+    if not form.validate_on_submit():
+        return render_order_detail(order, payment_error="Select a valid payment method.", status=400)
+    try:
+        select_payment_method(
+            order_reference=order_reference, user_id=current_user.id,
+            method=form.payment_method.data,
+        )
+    except PaymentError as error:
+        if error.status_code == 404:
+            abort(404)
+        return render_order_detail(order, payment_error=str(error), status=error.status_code)
+    return redirect(url_for("orders.detail", order_reference=order_reference))
+
+
+@orders_bp.post("/<order_reference>/payment/submit")
+@roles_required(UserRole.STUDENT)
+def submit_payment(order_reference: str):
+    try:
+        order = owned_order(order_reference, current_user.id)
+    except PaymentError:
+        abort(404)
+    form = PaymentReferenceForm()
+    if not form.validate_on_submit():
+        return render_order_detail(order, payment_error="Enter a valid payment reference.", status=400)
+    try:
+        submit_online_reference(
+            order_reference=order_reference, user_id=current_user.id,
+            reference=form.payment_reference.data,
+        )
+    except PaymentError as error:
+        if error.status_code == 404:
+            abort(404)
+        return render_order_detail(order, payment_error=str(error), status=error.status_code)
+    return redirect(url_for("orders.detail", order_reference=order_reference))
 
 
 def professor_form(order):
