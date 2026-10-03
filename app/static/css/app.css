@@ -257,6 +257,16 @@ button:disabled, input[type="submit"]:disabled { opacity: 0.52; cursor: not-allo
 .payment-qr p { margin: 0; font-size: 0.9rem; }
 .payment-qr-fallback { padding: 0.75rem; border-radius: var(--radius-sm); background: white; }
 .payment-instructions, .payment-panel p { overflow-wrap: anywhere; }
+.review-grid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(17rem, 1fr); gap: 1rem; align-items: start; }
+.review-grid > * { min-width: 0; }
+.review-grid p { overflow-wrap: anywhere; }
+.verification-student-row { flex-direction: column; align-items: flex-start; gap: 0.2rem; }
+.verification-student-row dd { text-align: left; }
+.verification-reject { margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border); }
+.verification-reject textarea { min-height: 7rem; }
+.button-danger { color: white; background: var(--danger); border-color: var(--danger); }
+.button-danger:hover { background: #752036; }
+@media (max-width: 48rem) { .review-grid { grid-template-columns: 1fr; } }
 .payment-reference-form { margin-top: 1rem; }
 .status-badge { display: inline-flex; align-items: center; gap: 0.35rem; max-width: 100%; min-height: 1.75rem; padding: 0.25rem 0.65rem; border: 1px solid #b9c8d7; border-radius: 99px; color: var(--navy); background: #eaf0f6; font-size: 0.76rem; font-weight: 850; letter-spacing: 0.025em; line-height: 1.2; overflow-wrap: anywhere; }
 .status-badge--success, .status-badge[data-status="PAID"], .status-badge[data-status="COMPLETED"], .status-badge[data-status="READY"] { border-color: #a9d5bd; color: var(--success); background: var(--success-bg); }

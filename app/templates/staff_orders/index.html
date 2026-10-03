@@ -9,6 +9,7 @@
     <h1>Shop orders</h1>
     <p class="page-lead">Review orders placed with your assigned shop and open one to see its print job.</p>
   </header>
+  <p><a class="button button-secondary" href="{{ url_for('payment_verification.index') }}">Review submitted payments</a></p>
 
   {% if orders %}
     <ul class="order-list">

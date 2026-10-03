@@ -19,12 +19,14 @@
         {% elif current_user.role.value == 'SHOP_STAFF' %}
           <a href="{{ url_for('access.shop') }}">Assigned Shop</a>
           <a href="{{ url_for('staff_orders.index') }}">Shop Orders</a>
+          <a href="{{ url_for('payment_verification.index') }}">Payment verification</a>
         {% elif current_user.role.value == 'ADMIN' %}
           <a href="{{ url_for('access.admin') }}">Admin management</a>
           <a href="{{ url_for('shop_admin.index') }}">Shops</a>
           <a href="{{ url_for('admin_management.staff_index') }}">Staff</a>
           <a href="{{ url_for('admin_management.professors') }}">Professors</a>
           <a href="{{ url_for('admin_management.payment') }}">Payment settings</a>
+          <a href="{{ url_for('payment_verification.index') }}">Payment verification</a>
         {% endif %}
         <span class="nav-account">{{ current_user.name }}</span>
         <form class="inline-form" method="post" action="{{ url_for('auth.logout') }}">

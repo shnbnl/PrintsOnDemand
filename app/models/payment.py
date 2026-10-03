@@ -52,6 +52,13 @@ class Payment(db.Model):
     amount: Mapped[Decimal] = mapped_column(db.Numeric(14, 2), nullable=False)
     currency: Mapped[str] = mapped_column(db.String(3), nullable=False)
     payment_reference: Mapped[str | None] = mapped_column(db.String(120), nullable=True)
+    submitted_at: Mapped[datetime | None] = mapped_column(db.DateTime(timezone=True))
+    reviewed_at: Mapped[datetime | None] = mapped_column(db.DateTime(timezone=True))
+    reviewed_by_id: Mapped[int | None] = mapped_column(
+        db.ForeignKey("users.id", name="fk_payments_reviewed_by_id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+    rejection_reason: Mapped[str | None] = mapped_column(db.String(500))
     created_at: Mapped[datetime] = mapped_column(
         db.DateTime(timezone=True), nullable=False, default=utc_now
     )
@@ -60,3 +67,4 @@ class Payment(db.Model):
     )
 
     order: Mapped[Order] = relationship(back_populates="payment")
+    reviewer: Mapped[User | None] = relationship(foreign_keys=[reviewed_by_id])

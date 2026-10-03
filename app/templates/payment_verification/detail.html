@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Payment review {{ payment.order.order_reference }} | Prints On Demand{% endblock %}
+
+{% block content %}
+  <a class="back-link" href="{{ url_for('payment_verification.index') }}">← Payment verification</a>
+  <header class="page-intro">
+    <p class="page-eyebrow">Manual payment review</p>
+    <h1>Payment review</h1>
+    <p class="page-lead">Order {{ payment.order.order_reference }} · {{ payment.order.shop_name }}</p>
+    <span class="status-badge" data-status="{{ payment.payment_status.value }}">{{ payment.payment_status.value }}</span>
+  </header>
+  {% if error %}<p class="notice notice-error" role="alert">{{ error }}</p>{% endif %}
+  <div class="review-grid">
+    <section class="content-card">
+      <h2>Order and payment</h2>
+      <dl class="summary-list">
+        <div class="summary-row"><dt>Order reference</dt><dd>{{ payment.order.order_reference }}</dd></div>
+        <div class="summary-row"><dt>Student</dt><dd>{{ payment.order.user.name }} ({{ payment.order.user.email }})</dd></div>
+        <div class="summary-row"><dt>Shop</dt><dd>{{ payment.order.shop_name }}</dd></div>
+        <div class="summary-row"><dt>Fulfillment</dt><dd>{{ payment.order.destination.label if payment.order.destination else 'Not selected' }}</dd></div>
+        <div class="summary-row"><dt>Order status</dt><dd>{{ payment.order.status.value }}</dd></div>
+        <div class="summary-row"><dt>Order total</dt><dd>{{ payment.order.currency }} {{ payment.order.total }}</dd></div>
+        <div class="summary-row"><dt>Payment amount</dt><dd>{{ payment.currency }} {{ payment.amount }}</dd></div>
+        <div class="summary-row"><dt>Payment method</dt><dd>{{ payment.payment_method.value }}</dd></div>
+        <div class="summary-row"><dt>Payment status</dt><dd><span class="status-badge" data-status="{{ payment.payment_status.value }}">{{ payment.payment_status.value }}</span></dd></div>
+        <div class="summary-row"><dt>Payment reference</dt><dd>{{ payment.payment_reference or 'Not submitted' }}</dd></div>
+        <div class="summary-row"><dt>Submitted</dt><dd>{% if payment.submitted_at %}<time datetime="{{ payment.submitted_at.isoformat() }}">{{ payment.submitted_at.strftime('%Y-%m-%d %H:%M UTC') }}</time>{% else %}Not recorded{% endif %}</dd></div>
+      </dl>
+      <h3>Print items</h3>
+      <ul class="payment-summary-items">{% for item in payment.order.items %}<li><span>{{ item.original_filename }} · {{ item.quantity }} {{ 'print' if item.quantity == 1 else 'prints' }}</span><strong>{{ payment.order.currency }} {{ item.line_total }}</strong></li>{% endfor %}</ul>
+      <p>Subtotal: {{ payment.order.currency }} {{ payment.order.subtotal }} · Fees: {{ payment.order.currency }} {{ payment.order.fees_total }}</p>
+      {% if payment.reviewed_at %}
+        <h3>Review record</h3>
+        <p>{{ 'Rejected' if payment.payment_status.value == 'REJECTED' else 'Verified' }} by {{ payment.reviewer.name if payment.reviewer else 'Former user' }} on <time datetime="{{ payment.reviewed_at.isoformat() }}">{{ payment.reviewed_at.strftime('%Y-%m-%d %H:%M UTC') }}</time>.</p>
+        {% if payment.rejection_reason %}<p><strong>Rejection reason:</strong> {{ payment.rejection_reason }}</p>{% endif %}
+      {% endif %}
+    </section>
+    <section class="content-card">
+      <h2>Review action</h2>
+      {% if payment.payment_status.value == 'SUBMITTED' and payment.payment_reference and payment.amount == payment.order.total and payment.currency == payment.order.currency and payment.order.status.value == 'PENDING_PAYMENT' %}
+        <p>Check the submitted reference and independently confirm receipt of funds before verifying. The QR display and reference alone do not prove payment.</p>
+        <form class="form-stack" method="post" action="{{ url_for('payment_verification.verify', payment_id=payment.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="button button-primary" type="submit">Verify payment as paid</button>
+        </form>
+        <form class="form-stack verification-reject" method="post" action="{{ url_for('payment_verification.reject', payment_id=payment.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="field"><label for="reason">Rejection reason</label><textarea id="reason" name="reason" maxlength="500" required aria-describedby="reason-hint">{{ request.form.get('reason', '') if error else '' }}</textarea><small id="reason-hint">Explain the issue to the student (up to 500 characters).</small></div>
+          <button class="button button-danger" type="submit">Reject payment</button>
+        </form>
+      {% else %}
+        <p class="notice notice-info">This payment is not eligible for another review action.</p>
+      {% endif %}
+    </section>
+  </div>
+{% endblock %}

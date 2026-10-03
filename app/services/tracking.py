@@ -32,7 +32,10 @@ def build_tracking(order: Order) -> OrderTracking:
     elif payment.payment_status == PaymentStatus.PAID:
         method = payment.payment_method.value.title()
         status = PaymentStatus.PAID.value
-        payment_step = TrackingStep("Payment", "Payment recorded as paid.", payment.updated_at)
+        payment_step = TrackingStep(
+            "Payment", "Online payment manually verified." if payment.reviewed_at else "Payment recorded as paid.",
+            payment.reviewed_at or payment.updated_at,
+        )
         next_step = {
             OrderStatus.PENDING_PAYMENT: "Wait for the printing shop to start processing.",
             OrderStatus.PROCESSING: "The printing shop is processing your order.",
@@ -42,7 +45,7 @@ def build_tracking(order: Order) -> OrderTracking:
     elif payment.payment_status == PaymentStatus.REJECTED:
         method = payment.payment_method.value.title()
         status = PaymentStatus.REJECTED.value
-        payment_step = TrackingStep("Payment", "Submitted payment was rejected.")
+        payment_step = TrackingStep("Payment", "Submitted payment was rejected.", payment.reviewed_at)
         next_step = "Contact the printing shop about the rejected payment."
     elif payment.payment_method == PaymentMethod.ONSITE:
         method = "Onsite"

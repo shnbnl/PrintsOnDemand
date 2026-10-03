@@ -50,6 +50,7 @@ def create_app(config_object: object | None = None) -> Flask:
     from app.routes.files import files_bp
     from app.routes.main import main_bp
     from app.routes.orders import orders_bp
+    from app.routes.payment_verification import payment_verification_bp
     from app.routes.shop_admin import shop_admin_bp
     from app.routes.shops import shops_bp
     from app.routes.staff_orders import staff_orders_bp
@@ -58,6 +59,7 @@ def create_app(config_object: object | None = None) -> Flask:
     app.register_blueprint(auth_bp)
     app.register_blueprint(files_bp)
     app.register_blueprint(orders_bp)
+    app.register_blueprint(payment_verification_bp)
     app.register_blueprint(access_bp)
     app.register_blueprint(admin_management_bp)
     app.register_blueprint(shops_bp)

@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Payment verification | Prints On Demand{% endblock %}
+
+{% block content %}
+  <header class="page-intro">
+    <p class="page-eyebrow">Manual review</p>
+    <h1>Payment verification</h1>
+    <p class="page-lead">Review submitted online references against payment records before marking a payment paid or rejected.</p>
+  </header>
+  {% if payments %}
+    <ul class="order-list">
+      {% for payment in payments %}
+        <li class="section-card order-card">
+          <div class="card-heading">
+            <div><p class="eyebrow">Order reference</p><h2><a href="{{ url_for('payment_verification.detail', payment_id=payment.id) }}">{{ payment.order.order_reference }}</a></h2></div>
+            <strong class="order-total">{{ payment.currency }} {{ payment.amount }}</strong>
+          </div>
+          <dl class="summary-list">
+            <div class="summary-row"><dt>Shop</dt><dd>{{ payment.order.shop_name }}</dd></div>
+            <div class="summary-row verification-student-row"><dt>Student</dt><dd>{{ payment.order.user.name }}</dd></div>
+            <div class="summary-row"><dt>Method</dt><dd>{{ payment.payment_method.value }}</dd></div>
+            <div class="summary-row"><dt>Status</dt><dd><span class="status-badge" data-status="{{ payment.payment_status.value }}">{{ payment.payment_status.value }}</span></dd></div>
+            <div class="summary-row"><dt>Payment reference</dt><dd>{{ payment.payment_reference }}</dd></div>
+            <div class="summary-row"><dt>Submitted</dt><dd>{% if payment.submitted_at %}<time datetime="{{ payment.submitted_at.isoformat() }}">{{ payment.submitted_at.strftime('%Y-%m-%d %H:%M UTC') }}</time>{% else %}Unknown{% endif %}</dd></div>
+          </dl>
+          <a class="card-action" href="{{ url_for('payment_verification.detail', payment_id=payment.id) }}">Review payment <span aria-hidden="true">→</span></a>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <section class="content-card empty-state"><h2>No online payments awaiting review</h2><p>Submitted online references for your permitted shops will appear here.</p></section>
+  {% endif %}
+{% endblock %}

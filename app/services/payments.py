@@ -166,6 +166,7 @@ def submit_online_reference(*, order_reference: str, user_id: int, reference: st
         return payment  # Browser retry must not create another submission.
     if payment.payment_status != PaymentStatus.PENDING:
         raise PaymentError("Payment information was already submitted.", 409)
+    now = utc_now()
     result = db.session.execute(update(Payment).where(
         Payment.id == payment.id,
         Payment.payment_method == PaymentMethod.ONLINE,
@@ -175,7 +176,7 @@ def submit_online_reference(*, order_reference: str, user_id: int, reference: st
         pending_order_for_payment(),
     ).values(
         payment_reference=cleaned, payment_status=PaymentStatus.SUBMITTED,
-        updated_at=utc_now(),
+        submitted_at=now, updated_at=now,
     ).execution_options(synchronize_session=False))
     if result.rowcount != 1:
         db.session.rollback()

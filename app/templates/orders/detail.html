@@ -11,6 +11,8 @@
       <h1>Order created successfully.</h1>
   {% if order.payment and order.payment.payment_status.value == 'PAID' %}
       <p>Your order has been created. Payment was recorded as paid by an authorized process.</p>
+  {% elif order.payment and order.payment.payment_status.value == 'REJECTED' %}
+      <p>Your order has been created, but the submitted payment was rejected. Check the reason and contact the printing shop.</p>
   {% else %}
       <p>Your order has been created and is awaiting payment. Payment has not been completed.</p>
   {% endif %}
@@ -110,7 +112,11 @@
           <p>Onsite payment was recorded as paid.</p>
         {% endif %}
       {% elif order.payment.payment_method.value == 'ONLINE' %}
-        {% if order.payment.payment_status.value == 'SUBMITTED' %}
+        {% if order.payment.payment_status.value == 'PAID' %}
+          <div class="payment-instructions"><h3>Payment verified</h3><p>Your online payment was manually verified. Shop processing has not started unless order tracking shows it.</p></div>
+        {% elif order.payment.payment_status.value == 'REJECTED' %}
+          <div class="payment-instructions"><h3>Payment rejected</h3><p>The submitted reference was rejected. Contact the printing shop about this order.</p>{% if order.payment.rejection_reason %}<p><strong>Reason:</strong> {{ order.payment.rejection_reason }}</p>{% endif %}</div>
+        {% elif order.payment.payment_status.value == 'SUBMITTED' %}
           <div class="payment-instructions" role="status"><h3>Payment reference submitted</h3><p>Your payment reference has been received and is awaiting verification. Payment submitted for verification. It has not been verified or completed.</p><p>Submitted reference: {{ order.payment.payment_reference }}</p><p><strong>Next step:</strong> Wait for payment verification before shop processing.</p></div>
         {% elif order.payment.payment_status.value == 'PENDING' %}
           {% if online_details %}
