@@ -55,16 +55,30 @@
                 <div>
                   <p class="page-eyebrow">Selected printing shop</p>
                   <h2>{{ marker.name }}</h2>
+                  <span class="status-badge status-success">Available</span>
                 </div>
               </div>
               {% if marker.is_demo %}<p class="demo-label">Illustrative demo pin — not a verified business location.</p>{% endif %}
               {% if marker.description %}<p>{{ marker.description }}</p>{% endif %}
               <p><strong>Address:</strong> {{ marker.address }}</p>
               <p><strong>Hours:</strong> {{ marker.hours }}</p>
+              <a class="button button-primary button-block map-panel-proceed" href="{{ marker.detail_url }}">Proceed <span aria-hidden="true">→</span></a>
               {% if marker.services %}
                 <div class="map-panel-services">
                   <span class="detail-label">Offers</span>
                   <ul class="chip-list">{% for service in marker.services %}<li>{{ service }}</li>{% endfor %}</ul>
+                </div>
+              {% endif %}
+              <div class="map-panel-fulfillment">
+                <span class="detail-label">Fulfillment</span>
+                {% if marker.fulfillment %}
+                  <ul class="chip-list">{% for method in marker.fulfillment %}<li>{{ method }}</li>{% endfor %}</ul>
+                {% else %}<p class="hint">No fulfillment methods configured yet.</p>{% endif %}
+              </div>
+              {% if marker.fees %}
+                <div class="map-panel-fees">
+                  <h3>Applicable fees</h3>
+                  <ul class="summary-list">{% for fee in marker.fees %}<li class="summary-row"><span>{{ fee.label }}{% if fee.is_demo %} (demo){% endif %}</span><strong>{{ fee.amount }}</strong></li>{% endfor %}</ul>
                 </div>
               {% endif %}
               <div class="map-panel-prices">
@@ -77,7 +91,6 @@
                 </div>
                 <p class="hint">Current listed rates. Checkout calculates and confirms the order total on the server.</p>
               </div>
-              <a class="button button-primary button-block" href="{{ marker.detail_url }}">Proceed <span aria-hidden="true">→</span></a>
             </section>
           {% endfor %}
         </div>

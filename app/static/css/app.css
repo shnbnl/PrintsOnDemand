@@ -314,9 +314,15 @@ tbody th { font-weight: 800; }
 .map-shop-panel, .map-shop-choices { min-width: 0; margin: 0; padding: 1rem; border: 3px solid var(--navy); border-radius: var(--radius-lg); background: var(--cream); box-shadow: var(--shadow); }
 .map-panel-heading { display: flex; align-items: center; gap: 0.7rem; min-width: 0; margin-bottom: 0.6rem; }
 .map-panel-heading > div { min-width: 0; }
+.map-panel-proceed { margin: 0.8rem 0; }
 .map-panel-heading h2 { margin: 0; font-size: clamp(1.3rem, 2vw, 1.8rem); overflow-wrap: anywhere; }
 .map-shop-panel > p { overflow-wrap: anywhere; }
 .map-panel-services { margin: 0.8rem 0; }
+.map-panel-heading .status-badge { margin-top: 0.4rem; }
+.map-panel-fulfillment { margin: 0.8rem 0; }
+.map-panel-fees { margin: 1rem 0; }
+.map-panel-fees h3 { margin-bottom: 0.45rem; color: var(--navy); }
+.map-panel-fees .summary-list { margin: 0; }
 .map-panel-prices { margin: 1rem 0; }
 .map-panel-prices h3 { margin-bottom: 0.45rem; color: var(--navy); }
 .map-panel-prices .pricing-table { min-width: 0; font-size: 0.79rem; }

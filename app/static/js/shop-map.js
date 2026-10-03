@@ -18,7 +18,7 @@
   let userMarker;
   let loadTimer;
 
-  function selectShop(id, moveMap = false) {
+  function selectShop(id, moveMap = false, revealPanel = false) {
     const shop = shops.find((item) => String(item.id) === String(id));
     if (!shop) return;
     choices.forEach((choice) => {
@@ -27,6 +27,11 @@
     panels.forEach((panel) => {
       panel.hidden = panel.dataset.shopPanel !== String(id);
     });
+    if (revealPanel && window.matchMedia("(max-width: 48rem)").matches) {
+      document.querySelector(`[data-shop-panel="${shop.id}"]`)?.scrollIntoView({
+        behavior: "smooth", block: "start",
+      });
+    }
     markers.forEach(({ pin, marker }, shopId) => {
       const selected = String(shopId) === String(id);
       pin.classList.toggle("is-selected", selected);
@@ -70,6 +75,7 @@
         center,
         zoom: 17,
         mapId,
+        clickableIcons: false,
         mapTypeControl: false,
         streetViewControl: false,
       });
@@ -85,7 +91,7 @@
           gmpClickable: true,
         });
         marker.append(pin);
-        marker.addEventListener("gmp-click", () => selectShop(shop.id, false));
+        marker.addEventListener("gmp-click", () => selectShop(shop.id, false, true));
         markers.set(shop.id, { pin, marker });
       });
       if (shops.length) selectShop(shops[0].id);

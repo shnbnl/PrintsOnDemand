@@ -10,7 +10,8 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
-from app.models import ColorMode, PaperSize, PrintPrice, PrintingShop, ShopService, ServiceType, UserRole
+from app.models import (ColorMode, FeeType, PaperSize, PrintPrice, PrintingShop,
+                        ShopFee, ShopService, ServiceType, UserRole)
 from tests.test_shops import add_shop, add_user, login, token
 
 
@@ -66,8 +67,9 @@ def test_student_map_search_and_existing_shop_flow(client, test_app):
     assert shops[0]["prices"][2]["color"] == "₱8.75"
     assert set(shops[0]) == {
         "id", "name", "description", "address", "hours", "services",
-        "prices", "is_demo", "position", "detail_url",
+        "fulfillment", "fees", "prices", "is_demo", "position", "detail_url",
     }
+    assert shops[0]["fulfillment"] == [] and shops[0]["fees"] == []
     assert "admin" not in response.get_data(as_text=True).lower()
     detail_url = shops[0]["detail_url"]
     assert detail_url == f"/shops/{mapped}"
@@ -83,6 +85,36 @@ def test_student_map_search_and_existing_shop_flow(client, test_app):
     assert map_data(client.get("/shops/map?q=No+Location")) == []
     assert client.get(f"/shops/{unmapped}").status_code == 200
     assert client.get(f"/shops/{inactive}").status_code == 404
+
+
+def test_custom_panel_uses_registered_shop_services_fees_and_existing_proceed(client, test_app):
+    mapped = add_shop(test_app, "Configured Print Shop")
+    set_location(test_app, mapped)
+    with test_app.app_context():
+        db.session.add_all([
+            ShopService(shop_id=mapped, service_type=ServiceType.PICKUP, enabled=True),
+            ShopService(shop_id=mapped, service_type=ServiceType.DELIVERY, enabled=True),
+            ShopService(shop_id=mapped, service_type=ServiceType.DIRECT_TO_PROFESSOR, enabled=True),
+            ShopFee(shop_id=mapped, fee_type=FeeType.DELIVERY, amount=Decimal("30.00")),
+        ])
+        db.session.commit()
+    add_user(test_app, UserRole.STUDENT, "configured.map@example.com")
+    login(client, "configured.map@example.com")
+    response = client.get("/shops/map")
+    assert response.status_code == 200
+    marker = map_data(response)[0]
+    assert marker["id"] == mapped
+    assert marker["fulfillment"] == ["Direct-to-Professor", "Scheduled Pickup", "Delivery"]
+    assert marker["fees"] == [{"label": "Delivery", "amount": "₱30.00", "is_demo": False}]
+    assert b"Available" in response.data
+    assert b"Applicable fees" in response.data
+    assert b"Scheduled Pickup" in response.data
+    assert client.get(marker["detail_url"]).status_code == 200
+
+    with test_app.app_context():
+        db.session.scalar(select(ShopFee).where(ShopFee.shop_id == mapped)).amount = Decimal("42.00")
+        db.session.commit()
+    assert map_data(client.get("/shops/map"))[0]["fees"][0]["amount"] == "₱42.00"
 
 
 def test_map_authorization_matches_existing_shop_policy(client, test_app):

@@ -8,6 +8,7 @@ from sqlalchemy.orm import selectinload
 from app.authorization import roles_required
 from app.extensions import db
 from app.models import ColorMode, PaperSize, PrintConfiguration, PrintingShop, UploadedFile, UserRole
+from app.services.fulfillment import availability
 
 
 shops_bp = Blueprint("shops", __name__, url_prefix="/shops")
@@ -64,11 +65,13 @@ def map_view():
         PrintingShop.longitude.between(-180, 180),
     ).options(
         selectinload(PrintingShop.services), selectinload(PrintingShop.prices),
+        selectinload(PrintingShop.fees),
     )
     shops = db.session.scalars(statement.order_by(PrintingShop.name)).all()
     markers = []
     for shop in shops:
         context = detail_context(shop)
+        fulfillment = availability(shop)
         markers.append({
             "id": shop.id,
             "name": shop.name,
@@ -76,6 +79,16 @@ def map_view():
             "address": shop.address,
             "hours": f"{shop.opening_time:%I:%M %p} - {shop.closing_time:%I:%M %p}",
             "services": [item.service_type.label for item in context["services"]],
+            "fulfillment": [label for method, label in (
+                ("PROFESSOR", "Direct-to-Professor"),
+                ("PICKUP", "Scheduled Pickup"),
+                ("DELIVERY", "Delivery"),
+            ) if fulfillment[method]],
+            "fees": [{
+                "label": item.fee_type.label,
+                "amount": f"₱{item.amount:.2f}",
+                "is_demo": item.is_demo,
+            } for item in context["fees"]],
             "prices": [{
                 "size": row["size"].label,
                 "grayscale": (
