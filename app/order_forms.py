@@ -6,7 +6,7 @@ from wtforms.validators import DataRequired
 
 
 class PlaceOrderForm(FlaskForm):
-    file_id = HiddenField(validators=[DataRequired()])
+    file_id = HiddenField()
     shop_id = HiddenField(validators=[DataRequired()])
     destination = HiddenField()
     professor_id = HiddenField()

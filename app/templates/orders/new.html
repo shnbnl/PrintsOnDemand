@@ -4,30 +4,18 @@
 
 {% block content %}
   <header class="page-intro">
-    <p class="page-eyebrow">Step 3 · Build your order</p>
+    <p class="page-eyebrow">Build your print order</p>
     <h1>Create an order</h1>
-    <p class="page-lead">Choose one configured file, an active printing shop, and an intended destination to review the current price.</p>
+    <p class="page-lead">Choose a shop, add files from your private library, and set print options for each file before reviewing the total.</p>
   </header>
   {% if error %}<p class="notice notice-error" role="alert">{{ error }}</p>{% endif %}
   {% if not files %}<section class="content-card empty-state"><h2>Prepare a file first</h2><p><a href="{{ url_for('files.index') }}">Upload and configure a file first.</a></p></section>{% endif %}
   {% if not shops %}<section class="content-card empty-state"><h2>No shops available</h2><p>No active printing shops are available.</p></section>{% endif %}
   {% if files and shops %}
     <form class="form-stack order-selection-form" method="get" action="{{ url_for('orders.new') }}">
+      <input type="hidden" name="review" value="1">
       <section class="content-card flow-card">
         <span class="flow-number" aria-hidden="true">1</span>
-        <div class="field">
-          <label for="file_id">Your configured file</label>
-          <p class="hint">Select the document and print settings you saved.</p>
-          <select id="file_id" name="file_id" required>
-            <option value="">Select a file</option>
-            {% for file in files %}
-              <option value="{{ file.id }}" {% if file.id == selected_file_id %}selected{% endif %}>{{ file.original_filename }}</option>
-            {% endfor %}
-          </select>
-        </div>
-      </section>
-      <section class="content-card flow-card">
-        <span class="flow-number" aria-hidden="true">2</span>
         <div class="field">
           <label for="shop_id">Printing shop</label>
           <p class="hint">Only active shops can accept new orders.</p>
@@ -38,6 +26,48 @@
             {% endfor %}
           </select>
         </div>
+      </section>
+      <section class="content-card flow-card" id="available-files" aria-labelledby="select-files-heading">
+        <span class="flow-number" aria-hidden="true">2</span>
+        <h2 id="select-files-heading">Select files</h2>
+        <p class="hint">Add up to {{ max_files }} configured files. Each file can appear only once. Uncheck a file to remove it from this draft; it stays in your library.</p>
+        <p class="order-file-count" id="order-file-count" role="status">{{ selected_file_ids|length }} selected</p>
+        <div class="order-file-grid">
+          {% for file in files %}
+            {% set saved = file.configuration %}
+            {% set selected = selected_options.get(file.id) %}
+            <article class="order-file-card{% if file.id in selected_file_ids %} is-selected{% endif %}" data-order-file-card>
+              <label class="order-file-toggle" for="select-file-{{ file.id }}">
+                <input id="select-file-{{ file.id }}" type="checkbox" name="file_id" value="{{ file.id }}" data-order-file-toggle {% if file.id in selected_file_ids %}checked{% endif %}>
+                <span><strong>{{ file.original_filename }}</strong><small>{{ file.file_extension|upper }} · {{ file.file_size }} bytes</small></span>
+              </label>
+              <details class="order-file-settings" {% if file.id in selected_file_ids %}open{% endif %}>
+                <summary>Edit print settings for {{ file.original_filename }}</summary>
+                <div class="order-file-fields">
+                  <div class="field">
+                    <label for="paper-size-{{ file.id }}">Paper size for {{ file.original_filename }}</label>
+                    <select id="paper-size-{{ file.id }}" name="paper_size_{{ file.id }}">
+                      {% for size in paper_sizes %}<option value="{{ size.value }}" {% if size.value == (selected.paper_size if selected else saved.paper_size.value) %}selected{% endif %}>{{ size.label }}</option>{% endfor %}
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="color-mode-{{ file.id }}">Output for {{ file.original_filename }}</label>
+                    <select id="color-mode-{{ file.id }}" name="color_mode_{{ file.id }}">
+                      {% for mode in color_modes %}<option value="{{ mode.value }}" {% if mode.value == (selected.color_mode if selected else saved.color_mode.value) %}selected{% endif %}>{{ mode.label }}</option>{% endfor %}
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="quantity-{{ file.id }}">Print count for {{ file.original_filename }}</label>
+                    <input id="quantity-{{ file.id }}" name="quantity_{{ file.id }}" type="number" min="1" max="{{ max_quantity }}" step="1" value="{{ selected.quantity if selected else saved.quantity }}">
+                  </div>
+                  <label class="checkbox-field"><input type="checkbox" name="is_rush_{{ file.id }}" value="1" {% if (selected.is_rush if selected else saved.is_rush) %}checked{% endif %}> Rush printing for {{ file.original_filename }}</label>
+                </div>
+              </details>
+              <button class="button button-secondary order-file-remove" type="button" data-remove-file {% if file.id not in selected_file_ids %}hidden{% endif %}>Remove from order</button>
+            </article>
+          {% endfor %}
+        </div>
+        <p class="form-actions"><a class="button button-secondary" href="#available-files">+ Add files</a><a href="{{ url_for('files.index') }}">Open my file library</a></p>
       </section>
       <section class="content-card flow-card destination-card">
         <span class="flow-number" aria-hidden="true">3</span>
@@ -63,8 +93,9 @@
           <p class="hint">Direct-to-Professor requires an approved professor. This records an intended recipient; no file is sent at this stage.</p>
         </div>
       </section>
-      <div class="form-actions"><button class="button button-primary" type="submit">Review order <span aria-hidden="true">→</span></button></div>
+      <div class="form-actions"><button class="button button-primary" type="submit">Review all files <span aria-hidden="true">→</span></button></div>
     </form>
+    <script src="{{ url_for('static', filename='js/order-selection.js') }}" defer></script>
   {% endif %}
   <p class="hint">A placed order starts pending payment. Choose online or onsite payment after placing it.</p>
 {% endblock %}

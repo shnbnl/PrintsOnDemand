@@ -27,6 +27,16 @@ class PricingError(ValueError):
 
 
 @dataclass(frozen=True)
+class PrintOptions:
+    """Untrusted checkout settings, validated again against model enums and limits."""
+
+    paper_size: str
+    color_mode: str
+    quantity: int
+    is_rush: bool
+
+
+@dataclass(frozen=True)
 class OrderQuote:
     user_id: int
     shop: PrintingShop
@@ -55,6 +65,28 @@ class OrderQuote:
         return hashlib.sha256("|".join(map(str, values)).encode()).hexdigest()
 
 
+@dataclass(frozen=True)
+class CartQuote:
+    user_id: int
+    shop: PrintingShop
+    items: tuple[OrderQuote, ...]
+    subtotal: Decimal
+    rush_fee: Decimal
+    fees_total: Decimal
+    total: Decimal
+    currency: str
+    is_demo: bool
+
+    @property
+    def fingerprint(self) -> str:
+        values = (
+            self.user_id, self.shop.id, self.shop.name,
+            *(item.fingerprint for item in self.items),
+            self.subtotal, self.rush_fee, self.fees_total, self.total, self.currency,
+        )
+        return hashlib.sha256("|".join(map(str, values)).encode()).hexdigest()
+
+
 def money(value: Decimal | None, label: str) -> Decimal:
     if value is None or not isinstance(value, Decimal):
         raise PricingError(f"{label} is unavailable.")
@@ -67,7 +99,8 @@ def money(value: Decimal | None, label: str) -> Decimal:
 
 
 def quote_order(
-    *, user_id: int, file_id: int, shop_id: int, max_quantity: int, currency: str = "PHP"
+    *, user_id: int, file_id: int, shop_id: int, max_quantity: int,
+    currency: str = "PHP", options: PrintOptions | None = None,
 ) -> OrderQuote:
     """Rebuild a quote from owned file settings and current shop prices."""
     uploaded_file = db.session.scalar(
@@ -83,15 +116,18 @@ def quote_order(
         configuration = uploaded_file.configuration
         if configuration is None:
             raise PricingError("Configure this file before ordering.")
-        paper_size = PaperSize(configuration.paper_size)
-        color_mode = ColorMode(configuration.color_mode)
+        paper_size = PaperSize(options.paper_size if options else configuration.paper_size)
+        color_mode = ColorMode(options.color_mode if options else configuration.color_mode)
     except (LookupError, ValueError) as error:
         if isinstance(error, PricingError):
             raise
         raise PricingError("Print configuration is invalid.") from error
-    quantity = configuration.quantity
+    quantity = options.quantity if options else configuration.quantity
     if type(quantity) is not int or not 1 <= quantity <= max_quantity:
         raise PricingError("Print count is invalid.")
+    is_rush = options.is_rush if options else configuration.is_rush
+    if type(is_rush) is not bool:
+        raise PricingError("Rush printing selection is invalid.")
 
     try:
         data = get_storage().read(uploaded_file.storage_key)
@@ -114,7 +150,7 @@ def quote_order(
 
     rush_fee = Decimal("0.00")
     fee_is_demo = False
-    if configuration.is_rush:
+    if is_rush:
         rush_service = db.session.scalar(
             select(ShopService).where(
                 ShopService.shop_id == shop.id,
@@ -140,7 +176,35 @@ def quote_order(
     return OrderQuote(
         user_id=user_id, shop=shop, uploaded_file=uploaded_file,
         paper_size=paper_size, color_mode=color_mode, quantity=quantity,
-        is_rush=configuration.is_rush, unit_price=unit_price, line_total=line_total,
+        is_rush=is_rush, unit_price=unit_price, line_total=line_total,
         subtotal=subtotal, rush_fee=rush_fee, fees_total=fees_total, total=total,
         currency=currency, is_demo=shop.is_demo or rate.is_demo or fee_is_demo,
+    )
+
+
+def quote_cart(
+    *, user_id: int, file_ids: list[int], shop_id: int, max_quantity: int,
+    max_files: int, currency: str = "PHP",
+    options: dict[int, PrintOptions] | None = None,
+) -> CartQuote:
+    """Quote unique owned files; apply a shop's rush fee once per order."""
+    if not file_ids:
+        raise PricingError("Select at least one file for this order.")
+    if len(file_ids) > max_files:
+        raise PricingError(f"Select no more than {max_files} files per order.")
+    if len(set(file_ids)) != len(file_ids):
+        raise PricingError("Select each file only once per order.")
+    items = tuple(quote_order(
+        user_id=user_id, file_id=file_id, shop_id=shop_id,
+        max_quantity=max_quantity, currency=currency,
+        options=(options or {}).get(file_id),
+    ) for file_id in file_ids)
+    subtotal = money(sum((item.line_total for item in items), Decimal("0.00")), "Order subtotal")
+    rush_fee = next((item.rush_fee for item in items if item.is_rush), Decimal("0.00"))
+    fees_total = rush_fee
+    total = money(subtotal + fees_total, "Order total")
+    return CartQuote(
+        user_id=user_id, shop=items[0].shop, items=items,
+        subtotal=subtotal, rush_fee=rush_fee, fees_total=fees_total, total=total,
+        currency=currency, is_demo=any(item.is_demo for item in items),
     )

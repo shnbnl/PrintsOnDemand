@@ -10,14 +10,15 @@ from sqlalchemy.exc import IntegrityError
 from app.extensions import db
 from app.models import Order, OrderItem, OrderStatus
 from app.models.user import utc_now
-from app.services.pricing import OrderQuote
+from app.services.pricing import CartQuote, OrderQuote
 from app.services.professors import assign_professor, validate_professor_selection
 
 
 def create_order(
-    quote: OrderQuote, *, destination: str | None = None, professor_id: str | int | None = None
+    quote: CartQuote | OrderQuote, *, destination: str | None = None,
+    professor_id: str | int | None = None,
 ) -> Order:
-    """Commit one order and its item, retrying rare reference collisions."""
+    """Commit one order and all quoted items, retrying rare reference collisions."""
     for _ in range(5):
         professor = validate_professor_selection(
             shop_id=quote.shop.id, destination=destination, professor_id=professor_id
@@ -37,16 +38,17 @@ def create_order(
         )
         if professor is not None:
             assign_professor(order, professor)
-        order.items.append(OrderItem(
-            uploaded_file_id=quote.uploaded_file.id,
-            original_filename=quote.uploaded_file.original_filename,
-            paper_size=quote.paper_size,
-            color_mode=quote.color_mode,
-            quantity=quote.quantity,
-            is_rush=quote.is_rush,
-            unit_price=quote.unit_price,
-            line_total=quote.line_total,
-        ))
+        for item in quote.items if isinstance(quote, CartQuote) else (quote,):
+            order.items.append(OrderItem(
+                uploaded_file_id=item.uploaded_file.id,
+                original_filename=item.uploaded_file.original_filename,
+                paper_size=item.paper_size,
+                color_mode=item.color_mode,
+                quantity=item.quantity,
+                is_rush=item.is_rush,
+                unit_price=item.unit_price,
+                line_total=item.line_total,
+            ))
         db.session.add(order)
         try:
             db.session.commit()

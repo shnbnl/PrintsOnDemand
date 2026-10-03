@@ -10,7 +10,7 @@ from app.authorization import roles_required
 from app.extensions import db
 from app.models import (
     Order, OrderDestination, OrderStatus, Payment, PaymentMethod, PaymentStatus,
-    PrintConfiguration, PrintingShop, UploadedFile, UserRole,
+    ColorMode, PaperSize, PrintConfiguration, PrintingShop, UploadedFile, UserRole,
 )
 from app.order_forms import PlaceOrderForm, SelectProfessorForm
 from app.payment_forms import PaymentMethodForm, PaymentReferenceForm
@@ -19,7 +19,7 @@ from app.services.payments import (
     PaymentError, online_payment_details, owned_order, payment_configuration,
     select_payment_method, submit_online_reference,
 )
-from app.services.pricing import PricingError, quote_order
+from app.services.pricing import PricingError, PrintOptions, quote_cart
 from app.services.professors import (
     ProfessorSelectionError, assign_professor, professor_service_available,
     professor_snapshot, selectable_professors, validate_professor_selection,
@@ -82,7 +82,13 @@ def choices():
     files = db.session.scalars(
         select(UploadedFile)
         .join(PrintConfiguration, PrintConfiguration.file_id == UploadedFile.id)
-        .where(UploadedFile.user_id == current_user.id)
+        .where(
+            UploadedFile.user_id == current_user.id,
+            PrintConfiguration.paper_size.in_(list(PaperSize)),
+            PrintConfiguration.color_mode.in_(list(ColorMode)),
+            PrintConfiguration.quantity.between(1, current_app.config["UPLOAD_MAX_QUANTITY"]),
+        )
+        .options(selectinload(UploadedFile.configuration))
         .order_by(UploadedFile.created_at.desc(), UploadedFile.id.desc())
     ).all()
     shops = db.session.scalars(
@@ -92,73 +98,148 @@ def choices():
     return files, shops
 
 
-def quote_for(file_id: int, shop_id: int):
-    return quote_order(
+def quote_for(file_ids: list[int], shop_id: int, options: dict[int, PrintOptions]):
+    return quote_cart(
         user_id=current_user.id,
-        file_id=file_id,
+        file_ids=file_ids,
         shop_id=shop_id,
         max_quantity=current_app.config["UPLOAD_MAX_QUANTITY"],
+        max_files=current_app.config["ORDER_MAX_FILES"],
         currency=current_app.config["ORDER_CURRENCY"],
+        options=options,
     )
 
 
-def render_selection(*, file_id=None, shop_id=None, destination=None, professor_id=None,
-                     error=None, status=200):
+def parse_files(values):
+    """Read repeated file IDs and independent settings from GET or POST data."""
+    file_ids = []
+    options = {}
+    for raw in values.getlist("file_id"):
+        file_id = positive_id(raw)
+        if file_id is None:
+            raise PricingError("Select a valid file.")
+        file_ids.append(file_id)
+    if len(file_ids) > current_app.config["ORDER_MAX_FILES"]:
+        raise PricingError(
+            f"Select no more than {current_app.config['ORDER_MAX_FILES']} files per order."
+        )
+    if len(set(file_ids)) != len(file_ids):
+        raise PricingError("Select each file only once per order.")
+    for file_id in file_ids:
+        names = {key: f"{key}_{file_id}" for key in ("paper_size", "color_mode", "quantity", "is_rush")}
+        if not any(name in values for name in names.values()):
+            continue  # Existing one-file links use the saved library configuration.
+        if any(names[key] not in values for key in ("paper_size", "color_mode", "quantity")):
+            raise PricingError("Complete the print settings for each selected file.")
+        raw_quantity = values.get(names["quantity"], "")
+        if (not raw_quantity.isdecimal()
+                or len(raw_quantity) > len(str(current_app.config["UPLOAD_MAX_QUANTITY"]))):
+            raise PricingError("Print count is invalid.")
+        raw_rush = values.get(names["is_rush"])
+        if raw_rush not in (None, "1"):
+            raise PricingError("Rush printing selection is invalid.")
+        options[file_id] = PrintOptions(
+            paper_size=values.get(names["paper_size"], ""),
+            color_mode=values.get(names["color_mode"], ""),
+            quantity=int(raw_quantity), is_rush=raw_rush == "1",
+        )
+    return file_ids, options
+
+
+def render_selection(*, file_ids=None, shop_id=None, destination=None, professor_id=None,
+                     options=None, error=None, status=200):
     files, shops = choices()
+    selected_order = {file_id: index for index, file_id in enumerate(file_ids or [])}
+    files.sort(key=lambda file: (0, selected_order[file.id]) if file.id in selected_order else (1, 0))
     return render_template(
         "orders/new.html", files=files, shops=shops,
-        professors=selectable_professors(), selected_file_id=file_id,
+        professors=selectable_professors(), selected_file_ids=set(file_ids or []),
         selected_shop_id=shop_id, selected_destination=destination,
-        selected_professor_id=professor_id, error=error,
+        selected_professor_id=professor_id, selected_options=options or {},
+        paper_sizes=PaperSize, color_modes=ColorMode,
+        max_quantity=current_app.config["UPLOAD_MAX_QUANTITY"],
+        max_files=current_app.config["ORDER_MAX_FILES"], error=error,
     ), status
 
 
 def review_state(quote, destination, professor):
     return {
-        "file_id": quote.uploaded_file.id, "shop_id": quote.shop.id,
+        "file_ids": [item.uploaded_file.id for item in quote.items],
+        "shop_id": quote.shop.id,
         "fingerprint": quote.fingerprint, "destination": destination or None,
         "professor": professor_snapshot(professor),
     }
 
 
+def selection_url(quote, destination, professor, *, remove_file_id=None):
+    items = [item for item in quote.items if item.uploaded_file.id != remove_file_id]
+    args = {
+        "edit": "1", "file_id": [item.uploaded_file.id for item in items],
+        "shop_id": quote.shop.id, "destination": destination or "",
+        "professor_id": professor.id if professor else "",
+    }
+    for item in items:
+        suffix = f"_{item.uploaded_file.id}"
+        args[f"paper_size{suffix}"] = item.paper_size.value
+        args[f"color_mode{suffix}"] = item.color_mode.value
+        args[f"quantity{suffix}"] = item.quantity
+        if item.is_rush:
+            args[f"is_rush{suffix}"] = "1"
+    return url_for("orders.new", **args)
+
+
 def render_review(quote, *, destination=None, professor=None, warning=None, status=200):
     form = PlaceOrderForm(formdata=None)
-    form.file_id.data = str(quote.uploaded_file.id)
+    form.file_id.data = str(quote.items[0].uploaded_file.id)
     form.shop_id.data = str(quote.shop.id)
     form.destination.data = destination or ""
     form.professor_id.data = str(professor.id) if professor else ""
     return render_template(
         "orders/review.html", quote=quote, form=form, professor=professor,
-        warning=warning,
+        warning=warning, selection_url=selection_url(quote, destination, professor),
+        remove_urls={item.uploaded_file.id: selection_url(
+            quote, destination, professor, remove_file_id=item.uploaded_file.id,
+        ) for item in quote.items},
     ), status
 
 
 @orders_bp.get("/new")
 @roles_required(UserRole.STUDENT)
 def new():
-    raw_file = request.args.get("file_id")
+    session.pop("order_quote", None)
     raw_shop = request.args.get("shop_id")
     destination = request.args.get("destination") or None
     professor_id = request.args.get("professor_id") or None
-    file_id, shop_id = positive_id(raw_file), positive_id(raw_shop)
-    if (raw_file and file_id is None) or (raw_shop and shop_id is None):
-        return render_selection(error="Select a valid file and printing shop.", status=400)
-    if file_id is None or shop_id is None:
-        return render_selection(file_id=file_id, shop_id=shop_id,
-                                destination=destination, professor_id=professor_id)
+    shop_id = positive_id(raw_shop)
     try:
-        quote = quote_for(file_id, shop_id)
+        file_ids, options = parse_files(request.args)
+    except PricingError as error:
+        return render_selection(error=str(error), status=error.status_code)
+    if raw_shop and shop_id is None:
+        return render_selection(file_ids=file_ids, options=options,
+                                error="Select a valid printing shop.", status=400)
+    if request.args.get("edit") == "1" or not file_ids or shop_id is None:
+        error = "Select at least one file for this order." if request.args.get("review") == "1" and not file_ids else None
+        return render_selection(
+            file_ids=file_ids, shop_id=shop_id, options=options,
+            destination=destination, professor_id=professor_id,
+            error=error, status=400 if error else 200,
+        )
+    try:
+        quote = quote_for(file_ids, shop_id, options)
         professor = validate_professor_selection(
             shop_id=shop_id, destination=destination, professor_id=professor_id
         )
     except PricingError as error:
         return render_selection(
-            file_id=file_id, shop_id=shop_id, error=str(error), status=error.status_code
+            file_ids=file_ids, shop_id=shop_id, options=options,
+            error=str(error), status=error.status_code,
         )
     except ProfessorSelectionError as error:
         return render_selection(
-            file_id=file_id, shop_id=shop_id, destination=destination,
-            professor_id=professor_id, error=str(error), status=400,
+            file_ids=file_ids, shop_id=shop_id, options=options,
+            destination=destination, professor_id=professor_id,
+            error=str(error), status=400,
         )
     session["order_quote"] = review_state(quote, destination, professor)
     return render_review(quote, destination=destination, professor=professor)
@@ -170,23 +251,32 @@ def create():
     form = PlaceOrderForm()
     if not form.validate_on_submit():
         return render_selection(error="Review a valid order before submitting.", status=400)
-    file_id, shop_id = positive_id(form.file_id.data), positive_id(form.shop_id.data)
-    if file_id is None or shop_id is None:
-        return render_selection(error="Select a valid file and printing shop.", status=400)
+    shop_id = positive_id(form.shop_id.data)
     try:
-        quote = quote_for(file_id, shop_id)
+        file_ids, options = parse_files(request.form)
+    except PricingError as error:
+        return render_selection(error=str(error), status=error.status_code)
+    if not file_ids:
+        return render_selection(error="Select at least one file for this order.", status=400)
+    if shop_id is None:
+        return render_selection(file_ids=file_ids, options=options,
+                                error="Select a valid printing shop.", status=400)
+    try:
+        quote = quote_for(file_ids, shop_id, options)
         professor = validate_professor_selection(
             shop_id=shop_id, destination=form.destination.data,
             professor_id=form.professor_id.data,
         )
     except PricingError as error:
         return render_selection(
-            file_id=file_id, shop_id=shop_id, error=str(error), status=error.status_code
+            file_ids=file_ids, shop_id=shop_id, options=options,
+            error=str(error), status=error.status_code,
         )
     except ProfessorSelectionError as error:
         return render_selection(
-            file_id=file_id, shop_id=shop_id, destination=form.destination.data,
-            professor_id=form.professor_id.data, error=str(error), status=400,
+            file_ids=file_ids, shop_id=shop_id, options=options,
+            destination=form.destination.data, professor_id=form.professor_id.data,
+            error=str(error), status=400,
         )
     reviewed = session.get("order_quote")
     current_review = review_state(quote, form.destination.data, professor)
@@ -203,8 +293,9 @@ def create():
         )
     except ProfessorSelectionError as error:
         return render_selection(
-            file_id=file_id, shop_id=shop_id, destination=form.destination.data,
-            professor_id=form.professor_id.data, error=str(error), status=400,
+            file_ids=file_ids, shop_id=shop_id, options=options,
+            destination=form.destination.data, professor_id=form.professor_id.data,
+            error=str(error), status=400,
         )
     except (SQLAlchemyError, RuntimeError):
         db.session.rollback()

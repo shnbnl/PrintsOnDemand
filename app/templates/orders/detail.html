@@ -57,11 +57,11 @@
   </section>
   <section class="content-card print-details">
     <p class="page-eyebrow">Your documents</p>
-    <h2>Print details</h2>
+    <h2>Print details ({{ order.items|length }} {{ 'file' if order.items|length == 1 else 'files' }})</h2>
     <div class="order-item-list">
       {% for item in order.items %}
         <article class="order-item-card">
-          <h3>{{ item.original_filename }}</h3>
+          <h3>{{ loop.index }}. {{ item.original_filename }}</h3>
           <dl class="detail-list">
             <div class="detail-row"><dt>Paper</dt><dd>{{ item.paper_size.label }}</dd></div>
             <div class="detail-row"><dt>Output</dt><dd>{{ item.color_mode.label }}</dd></div>

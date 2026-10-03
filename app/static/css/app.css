@@ -338,6 +338,22 @@ tbody th { font-weight: 800; }
 .map-pin.is-selected { outline: 3px solid var(--cobalt); outline-offset: 2px; background: var(--cobalt); }
 .map-user-pin { width: 2.8rem; height: 2.8rem; background: var(--success); font-size: 0.72rem; }
 
+/* Multi-file checkout uses the existing card and form language. */
+.order-file-count { display: inline-flex; margin: 0.35rem 0 0.8rem; padding: 0.3rem 0.7rem; border-radius: 99px; color: var(--navy); background: #eaf0ff; font-weight: 800; }
+.order-file-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr)); gap: 0.8rem; }
+.order-file-card { min-width: 0; padding: 0.85rem; border: 2px solid var(--border); border-radius: var(--radius); background: white; }
+.order-file-card.is-selected { border-color: var(--cobalt); box-shadow: inset 0 0 0 1px var(--cobalt); }
+.order-file-toggle { display: flex; align-items: start; gap: 0.65rem; cursor: pointer; }
+.order-file-toggle input { flex: none; margin-top: 0.2rem; }
+.order-file-toggle span { min-width: 0; }
+.order-file-toggle strong, .order-file-toggle small { display: block; overflow-wrap: anywhere; }
+.order-file-toggle small { margin-top: 0.15rem; color: var(--muted); }
+.order-file-settings { margin-top: 0.7rem; border-top: 1px solid var(--border); }
+.order-file-settings summary { padding: 0.65rem 0; color: var(--navy); font-weight: 800; cursor: pointer; }
+.order-file-fields { display: grid; gap: 0.7rem; padding: 0.4rem 0 0.7rem; }
+.order-file-remove { min-height: 2.5rem; margin-top: 0.5rem; font-size: 0.85rem; }
+.order-item-card h3 { overflow-wrap: anywhere; }
+
 @media (max-width: 64rem) {
   .desktop-nav { display: none; }
   .mobile-nav { display: block; }
