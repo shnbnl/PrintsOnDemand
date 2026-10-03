@@ -14,7 +14,8 @@ class ManagementError(ValueError):
 
 def save_professor(record: Professor | None, *, name: str, email: str,
                    department: str | None, office: str | None,
-                   is_active: bool, direct_send_approved: bool) -> Professor:
+                   is_active: bool, direct_send_approved: bool,
+                   accepts_student_deliveries: bool = False) -> Professor:
     try:
         normalized = validate_email(email, check_deliverability=False).normalized.casefold()
     except (EmailNotValidError, TypeError, ValueError) as error:
@@ -32,6 +33,7 @@ def save_professor(record: Professor | None, *, name: str, email: str,
     record.office = office or None
     record.is_active = is_active
     record.direct_send_approved = direct_send_approved
+    record.accepts_student_deliveries = accepts_student_deliveries
     db.session.add(record)
     try:
         db.session.commit()

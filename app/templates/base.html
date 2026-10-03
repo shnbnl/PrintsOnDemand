@@ -17,6 +17,11 @@
           <a href="{{ url_for('shops.index') }}">Printing Shops</a>
           <a href="{{ url_for('files.index') }}">My Files</a>
           <a href="{{ url_for('orders.index') }}">Order History</a>
+        {% elif current_user.role.value == 'PROFESSOR' %}
+          <a href="{{ url_for('shops.index') }}">Printing Shops</a>
+          <a href="{{ url_for('files.index') }}">My Files</a>
+          <a href="{{ url_for('orders.index') }}">Order History</a>
+          <a href="{{ url_for('professor_settings.settings') }}">Delivery setting</a>
         {% elif current_user.role.value == 'SHOP_STAFF' %}
           <a href="{{ url_for('access.shop') }}">Assigned Shop</a>
           <a href="{{ url_for('staff_orders.index') }}">Shop Orders</a>

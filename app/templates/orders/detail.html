@@ -46,12 +46,13 @@
     </dl>
     {% if order.destination and order.destination.value == 'PROFESSOR' %}
       <div class="destination-panel">
-        <h3>Direct-to-Professor</h3>
+        <h3>Professor Delivery</h3>
+        <p>{{ 'Deliver to Me' if order.professor_recipient_type == 'SELF' else 'Deliver to Professor' }}</p>
         <p>Intended recipient: <strong>{{ order.professor_name }}</strong></p>
         <p>Department: {{ order.professor_department or 'Not listed' }}</p>
         <p>Office: {{ order.professor_office or 'Not listed' }}</p>
         <p>Email: {{ order.professor_email }}</p>
-        <p>The order was created with this intended recipient. No file or email has been sent to the professor.</p>
+        <p>Blue and Silver staff will physically deliver the printed papers to this recipient. The order record does not confirm handoff. No file is sent electronically.</p>
       </div>
     {% elif order.destination and order.destination.value == 'PICKUP' %}
       <div class="destination-panel"><h3>Scheduled Pickup</h3><p>Requested pickup date: {{ order.pickup_date }}</p><p>Requested pickup time: {{ order.pickup_slot }} (Philippine time)</p><p>Check order tracking for processing progress.</p></div>

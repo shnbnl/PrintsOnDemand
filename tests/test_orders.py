@@ -120,12 +120,13 @@ def place(client, file_id, shop_id, **extras):
     })
 
 
-def approved_professor(app, *, active=True, approved=True, name="Maria Santos"):
+def approved_professor(app, *, active=True, approved=True, accepts=True, name="Maria Santos"):
     with app.app_context():
         professor = Professor(
             name=name, email=f"{name.lower().replace(' ', '.')}@example.edu",
             department="Computer Engineering", office="Engineering Building 204",
             is_active=active, direct_send_approved=approved,
+            accepts_student_deliveries=accepts,
         )
         db.session.add(professor)
         db.session.commit()
@@ -134,6 +135,9 @@ def approved_professor(app, *, active=True, approved=True, name="Maria Santos"):
 
 def offer_professor_service(app, shop_id, *, enabled=True):
     with app.app_context():
+        record = db.session.get(PrintingShop, shop_id)
+        if record.name == "Campus Prints":
+            record.name = "Blue and Silver Bookstore"
         service = db.session.scalar(select(ShopService).where(
             ShopService.shop_id == shop_id,
             ShopService.service_type == ServiceType.DIRECT_TO_PROFESSOR,
@@ -170,7 +174,7 @@ def test_professor_checkout_review_confirmation_and_snapshot(client, test_app):
     approved_professor(test_app, active=False, name="Liza Navarro")
     sign_in(client, user_id)
     selection = client.get("/orders/new")
-    assert b"Direct-to-Professor" in selection.data
+    assert b"Deliver to Professor" in selection.data
     assert b"Maria Santos" in selection.data
     assert b"Ana Reyes" not in selection.data
     assert b"Liza Navarro" not in selection.data
@@ -190,7 +194,7 @@ def test_professor_checkout_review_confirmation_and_snapshot(client, test_app):
     assert b"Maria Santos" in confirmation.data
     assert b"maria.santos@example.edu" in confirmation.data
     assert b"PENDING_PAYMENT" in confirmation.data
-    assert b"No file or email has been sent" in confirmation.data
+    assert b"No file is sent electronically" in confirmation.data
     assert b"Payment is pending" in confirmation.data
     with test_app.app_context():
         order = db.session.scalar(select(Order))

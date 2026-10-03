@@ -14,7 +14,7 @@ from sqlalchemy import select
 from app.extensions import db
 from app.models import FeeType, OrderDestination, PrintingShop, ServiceType, ShopFee, ShopService
 from app.services.pricing import PricingError, money
-from app.services.professors import ProfessorSelectionError, professor_snapshot, validate_professor_selection
+from app.services.professors import ProfessorSelectionError, professor_snapshot, professor_service_available, validate_professor_selection
 
 
 class FulfillmentError(ValueError):
@@ -31,6 +31,7 @@ class Fulfillment:
     destination: OrderDestination
     professor_id: int | None = None
     professor_details: dict | None = None
+    professor_recipient_type: str | None = None
     pickup_date: date | None = None
     pickup_slot: str | None = None
     delivery_recipient_name: str | None = None
@@ -45,6 +46,7 @@ class Fulfillment:
         return {
             "destination": self.destination.value,
             "professor": self.professor_details,
+            "professor_recipient_type": self.professor_recipient_type,
             "pickup_date": self.pickup_date.isoformat() if self.pickup_date else None,
             "pickup_slot": self.pickup_slot,
             "delivery_recipient_name": self.delivery_recipient_name,
@@ -58,7 +60,7 @@ class Fulfillment:
     def fields(self) -> dict[str, str]:
         return {
             "destination": self.destination.value,
-            "professor_id": str(self.professor_id or ""),
+            "professor_id": str(self.professor_id or "") if self.professor_recipient_type != "SELF" else "",
             "pickup_date": self.pickup_date.isoformat() if self.pickup_date else "",
             "pickup_slot": self.pickup_slot or "",
             "delivery_recipient_name": self.delivery_recipient_name or "",
@@ -130,7 +132,7 @@ def availability(shop: PrintingShop) -> dict[str, bool]:
         except FulfillmentError:
             delivery = False
     return {
-        OrderDestination.PROFESSOR.value: service_available(shop.id, ServiceType.DIRECT_TO_PROFESSOR),
+        OrderDestination.PROFESSOR.value: professor_service_available(shop.id),
         OrderDestination.PICKUP.value: pickup,
         OrderDestination.DELIVERY.value: delivery,
     }
@@ -163,7 +165,7 @@ def _scheduled(values: dict[str, str], prefix: str, shop: PrintingShop) -> tuple
     return requested, raw_slot
 
 
-def validate_fulfillment(*, shop: PrintingShop, values) -> Fulfillment:
+def validate_fulfillment(*, shop: PrintingShop, values, actor=None) -> Fulfillment:
     """Accept only fields belonging to the selected method; price never comes from values."""
     if "delivery_fee" in values:
         raise FulfillmentError("Delivery fee must be calculated by the shop.")
@@ -186,11 +188,12 @@ def validate_fulfillment(*, shop: PrintingShop, values) -> Fulfillment:
     if destination == OrderDestination.PROFESSOR:
         try:
             professor = validate_professor_selection(
-                shop_id=shop.id, destination=destination, professor_id=data["professor_id"]
+                shop_id=shop.id, destination=destination, professor_id=data["professor_id"], actor=actor
             )
         except ProfessorSelectionError as error:
             raise FulfillmentError(str(error)) from error
-        return Fulfillment(destination, professor.id, professor_snapshot(professor))
+        return Fulfillment(destination, professor.id, professor_snapshot(professor),
+                           "SELF" if actor is not None and actor.role.value == "PROFESSOR" else "STUDENT_SELECTED")
     service = ServiceType.PICKUP if destination == OrderDestination.PICKUP else ServiceType.DELIVERY
     if not service_available(shop.id, service):
         raise FulfillmentError(f"This shop does not offer {destination.label}.")

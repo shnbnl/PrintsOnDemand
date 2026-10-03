@@ -19,6 +19,7 @@
     {% endfor %}
     <div class="checkbox-field">{{ form.is_active() }} {{ form.is_active.label }}</div>
     <div class="checkbox-field">{{ form.direct_send_approved() }} {{ form.direct_send_approved.label }}</div>
+    <div class="checkbox-field">{{ form.accepts_student_deliveries() }} {{ form.accepts_student_deliveries.label }}</div>
     <div class="form-actions">{{ form.submit(class_='button') }}</div>
   </form>
 {% endblock %}

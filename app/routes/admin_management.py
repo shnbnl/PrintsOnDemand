@@ -64,6 +64,7 @@ def professor_editor(record=None):
                 department=form.department.data, office=form.office.data,
                 is_active=bool(form.is_active.data),
                 direct_send_approved=bool(form.direct_send_approved.data),
+                accepts_student_deliveries=bool(form.accepts_student_deliveries.data),
             )
         except ManagementError as error:
             form.email.errors.append(str(error))

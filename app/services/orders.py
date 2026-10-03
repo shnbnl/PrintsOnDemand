@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
-from app.models import Order, OrderDestination, OrderItem, OrderStatus
+from app.models import Order, OrderDestination, OrderItem, OrderStatus, Professor, User
 from app.models.user import utc_now
 from app.services.pricing import CartQuote, OrderQuote
 from app.services.professors import assign_professor, validate_professor_selection
@@ -22,19 +22,17 @@ def create_order(
 ) -> Order:
     """Commit one order and all quoted items, retrying rare reference collisions."""
     for _ in range(5):
+        actor = db.session.get(User, quote.user_id)
+        if actor is None:
+            raise FulfillmentError("Order account no longer exists.")
         if fulfillment is not None:
-            refreshed = validate_fulfillment(shop=quote.shop, values=fulfillment.fields())
+            refreshed = validate_fulfillment(shop=quote.shop, values=fulfillment.fields(), actor=actor)
             if refreshed.snapshot() != fulfillment.snapshot() or refreshed.delivery_fee != getattr(quote, "delivery_fee", 0):
                 raise FulfillmentError("Fulfillment details or delivery fee changed. Review the order again.")
-            professor = None
-            if refreshed.professor_id is not None:
-                professor = validate_professor_selection(
-                    shop_id=quote.shop.id, destination=OrderDestination.PROFESSOR,
-                    professor_id=refreshed.professor_id,
-                )
+            professor = db.session.get(Professor, refreshed.professor_id) if refreshed.professor_id else None
         else:
             professor = validate_professor_selection(
-                shop_id=quote.shop.id, destination=destination, professor_id=professor_id
+                shop_id=quote.shop.id, destination=destination, professor_id=professor_id, actor=actor
             )
         reference = f"POD-{utc_now().year}-{secrets.token_hex(6).upper()}"
         order = Order(
@@ -52,6 +50,8 @@ def create_order(
         )
         if professor is not None:
             assign_professor(order, professor)
+            order.professor_recipient_type = (fulfillment.professor_recipient_type if fulfillment
+                                              else "STUDENT_SELECTED")
         if fulfillment is not None:
             order.destination = fulfillment.destination
             order.pickup_date = fulfillment.pickup_date

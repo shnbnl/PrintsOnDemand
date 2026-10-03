@@ -121,9 +121,9 @@ def test_old_shop_price_and_professor_snapshots_remain_visible(client, test_app)
     assert client.get(f"/shops/{shop_id}").status_code == 404
     listing = client.get("/orders")
     assert listing.status_code == 200
-    assert b"Campus Prints" in listing.data and b"Renamed Inactive Shop" not in listing.data
+    assert b"Blue and Silver Bookstore" in listing.data and b"Renamed Inactive Shop" not in listing.data
     assert b"PHP 6.75" in listing.data and b"PHP 297.00" not in listing.data
-    assert b"Direct-to-Professor: Maria Santos" in listing.data
+    assert b"Professor Delivery: Maria Santos" in listing.data
     assert b"Changed Name" not in listing.data
     assert storage_key.encode() not in listing.data
     detail = client.get(detail_url)

@@ -118,7 +118,7 @@ def test_custom_panel_uses_registered_shop_services_fees_and_existing_proceed(cl
     assert response.status_code == 200
     marker = map_data(response)[0]
     assert marker["id"] == mapped
-    assert marker["fulfillment"] == ["Direct-to-Professor", "Scheduled Pickup", "Delivery"]
+    assert marker["fulfillment"] == ["Scheduled Pickup", "Delivery"]
     assert marker["fees"] == [{"label": "Delivery", "amount": "₱30.00", "is_demo": False}]
     assert b"Available" in response.data
     assert b"Applicable fees" in response.data

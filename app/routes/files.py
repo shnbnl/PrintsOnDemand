@@ -1,4 +1,4 @@
-"""Student-owned private file uploads and print configuration."""
+"""Owner-only private file uploads and print configuration."""
 
 import hashlib
 from io import BytesIO
@@ -41,7 +41,7 @@ def private_storage():
 
 
 @files_bp.get("")
-@roles_required(UserRole.STUDENT)
+@roles_required(UserRole.STUDENT, UserRole.PROFESSOR)
 def index():
     records = db.session.scalars(
         select(UploadedFile).where(UploadedFile.user_id == current_user.id)
@@ -51,7 +51,7 @@ def index():
 
 
 @files_bp.route("/upload", methods=["GET", "POST"])
-@roles_required(UserRole.STUDENT)
+@roles_required(UserRole.STUDENT, UserRole.PROFESSOR)
 def upload():
     form = UploadForm()
     if form.validate_on_submit():
@@ -100,13 +100,13 @@ def upload():
 
 
 @files_bp.get("/<int:file_id>")
-@roles_required(UserRole.STUDENT)
+@roles_required(UserRole.STUDENT, UserRole.PROFESSOR)
 def detail(file_id: int):
     return render_template("files/detail.html", record=owned_file(file_id))
 
 
 @files_bp.get("/<int:file_id>/download")
-@roles_required(UserRole.STUDENT)
+@roles_required(UserRole.STUDENT, UserRole.PROFESSOR)
 def download(file_id: int):
     return send_private_file(owned_file(file_id))
 
@@ -133,7 +133,7 @@ def send_private_file(record: UploadedFile):
 
 
 @files_bp.route("/<int:file_id>/configure", methods=["GET", "POST"])
-@roles_required(UserRole.STUDENT)
+@roles_required(UserRole.STUDENT, UserRole.PROFESSOR)
 def configure(file_id: int):
     record = owned_file(file_id)
     form = PrintConfigurationForm(obj=record.configuration)
@@ -154,7 +154,7 @@ def configure(file_id: int):
 
 
 @files_bp.post("/<int:file_id>/delete")
-@roles_required(UserRole.STUDENT)
+@roles_required(UserRole.STUDENT, UserRole.PROFESSOR)
 def delete(file_id: int):
     # Lock the metadata row where supported so an order cannot attach this file
     # between the reference check and the delete. The FK remains the final guard.

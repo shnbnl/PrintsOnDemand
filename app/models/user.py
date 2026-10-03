@@ -1,4 +1,4 @@
-"""User identity and the three application roles."""
+"""User identity and application roles."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from enum import StrEnum
 
 from flask_login import UserMixin
+from sqlalchemy import UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -14,6 +15,7 @@ from app.extensions import db
 
 class UserRole(StrEnum):
     STUDENT = "STUDENT"
+    PROFESSOR = "PROFESSOR"
     SHOP_STAFF = "SHOP_STAFF"
     ADMIN = "ADMIN"
 
@@ -24,6 +26,7 @@ def utc_now() -> datetime:
 
 class User(UserMixin, db.Model):
     __tablename__ = "users"
+    __table_args__ = (UniqueConstraint("professor_id", name="uq_users_professor_id"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(db.String(120), nullable=False)
@@ -47,6 +50,11 @@ class User(UserMixin, db.Model):
         index=True,
     )
     shop: Mapped[PrintingShop | None] = relationship(back_populates="staff")
+    professor_id: Mapped[int | None] = mapped_column(
+        db.ForeignKey("professors.id", name="fk_users_professor_id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+    professor: Mapped[Professor | None] = relationship(back_populates="account")
     uploaded_files: Mapped[list[UploadedFile]] = relationship(back_populates="user")
     orders: Mapped[list[Order]] = relationship(back_populates="user")
 

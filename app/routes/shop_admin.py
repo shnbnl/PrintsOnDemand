@@ -20,6 +20,7 @@ from app.models import (
 )
 from app.shop_forms import FeeForm, PriceForm, ServiceForm, ShopForm, StaffAssignmentForm
 from app.services.admin_management import ManagementError, assign_staff_to_shop
+from app.services.professors import PROFESSOR_DELIVERY_SHOP
 
 
 shop_admin_bp = Blueprint("shop_admin", __name__, url_prefix="/admin/shops")
@@ -35,15 +36,24 @@ def staff_choices() -> list[tuple[int, str]]:
 def render_editor(shop: PrintingShop, *, shop_form=None, service_form=None, price_form=None, fee_form=None, staff_form=None):
     staff_form = staff_form or StaffAssignmentForm(formdata=None)
     staff_form.staff_id.choices = staff_choices()
+    service_form = service_form or ServiceForm(formdata=None)
+    if shop.name != PROFESSOR_DELIVERY_SHOP:
+        service_form.service_type.choices = [
+            choice for choice in service_form.service_type.choices
+            if choice[0] != ServiceType.DIRECT_TO_PROFESSOR.value
+        ]
     return render_template(
         "shops/edit.html",
         shop=shop,
         shop_form=shop_form or ShopForm(formdata=None, obj=shop),
-        service_form=service_form or ServiceForm(formdata=None),
+        service_form=service_form,
         price_form=price_form or PriceForm(formdata=None),
         fee_form=fee_form or FeeForm(formdata=None),
         staff_form=staff_form,
-        services=sorted(shop.services, key=lambda item: item.service_type.value),
+        services=sorted((item for item in shop.services if (
+            shop.name == PROFESSOR_DELIVERY_SHOP
+            or item.service_type != ServiceType.DIRECT_TO_PROFESSOR)),
+            key=lambda item: item.service_type.value),
         prices=sorted(shop.prices, key=lambda item: (item.paper_size.value, item.color_mode.value)),
         fees=sorted(shop.fees, key=lambda item: item.fee_type.value),
         assigned_staff=sorted(shop.staff, key=lambda user: user.name),
@@ -128,6 +138,10 @@ def save_service(shop_id: int):
     form = ServiceForm()
     if form.validate_on_submit():
         service_type = ServiceType(form.service_type.data)
+        if (service_type == ServiceType.DIRECT_TO_PROFESSOR and form.enabled.data
+                and shop.name != PROFESSOR_DELIVERY_SHOP):
+            form.service_type.errors.append("Only Blue and Silver Bookstore can offer professor delivery.")
+            return render_editor(shop, service_form=form), 400
         service = db.session.scalar(
             select(ShopService).where(
                 ShopService.shop_id == shop.id, ShopService.service_type == service_type

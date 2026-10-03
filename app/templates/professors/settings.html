@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Professor delivery setting | Prints On Demand{% endblock %}
+{% block content %}
+  <header class="page-intro"><h1>Professor delivery setting</h1>
+    <p class="page-lead">Choose whether students can select you for physical delivery of printed papers from Blue and Silver Bookstore.</p></header>
+  <section class="content-card">
+    <h2>{{ profile.name }}</h2>
+    <p>{{ profile.department or 'Department not listed' }} · {{ profile.office or 'Office not listed' }}</p>
+    <form method="post">
+      {{ form.hidden_tag() }}
+      <div class="checkbox-field">{{ form.accepts_student_deliveries() }} {{ form.accepts_student_deliveries.label }}</div>
+      <p class="hint">Students can select you only when this is on and your profile is active and approved. Your own deliveries remain available when this is off.</p>
+      {{ form.submit(class_="button button-primary") }}
+    </form>
+  </section>
+{% endblock %}

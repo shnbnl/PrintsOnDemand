@@ -1,4 +1,4 @@
-"""Student shop directory and read-only shop details."""
+"""Ordering-account shop directory and read-only shop details."""
 
 from flask import Blueprint, abort, current_app, render_template, request, url_for
 from flask_login import current_user
@@ -9,6 +9,8 @@ from app.authorization import roles_required
 from app.extensions import db
 from app.models import ColorMode, PaperSize, PrintConfiguration, PrintingShop, UploadedFile, UserRole
 from app.services.fulfillment import availability
+from app.services.professors import shop_supports_professor_delivery
+from app.models import ServiceType
 
 
 shops_bp = Blueprint("shops", __name__, url_prefix="/shops")
@@ -26,7 +28,9 @@ def detail_context(shop: PrintingShop) -> dict:
         for size in PaperSize
     ]
     services = sorted(
-        (item for item in shop.services if item.enabled),
+        (item for item in shop.services if item.enabled and (
+            item.service_type != ServiceType.DIRECT_TO_PROFESSOR
+            or shop_supports_professor_delivery(shop))),
         key=lambda item: item.service_type.value,
     )
     service_types = {item.service_type.value for item in services}
@@ -46,7 +50,7 @@ def active_shop_statement(query: str):
 
 
 @shops_bp.get("")
-@roles_required(UserRole.STUDENT)
+@roles_required(UserRole.STUDENT, UserRole.PROFESSOR)
 def index():
     query = request.args.get("q", "").strip()[:100]
     statement = active_shop_statement(query)
@@ -55,7 +59,7 @@ def index():
 
 
 @shops_bp.get("/map")
-@roles_required(UserRole.STUDENT)
+@roles_required(UserRole.STUDENT, UserRole.PROFESSOR)
 def map_view():
     """Discover only active shops with stored, valid coordinates."""
     query = request.args.get("q", "").strip()[:100]
@@ -116,7 +120,7 @@ def map_view():
 
 
 @shops_bp.get("/<int:shop_id>")
-@roles_required(UserRole.STUDENT)
+@roles_required(UserRole.STUDENT, UserRole.PROFESSOR)
 def detail(shop_id: int):
     shop = db.session.get(PrintingShop, shop_id)
     if shop is None or not shop.is_active:

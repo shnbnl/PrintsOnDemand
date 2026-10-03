@@ -44,7 +44,7 @@ DEMO_SHOPS = (
     ),
     (
         "Iced Design and Prints", time(9, 0), time(15, 0),
-        (ServiceType.PICKUP, ServiceType.DIRECT_TO_PROFESSOR, ServiceType.RUSH_PRINTING, ServiceType.DELIVERY),
+        (ServiceType.PICKUP, ServiceType.RUSH_PRINTING, ServiceType.DELIVERY),
     ),
     (
         "CHALECOSPOT", time(8, 30), time(18, 50),

@@ -145,7 +145,7 @@ def test_professor_snapshot_and_print_details_remain_visible(client, test_app):
     assert b"A4" in response.data
     assert b"Subtotal: PHP 6.75" in response.data
     assert b"Fees total: PHP 0.00" in response.data
-    assert b"No file or email has been sent" in response.data
+    assert b"No file is sent electronically" in response.data
 
 
 def test_tracking_inherits_order_ownership_and_avoids_internal_data(client, test_app):

@@ -64,7 +64,7 @@ def test_staff_reassignment_and_unassignment_change_access_immediately(client, t
     assert client.post(f"/admin/staff/{staff_a}/assignment", data={"shop_id": shop_b, "csrf_token": token(client.get(a))}).status_code == 403
     sign_in(client, admin)
     page = f"/admin/staff/{staff_a}/assignment"
-    assert b"Shop A" in client.get("/admin/staff").data
+    assert b"Blue and Silver Bookstore" in client.get("/admin/staff").data
     assert post_with_token(client, page, {"shop_id": str(shop_b), "role": "ADMIN"}).status_code == 302
     with test_app.app_context():
         user = db.session.get(User, staff_a)
@@ -95,7 +95,7 @@ def test_professor_management_eligibility_normalization_and_snapshots(client, te
     created = post_with_token(client, path, {
         "name": "Maria Santos", "email": "  MARIA.SANTOS@EXAMPLE.EDU  ",
         "department": "Engineering", "office": "Room 204",
-        "is_active": "y", "direct_send_approved": "y", "role": "ADMIN",
+        "is_active": "y", "direct_send_approved": "y", "accepts_student_deliveries": "y", "role": "ADMIN",
     })
     assert created.status_code == 302
     with test_app.app_context():
@@ -128,7 +128,7 @@ def test_professor_management_eligibility_normalization_and_snapshots(client, te
     assert post_with_token(client, edit, {
         "name": "Maria Updated", "email": "new.maria@example.edu",
         "department": "New Department", "office": "New Office",
-        "is_active": "y", "direct_send_approved": "y",
+        "is_active": "y", "direct_send_approved": "y", "accepts_student_deliveries": "y",
     }).status_code == 302
     sign_in(client, owner)
     new_file = file(test_app, owner, name="new.pdf")
@@ -254,7 +254,7 @@ def test_disabling_professor_service_blocks_new_use_but_keeps_old_order(client, 
     sign_in(client, admin)
     created = post_with_token(client, "/admin/professors/new", {
         "name": "Professor One", "email": "professor.one@example.edu",
-        "is_active": "y", "direct_send_approved": "y",
+        "is_active": "y", "direct_send_approved": "y", "accepts_student_deliveries": "y",
     })
     assert created.status_code == 302
     with test_app.app_context():

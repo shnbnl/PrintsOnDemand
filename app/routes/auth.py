@@ -18,6 +18,7 @@ auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 def role_home(role: UserRole) -> str:
     return {
         UserRole.STUDENT: url_for("access.student"),
+        UserRole.PROFESSOR: url_for("access.professor"),
         UserRole.SHOP_STAFF: url_for("access.shop"),
         UserRole.ADMIN: url_for("access.admin"),
     }[role]

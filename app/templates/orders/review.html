@@ -42,14 +42,14 @@
       {% if fulfillment.destination.value == 'PROFESSOR' %}
         <section class="content-card">
           <p class="page-eyebrow">Intended recipient</p>
-          <h2>Direct-to-Professor</h2>
+          <h2>{{ 'Deliver to Me' if fulfillment.professor_recipient_type == 'SELF' else 'Deliver to Professor' }}</h2>
           <p><strong>{{ fulfillment.professor_details.name }}</strong></p>
           <dl class="detail-list">
             <div class="detail-row"><dt>Department</dt><dd>{{ fulfillment.professor_details.department or 'Not listed' }}</dd></div>
             <div class="detail-row"><dt>Office</dt><dd>{{ fulfillment.professor_details.office or 'Not listed' }}</dd></div>
             <div class="detail-row"><dt>Email</dt><dd>{{ fulfillment.professor_details.email }}</dd></div>
           </dl>
-          <p class="hint">This professor is the intended recipient. No file or email has been sent.</p>
+          <p class="hint">Blue and Silver staff will physically deliver the printed papers to this professor. No file is sent electronically.</p>
         </section>
       {% elif fulfillment.destination.value == 'PICKUP' %}
         <section class="content-card"><p class="page-eyebrow">Fulfillment</p><h2>Scheduled Pickup</h2>

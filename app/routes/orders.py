@@ -1,4 +1,4 @@
-"""Student-only order selection, quote review, creation, and detail."""
+"""Owner-only order selection, quote review, creation, and detail."""
 
 from flask import Blueprint, abort, current_app, redirect, render_template, request, session, url_for
 from flask_login import current_user
@@ -33,13 +33,14 @@ from app.services.tracking import build_tracking
 
 
 orders_bp = Blueprint("orders", __name__, url_prefix="/orders")
+ORDERING_ROLES = (UserRole.STUDENT, UserRole.PROFESSOR)
 HISTORY_PAGE_SIZE = 20
 MAX_DATABASE_ID = 2**63 - 1
 MAX_HISTORY_PAGE = MAX_DATABASE_ID // HISTORY_PAGE_SIZE
 
 
 @orders_bp.get("")
-@roles_required(UserRole.STUDENT)
+@roles_required(*ORDERING_ROLES)
 def index():
     """Show the signed-in student's stored orders, newest first."""
     status = request.args.get("status", "").strip()
@@ -158,9 +159,13 @@ def parse_files(values):
 def render_selection(*, file_ids=None, shop_id=None, destination=None, professor_id=None,
                      options=None, fulfillment_fields=None, error=None, status=200):
     files, shops = choices()
-    professors = selectable_professors()
+    professors = selectable_professors() if current_user.role == UserRole.STUDENT else []
     shop_availability = {shop.id: availability(shop) for shop in shops}
-    if not professors:
+    if (not professors and current_user.role == UserRole.STUDENT) or (
+        current_user.role == UserRole.PROFESSOR and (
+            current_user.professor is None or not current_user.professor.is_active
+        )
+    ):
         for offered in shop_availability.values():
             offered[OrderDestination.PROFESSOR.value] = False
     selected_order = {file_id: index for index, file_id in enumerate(file_ids or [])}
@@ -168,6 +173,7 @@ def render_selection(*, file_ids=None, shop_id=None, destination=None, professor
     return render_template(
         "orders/new.html", files=files, shops=shops,
         professors=professors, selected_file_ids=set(file_ids or []),
+        own_professor=current_user.professor if current_user.role == UserRole.PROFESSOR else None,
         selected_shop_id=shop_id, selected_destination=destination,
         selected_professor_id=professor_id, selected_options=options or {},
         fulfillment_fields=fulfillment_fields or {},
@@ -224,7 +230,7 @@ def render_review(quote, *, fulfillment, warning=None, status=200):
 
 
 @orders_bp.route("/new", methods=["GET", "POST"])
-@roles_required(UserRole.STUDENT)
+@roles_required(*ORDERING_ROLES)
 def new():
     previous_review = session.pop("order_quote", None)
     values = request.form if request.method == "POST" else request.args
@@ -234,7 +240,8 @@ def new():
         saved = previous_review.get("fulfillment") or {}
         for field in FIELDS:
             fulfillment_fields[field] = saved.get(field) or ""
-        fulfillment_fields["professor_id"] = str((saved.get("professor") or {}).get("id") or "")
+        fulfillment_fields["professor_id"] = (str((saved.get("professor") or {}).get("id") or "")
+                                              if current_user.role == UserRole.STUDENT else "")
     destination = fulfillment_fields["destination"] or None
     professor_id = fulfillment_fields["professor_id"] or None
     shop_id = positive_id(raw_shop)
@@ -256,7 +263,7 @@ def new():
     try:
         preliminary = quote_for(file_ids, shop_id, options)
         shop = preliminary.shop
-        fulfillment = validate_fulfillment(shop=shop, values=values)
+        fulfillment = validate_fulfillment(shop=shop, values=values, actor=current_user)
         quote = (quote_for(file_ids, shop_id, options, delivery_fee=fulfillment.delivery_fee,
                            delivery_fee_is_demo=fulfillment.delivery_fee_is_demo)
                  if fulfillment.destination == OrderDestination.DELIVERY else preliminary)
@@ -277,7 +284,7 @@ def new():
 
 
 @orders_bp.post("/create")
-@roles_required(UserRole.STUDENT)
+@roles_required(*ORDERING_ROLES)
 def create():
     form = PlaceOrderForm()
     if not form.validate_on_submit():
@@ -295,7 +302,7 @@ def create():
     try:
         preliminary = quote_for(file_ids, shop_id, options)
         shop = preliminary.shop
-        fulfillment = validate_fulfillment(shop=shop, values=request.form)
+        fulfillment = validate_fulfillment(shop=shop, values=request.form, actor=current_user)
         quote = (quote_for(file_ids, shop_id, options, delivery_fee=fulfillment.delivery_fee,
                            delivery_fee_is_demo=fulfillment.delivery_fee_is_demo)
                  if fulfillment.destination == OrderDestination.DELIVERY else preliminary)
@@ -338,7 +345,7 @@ def create():
 
 
 @orders_bp.get("/<order_reference>")
-@roles_required(UserRole.STUDENT)
+@roles_required(*ORDERING_ROLES)
 def detail(order_reference: str):
     order = db.session.scalar(
         select(Order).where(
@@ -382,7 +389,7 @@ def render_order_detail(order, *, payment_error=None, professor_error=None, stat
 
 
 @orders_bp.post("/<order_reference>/payment")
-@roles_required(UserRole.STUDENT)
+@roles_required(*ORDERING_ROLES)
 def choose_payment(order_reference: str):
     try:
         order = owned_order(order_reference, current_user.id)
@@ -407,7 +414,7 @@ def choose_payment(order_reference: str):
 
 
 @orders_bp.post("/<order_reference>/payment/submit")
-@roles_required(UserRole.STUDENT)
+@roles_required(*ORDERING_ROLES)
 def submit_payment(order_reference: str):
     try:
         order = owned_order(order_reference, current_user.id)
@@ -429,7 +436,8 @@ def submit_payment(order_reference: str):
 
 
 def professor_form(order):
-    if (order.destination not in (None, OrderDestination.PROFESSOR)
+    if (current_user.role != UserRole.STUDENT
+            or order.destination not in (None, OrderDestination.PROFESSOR)
             or order.status != OrderStatus.PENDING_PAYMENT
             or not professor_service_available(order.shop_id)):
         return None
@@ -464,9 +472,10 @@ def select_professor(order_reference: str):
     try:
         professor = validate_professor_selection(
             shop_id=order.shop_id, destination=OrderDestination.PROFESSOR,
-            professor_id=form.professor_id.data,
+            professor_id=form.professor_id.data, actor=current_user,
         )
         assign_professor(order, professor)
+        order.professor_recipient_type = "STUDENT_SELECTED"
         db.session.commit()
     except ProfessorSelectionError as error:
         return render_order_detail(order, professor_error=str(error), status=400)

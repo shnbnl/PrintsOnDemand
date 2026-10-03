@@ -29,7 +29,7 @@ class OrderDestination(StrEnum):
     @property
     def label(self) -> str:
         return {
-            self.PROFESSOR: "Direct-to-Professor",
+            self.PROFESSOR: "Professor Delivery",
             self.PICKUP: "Scheduled Pickup",
             self.DELIVERY: "Delivery",
         }[self]
@@ -61,6 +61,7 @@ class Order(db.Model):
         db.ForeignKey("professors.id", name="fk_orders_professor_id", ondelete="RESTRICT"),
         nullable=True, index=True
     )
+    professor_recipient_type: Mapped[str | None] = mapped_column(db.String(20), nullable=True)
     professor_name: Mapped[str | None] = mapped_column(db.String(120), nullable=True)
     professor_email: Mapped[str | None] = mapped_column(db.String(254), nullable=True)
     professor_department: Mapped[str | None] = mapped_column(db.String(120), nullable=True)

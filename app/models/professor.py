@@ -21,6 +21,9 @@ class Professor(db.Model):
     office: Mapped[str | None] = mapped_column(db.String(120), nullable=True)
     is_active: Mapped[bool] = mapped_column(db.Boolean, nullable=False, default=True)
     direct_send_approved: Mapped[bool] = mapped_column(db.Boolean, nullable=False, default=False)
+    accepts_student_deliveries: Mapped[bool] = mapped_column(
+        db.Boolean, nullable=False, default=False, server_default=db.false()
+    )
     created_at: Mapped[datetime] = mapped_column(
         db.DateTime(timezone=True), nullable=False, default=utc_now
     )
@@ -28,6 +31,7 @@ class Professor(db.Model):
         db.DateTime(timezone=True), nullable=False, default=utc_now, onupdate=utc_now
     )
     orders: Mapped[list[Order]] = relationship(back_populates="professor")
+    account: Mapped[User | None] = relationship(back_populates="professor", uselist=False)
 
     @validates("name")
     def validate_name(self, key: str, value: str) -> str:

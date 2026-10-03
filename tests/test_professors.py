@@ -20,6 +20,7 @@ def test_professor_fields_defaults_and_normalized_unique_email(test_app):
         assert professor.department is None and professor.office is None
         assert professor.is_active is True
         assert professor.direct_send_approved is False
+        assert professor.accepts_student_deliveries is False
         assert professor.created_at is not None and professor.updated_at is not None
         db.session.add(Professor(name="Other", email="maria.santos@example.edu"))
         with pytest.raises(IntegrityError):
@@ -58,6 +59,7 @@ def test_selectable_filter_all_four_states(test_app):
                 name=f"Demo {active} {approved}",
                 email=f"demo-{active}-{approved}@example.edu",
                 is_active=active, direct_send_approved=approved,
+                accepts_student_deliveries=True,
             ))
         db.session.commit()
         assert [p.email for p in selectable_professors()] == ["demo-True-True@example.edu".casefold()]

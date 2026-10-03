@@ -6,21 +6,22 @@ from flask import Flask, current_app
 from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
-from app.models import User, UserRole
+from app.models import Professor, User, UserRole
 
 
 def register_commands(app: Flask) -> None:
     @app.cli.command("create-privileged-user")
     @click.option(
         "--role",
-        type=click.Choice([UserRole.SHOP_STAFF.value, UserRole.ADMIN.value]),
+        type=click.Choice([UserRole.SHOP_STAFF.value, UserRole.ADMIN.value, UserRole.PROFESSOR.value]),
         required=True,
     )
+    @click.option("--professor-id", type=int)
     @click.option("--name", prompt=True)
     @click.option("--email", prompt=True)
     @click.password_option(confirmation_prompt=True)
-    def create_privileged_user(role: str, name: str, email: str, password: str) -> None:
-        """Create a staff/admin account from a trusted server shell."""
+    def create_privileged_user(role: str, professor_id: int | None, name: str, email: str, password: str) -> None:
+        """Create a staff/admin/professor account from a trusted server shell."""
         name = name.strip()
         if len(name) < 2 or len(name) > 120:
             raise click.ClickException("Name must be between 2 and 120 characters.")
@@ -33,7 +34,15 @@ def register_commands(app: Flask) -> None:
         if len(email) > 254:
             raise click.ClickException("Email address is too long.")
 
-        user = User(name=name, email=email, role=UserRole(role))
+        professor = None
+        if role == UserRole.PROFESSOR:
+            professor = db.session.get(Professor, professor_id) if professor_id else None
+            if (professor is None or not professor.is_active or professor.account is not None
+                    or professor.email != email.casefold()):
+                raise click.ClickException("Select an active, unlinked professor with a matching email.")
+        elif professor_id is not None:
+            raise click.ClickException("--professor-id is only valid for a professor account.")
+        user = User(name=name, email=email, role=UserRole(role), professor=professor)
         user.set_password(password)
         db.session.add(user)
         try:

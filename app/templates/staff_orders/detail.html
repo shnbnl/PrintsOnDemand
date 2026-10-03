@@ -70,6 +70,8 @@
     <dl class="summary-list">
       <div class="summary-row"><dt>Type</dt><dd>{{ order.destination.label if order.destination else 'Not selected' }}</dd></div>
       {% if order.destination and order.destination.value == 'PROFESSOR' %}
+        <div class="summary-row"><dt>Physical handoff</dt><dd>Deliver printed papers to professor</dd></div>
+        <div class="summary-row"><dt>Recipient type</dt><dd>{{ 'Professor self-order' if order.professor_recipient_type == 'SELF' else 'Student-selected professor' }}</dd></div>
         <div class="summary-row"><dt>Professor</dt><dd>{{ order.professor_name }}</dd></div>
         <div class="summary-row"><dt>Department</dt><dd>{{ order.professor_department or 'Not listed' }}</dd></div>
         <div class="summary-row"><dt>Office</dt><dd>{{ order.professor_office or 'Not listed' }}</dd></div>

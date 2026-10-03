@@ -22,6 +22,16 @@ def student():
     )
 
 
+@access_bp.get("/professor")
+@roles_required(UserRole.PROFESSOR)
+def professor():
+    return render_template(
+        "main/protected.html", title="Professor access", next_url=url_for("shops.index"),
+        next_label="Browse printing shops", files_url=url_for("files.index"),
+        orders_url=url_for("orders.index"),
+    )
+
+
 @access_bp.get("/shop")
 @roles_required(UserRole.SHOP_STAFF)
 def shop():

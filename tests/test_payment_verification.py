@@ -40,7 +40,7 @@ def test_admin_queue_verify_audit_and_processing_gate(client, test_app):
     assert queue.status_code == 200
     assert url_a.rsplit("/", 1)[1].encode() in queue.data
     assert url_b.rsplit("/", 1)[1].encode() not in queue.data
-    for value in (b"Shop A", b"DEMO-REF-1234", b"ONLINE", b"SUBMITTED", b"PHP 6.75"):
+    for value in (b"Blue and Silver Bookstore", b"DEMO-REF-1234", b"ONLINE", b"SUBMITTED", b"PHP 6.75"):
         assert value in queue.data
     detail = client.get(review_a)
     assert detail.status_code == 200

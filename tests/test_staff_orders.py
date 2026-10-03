@@ -21,7 +21,7 @@ from test_payments import choose, configured_online, submit
 def setup_orders(client, app):
     configured_online(app)
     owner = student(app)
-    shop_a = shop(app, name="Shop A")
+    shop_a = shop(app, name="Blue and Silver Bookstore")
     shop_b = shop(app, name="Shop B")
     staff_a = student(app, "staff-a@example.edu", role="SHOP_STAFF")
     staff_b = student(app, "staff-b@example.edu", role="SHOP_STAFF")

@@ -1,4 +1,4 @@
-"""Read-only student tracking derived from persisted order and payment state."""
+"""Read-only owner tracking derived from persisted order and payment state."""
 
 from dataclasses import dataclass
 from datetime import datetime
@@ -80,7 +80,10 @@ def build_tracking(order: Order) -> OrderTracking:
         "Order created", f"Order {order.order_reference} was created.", order.created_at
     ), payment_step]
     if order.destination == OrderDestination.PROFESSOR:
-        fulfillment_detail = f"Direct-to-Professor: {order.professor_name} is the intended recipient."
+        fulfillment_detail = (
+            f"Professor Delivery: {order.professor_name} is the intended physical recipient. "
+            "No handoff confirmation is recorded."
+        )
     elif order.destination == OrderDestination.PICKUP:
         fulfillment_detail = f"Scheduled Pickup requested for {order.pickup_date}, {order.pickup_slot} Philippine time."
     elif order.destination == OrderDestination.DELIVERY:
