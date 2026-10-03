@@ -13,6 +13,7 @@
       <nav aria-label="Account">
         {% if current_user.is_authenticated %}
           <span>{{ current_user.name }}</span>
+          {% if current_user.role.value == 'STUDENT' %}<a href="{{ url_for('orders.index') }}">Order History</a>{% endif %}
           {% if current_user.role.value == 'ADMIN' %}<a href="{{ url_for('access.admin') }}">Admin management</a>{% endif %}
           <form class="inline-form" method="post" action="{{ url_for('auth.logout') }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

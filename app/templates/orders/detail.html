@@ -3,6 +3,7 @@
 {% block title %}Order {{ order.order_reference }} | Prints On Demand{% endblock %}
 
 {% block content %}
+  <p><a href="{{ url_for('orders.index') }}">← Order History</a></p>
   <h1>Order created successfully.</h1>
   {% if order.payment and order.payment.payment_status.value == 'PAID' %}
     <p>Your order has been created. Payment was recorded as paid by an authorized process.</p>

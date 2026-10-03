@@ -4,11 +4,12 @@ from flask import Blueprint, abort, current_app, redirect, render_template, requ
 from flask_login import current_user
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import selectinload
 
 from app.authorization import roles_required
 from app.extensions import db
 from app.models import (
-    Order, OrderDestination, OrderStatus, PaymentMethod, PaymentStatus,
+    Order, OrderDestination, OrderStatus, Payment, PaymentMethod, PaymentStatus,
     PrintConfiguration, PrintingShop, UploadedFile, UserRole,
 )
 from app.order_forms import PlaceOrderForm, SelectProfessorForm
@@ -27,6 +28,44 @@ from app.services.tracking import build_tracking
 
 
 orders_bp = Blueprint("orders", __name__, url_prefix="/orders")
+HISTORY_PAGE_SIZE = 20
+
+
+@orders_bp.get("")
+@roles_required(UserRole.STUDENT)
+def index():
+    """Show the signed-in student's stored orders, newest first."""
+    status = request.args.get("status", "").strip()
+    payment_status = request.args.get("payment_status", "").strip()
+    raw_page = request.args.get("page", "1")
+    if status and status not in OrderStatus.__members__:
+        abort(400)
+    if payment_status and payment_status not in PaymentStatus.__members__ and payment_status != "NONE":
+        abort(400)
+    try:
+        page = int(raw_page)
+    except ValueError:
+        abort(400)
+    if page < 1:
+        abort(400)
+
+    statement = select(Order).where(Order.user_id == current_user.id)
+    if status:
+        statement = statement.where(Order.status == OrderStatus[status])
+    if payment_status == "NONE":
+        statement = statement.outerjoin(Order.payment).where(Payment.id.is_(None))
+    elif payment_status:
+        statement = statement.join(Order.payment).where(
+            Payment.payment_status == PaymentStatus[payment_status]
+        )
+    statement = statement.options(selectinload(Order.payment)).order_by(
+        Order.created_at.desc(), Order.id.desc()
+    )
+    orders = db.paginate(statement, page=page, per_page=HISTORY_PAGE_SIZE, error_out=False)
+    return render_template(
+        "orders/index.html", orders=orders, status=status, payment_status=payment_status,
+        order_statuses=OrderStatus, payment_statuses=PaymentStatus,
+    )
 
 
 def positive_id(value: str | None) -> int | None:
