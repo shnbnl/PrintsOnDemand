@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block title %}Admin management | Prints On Demand{% endblock %}
+
+{% block content %}
+  <h1>Admin management</h1>
+  <p>Manage shops, staff assignments, professors, and public payment information.</p>
+  <ul>
+    <li><a href="{{ url_for('shop_admin.index') }}">Printing shops, services, and pricing</a></li>
+    <li><a href="{{ url_for('admin_management.staff_index') }}">Staff assignments</a></li>
+    <li><a href="{{ url_for('admin_management.professors') }}">Professors</a></li>
+    <li><a href="{{ url_for('admin_management.payment') }}">Payment configuration</a></li>
+  </ul>
+{% endblock %}

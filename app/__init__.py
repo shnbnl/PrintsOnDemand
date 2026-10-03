@@ -36,6 +36,7 @@ def create_app(config_object: object | None = None) -> Flask:
     csrf.init_app(app)
 
     from app.routes.access import access_bp
+    from app.routes.admin_management import admin_management_bp
     from app.routes.auth import auth_bp
     from app.routes.files import files_bp
     from app.routes.main import main_bp
@@ -49,6 +50,7 @@ def create_app(config_object: object | None = None) -> Flask:
     app.register_blueprint(files_bp)
     app.register_blueprint(orders_bp)
     app.register_blueprint(access_bp)
+    app.register_blueprint(admin_management_bp)
     app.register_blueprint(shops_bp)
     app.register_blueprint(shop_admin_bp)
     app.register_blueprint(staff_orders_bp)

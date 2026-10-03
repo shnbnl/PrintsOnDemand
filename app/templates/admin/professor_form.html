@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Edit professor' if professor else 'Add professor' }} | Prints On Demand{% endblock %}
+
+{% block content %}
+  <p><a href="{{ url_for('admin_management.professors') }}">← Professors</a></p>
+  <h1>{{ 'Edit professor' if professor else 'Add professor' }}</h1>
+  <p>Changes affect future selections. Existing orders keep their stored recipient details.</p>
+  <form class="account-form" method="post" novalidate>
+    {{ form.hidden_tag() }}
+    {% for field in [form.name, form.email, form.department, form.office] %}
+      <div class="field">{{ field.label }} {{ field() }}
+        {% for error in field.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+      </div>
+    {% endfor %}
+    <div class="checkbox-field">{{ form.is_active() }} {{ form.is_active.label }}</div>
+    <div class="checkbox-field">{{ form.direct_send_approved() }} {{ form.direct_send_approved.label }}</div>
+    {{ form.submit() }}
+  </form>
+{% endblock %}

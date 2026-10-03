@@ -15,7 +15,7 @@ from app.order_forms import PlaceOrderForm, SelectProfessorForm
 from app.payment_forms import PaymentMethodForm, PaymentReferenceForm
 from app.services.orders import create_order
 from app.services.payments import (
-    PaymentError, online_payment_details, owned_order,
+    PaymentError, online_payment_details, owned_order, payment_configuration,
     select_payment_method, submit_online_reference,
 )
 from app.services.pricing import PricingError, quote_order
@@ -211,7 +211,7 @@ def render_order_detail(order, *, payment_error=None, professor_error=None, stat
         method_form=method_form, reference_form=reference_form,
         online_details=online_details, payment_error=payment_error,
         professor_error=professor_error,
-        onsite_instructions=current_app.config["ONSITE_PAYMENT_INSTRUCTIONS"],
+        onsite_instructions=payment_configuration()["onsite_instructions"],
         tracking=build_tracking(order),
     ), status
 

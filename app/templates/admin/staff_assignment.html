@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Assign {{ user.name }} | Prints On Demand{% endblock %}
+
+{% block content %}
+  <p><a href="{{ url_for('admin_management.staff_index') }}">← Staff assignments</a></p>
+  <h1>Assign {{ user.name }}</h1>
+  <p>{{ user.email }}</p>
+  <form class="account-form" method="post" novalidate>
+    {{ form.hidden_tag() }}
+    <div class="field">{{ form.shop_id.label }} {{ form.shop_id() }}
+      {% for error in form.shop_id.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+    </div>
+    {{ form.submit() }}
+  </form>
+{% endblock %}

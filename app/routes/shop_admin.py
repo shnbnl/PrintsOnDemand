@@ -19,6 +19,7 @@ from app.models import (
     UserRole,
 )
 from app.shop_forms import FeeForm, PriceForm, ServiceForm, ShopForm, StaffAssignmentForm
+from app.services.admin_management import ManagementError, assign_staff_to_shop
 
 
 shop_admin_bp = Blueprint("shop_admin", __name__, url_prefix="/admin/shops")
@@ -192,11 +193,11 @@ def assign_staff(shop_id: int):
     form = StaffAssignmentForm()
     form.staff_id.choices = staff_choices()
     if form.validate_on_submit():
-        user = db.session.get(User, form.staff_id.data)
-        if user is not None and user.role == UserRole.SHOP_STAFF:
-            user.shop = shop
-            db.session.commit()
+        try:
+            assign_staff_to_shop(form.staff_id.data, shop.id)
+        except ManagementError:
+            form.staff_id.errors.append("Select a Shop Staff account.")
+        else:
             flash("Shop Staff account assigned.", "success")
             return redirect(url_for("shop_admin.edit", shop_id=shop.id))
-        form.staff_id.errors.append("Select a Shop Staff account.")
     return render_editor(shop, staff_form=form)

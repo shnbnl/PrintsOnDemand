@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Professors | Prints On Demand{% endblock %}
+
+{% block content %}
+  <p><a href="{{ url_for('access.admin') }}">← Admin management</a></p>
+  <h1>Professors</h1>
+  <p><a href="{{ url_for('admin_management.new_professor') }}">Add professor</a></p>
+  {% if professors %}
+    <div class="table-scroll"><table>
+      <thead><tr><th>Name</th><th>Email</th><th>Department</th><th>Office</th><th>Active</th><th>Direct-to-Professor approval</th><th>Action</th></tr></thead>
+      <tbody>
+        {% for professor in professors %}
+          <tr><td>{{ professor.name }}</td><td>{{ professor.email }}</td>
+            <td>{{ professor.department or '—' }}</td><td>{{ professor.office or '—' }}</td>
+            <td>{{ 'Yes' if professor.is_active else 'No' }}</td>
+            <td>{{ 'Approved' if professor.direct_send_approved else 'Not approved' }}</td>
+            <td><a href="{{ url_for('admin_management.edit_professor', professor_id=professor.id) }}">Edit</a></td></tr>
+        {% endfor %}
+      </tbody>
+    </table></div>
+  {% else %}<p>No professors have been added.</p>{% endif %}
+{% endblock %}

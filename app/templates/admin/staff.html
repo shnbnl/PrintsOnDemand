@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}Staff assignments | Prints On Demand{% endblock %}
+
+{% block content %}
+  <p><a href="{{ url_for('access.admin') }}">← Admin management</a></p>
+  <h1>Staff assignments</h1>
+  {% if staff %}
+    <div class="table-scroll"><table>
+      <thead><tr><th>Name</th><th>Email</th><th>Assigned shop</th><th>Action</th></tr></thead>
+      <tbody>
+        {% for user in staff %}
+          <tr><td>{{ user.name }}</td><td>{{ user.email }}</td>
+            <td>{{ user.shop.name if user.shop else 'Unassigned' }}</td>
+            <td><a href="{{ url_for('admin_management.staff_assignment', staff_id=user.id) }}">Change assignment</a></td></tr>
+        {% endfor %}
+      </tbody>
+    </table></div>
+  {% else %}<p>No Shop Staff accounts exist. Create one with the controlled CLI first.</p>{% endif %}
+{% endblock %}

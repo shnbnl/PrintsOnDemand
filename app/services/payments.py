@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
-from app.models import Order, OrderStatus, Payment, PaymentMethod, PaymentStatus
+from app.models import Order, OrderStatus, Payment, PaymentMethod, PaymentSettings, PaymentStatus
 
 
 REFERENCE_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9 ._/-]{3,119}\Z")
@@ -21,15 +21,36 @@ class PaymentError(ValueError):
         self.status_code = status_code
 
 
+def payment_configuration() -> dict[str, str | bool]:
+    """Admin-managed public values override the existing environment defaults."""
+    saved = db.session.get(PaymentSettings, 1)
+    if saved is not None:
+        return {
+            "online_enabled": saved.online_enabled,
+            "online_instructions": saved.online_instructions,
+            "online_account_name": saved.online_account_name,
+            "online_destination": saved.online_destination,
+            "onsite_instructions": saved.onsite_instructions,
+        }
+    config = current_app.config
+    return {
+        "online_enabled": config["ONLINE_PAYMENT_ENABLED"],
+        "online_instructions": config["ONLINE_PAYMENT_INSTRUCTIONS"],
+        "online_account_name": config["ONLINE_PAYMENT_ACCOUNT_NAME"],
+        "online_destination": config["ONLINE_PAYMENT_DESTINATION"],
+        "onsite_instructions": config["ONSITE_PAYMENT_INSTRUCTIONS"],
+    }
+
+
 def online_payment_details() -> dict[str, str] | None:
     """Only advertise online payment when every public instruction is configured."""
-    config = current_app.config
-    if not config["ONLINE_PAYMENT_ENABLED"]:
+    config = payment_configuration()
+    if not config["online_enabled"]:
         return None
     details = {
-        "instructions": config["ONLINE_PAYMENT_INSTRUCTIONS"].strip(),
-        "account_name": config["ONLINE_PAYMENT_ACCOUNT_NAME"].strip(),
-        "destination": config["ONLINE_PAYMENT_DESTINATION"].strip(),
+        "instructions": config["online_instructions"].strip(),
+        "account_name": config["online_account_name"].strip(),
+        "destination": config["online_destination"].strip(),
     }
     return details if all(details.values()) else None
 

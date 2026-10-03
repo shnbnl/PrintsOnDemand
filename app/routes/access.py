@@ -32,7 +32,4 @@ def shop():
 @access_bp.get("/admin")
 @roles_required(UserRole.ADMIN)
 def admin():
-    return render_template(
-        "main/protected.html", title="Admin access", next_url=url_for("shop_admin.index"),
-        next_label="Manage printing shops",
-    )
+    return render_template("admin/index.html")
