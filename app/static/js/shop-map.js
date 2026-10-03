@@ -87,7 +87,7 @@
         const marker = new AdvancedMarkerElement({
           map,
           position: shop.position,
-          title: `${shop.name}${shop.is_demo ? " (demo location)" : ""}`,
+          title: `${shop.name}${shop.is_demo ? " (demo shop)" : ""}`,
           gmpClickable: true,
         });
         marker.append(pin);

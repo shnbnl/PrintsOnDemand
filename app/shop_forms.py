@@ -46,8 +46,8 @@ class ShopForm(FlaskForm):
             return
         if not value.is_finite() or not -limit <= value <= limit:
             raise ValidationError(f"Enter a value from -{limit} to {limit}.")
-        if value != value.quantize(Decimal("0.000001")):
-            raise ValidationError("Use no more than six decimal places.")
+        if value != value.quantize(Decimal("0.000000000000001")):
+            raise ValidationError("Use no more than fifteen decimal places.")
 
     def validate_latitude(self, field) -> None:
         self._validate_coordinate(field, 90)

@@ -28,5 +28,18 @@ def upgrade():
 
 
 def downgrade():
-    op.drop_column("printing_shops", "longitude")
-    op.drop_column("printing_shops", "latitude")
+    bind = op.get_bind()
+    sqlite = bind.dialect.name == "sqlite"
+    if sqlite:
+        with op.get_context().autocommit_block():
+            bind.exec_driver_sql("PRAGMA foreign_keys=OFF")
+    try:
+        with op.batch_alter_table("printing_shops") as batch_op:
+            batch_op.drop_constraint("shop_longitude_range", type_="check")
+            batch_op.drop_constraint("shop_latitude_range", type_="check")
+            batch_op.drop_column("longitude")
+            batch_op.drop_column("latitude")
+    finally:
+        if sqlite:
+            with op.get_context().autocommit_block():
+                bind.exec_driver_sql("PRAGMA foreign_keys=ON")

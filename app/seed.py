@@ -29,12 +29,12 @@ DEMO_PRICES = {
 }
 DEMO_FEES = {FeeType.RUSH_PRINTING: "25.00", FeeType.DELIVERY: "30.00"}
 DEMO_ADDRESS = "Demo location near Mapúa Malayan Colleges Laguna"
-# Illustrative pins near campus, not verified locations of these businesses.
+# User-provided coordinates for these seeded demo-shop records.
 DEMO_SHOP_COORDINATES = {
-    "Blue and Silver Bookstore": (Decimal("14.243650"), Decimal("121.111900")),
-    "Iced Design and Prints": (Decimal("14.243520"), Decimal("121.113450")),
-    "CHALECOSPOT": (Decimal("14.242700"), Decimal("121.113250")),
-    "Pixels Print and Press": (Decimal("14.242550"), Decimal("121.112050")),
+    "Blue and Silver Bookstore": (Decimal("14.243034885614946"), Decimal("121.1129526948974")),
+    "CHALECOSPOT": (Decimal("14.24264686747224"), Decimal("121.11376032373335")),
+    "Iced Design and Prints": (Decimal("14.243072562326358"), Decimal("121.11352762558575")),
+    "Pixels Print and Press": (Decimal("14.242065977086666"), Decimal("121.11273536791352")),
 }
 
 DEMO_SHOPS = (
@@ -57,16 +57,20 @@ DEMO_SHOPS = (
 )
 
 
-def seed_demo_shops() -> int:
-    """Insert missing named demo shops once; never overwrite edited rows."""
+def seed_demo_shops() -> tuple[int, int]:
+    """Insert demo shops and refresh verified coordinates on their seed records."""
     added = 0
+    coordinates_updated = 0
     for name, opening_time, closing_time, services in DEMO_SHOPS:
         existing = db.session.scalar(select(PrintingShop).where(PrintingShop.name == name))
         if existing:
-            # Upgrade only untouched placeholder locations from earlier demo seeds.
-            if (existing.is_demo and existing.address == DEMO_ADDRESS
-                    and existing.latitude is None and existing.longitude is None):
-                existing.latitude, existing.longitude = DEMO_SHOP_COORDINATES[name]
+            # The name plus demo flag identify the seeded record; preserve all
+            # other fields and leave real/admin-created shops untouched.
+            if existing.is_demo:
+                coordinates = DEMO_SHOP_COORDINATES[name]
+                if (existing.latitude, existing.longitude) != coordinates:
+                    existing.latitude, existing.longitude = coordinates
+                    coordinates_updated += 1
             continue
         shop = PrintingShop(
             name=name,
@@ -93,7 +97,7 @@ def seed_demo_shops() -> int:
                 shop.fees.append(ShopFee(fee_type=fee_type, amount=Decimal(amount), is_demo=True))
         added += 1
     db.session.commit()
-    return added
+    return added, coordinates_updated
 
 
 DEMO_PROFESSORS = (

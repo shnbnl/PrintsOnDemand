@@ -50,8 +50,11 @@ def register_commands(app: Flask) -> None:
             raise click.ClickException("Demo seeding is disabled in production.")
         from app.seed import seed_demo_shops
 
-        count = seed_demo_shops()
-        click.echo(f"Added {count} demo shops. Existing shops were left unchanged.")
+        added, coordinates_updated = seed_demo_shops()
+        click.echo(
+            f"Added {added} demo shops; refreshed verified coordinates on "
+            f"{coordinates_updated} existing demo shops."
+        )
 
     @app.cli.command("seed-demo-professors")
     def seed_demo_professors_command() -> None:

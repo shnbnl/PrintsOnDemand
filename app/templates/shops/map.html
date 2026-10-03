@@ -58,7 +58,7 @@
                   <span class="status-badge status-success">Available</span>
                 </div>
               </div>
-              {% if marker.is_demo %}<p class="demo-label">Illustrative demo pin — not a verified business location.</p>{% endif %}
+              {% if marker.is_demo %}<p class="demo-label">Seeded demo shop with user-provided coordinates.</p>{% endif %}
               {% if marker.description %}<p>{{ marker.description }}</p>{% endif %}
               <p><strong>Address:</strong> {{ marker.address }}</p>
               <p><strong>Hours:</strong> {{ marker.hours }}</p>
@@ -102,7 +102,7 @@
                 <button type="button" class="map-shop-choice" data-shop-id="{{ marker.id }}" aria-pressed="{{ 'true' if loop.first else 'false' }}">
                   <strong>{{ marker.name }}</strong>
                   <span>{{ marker.hours }}</span>
-                  {% if marker.is_demo %}<small>Demo location</small>{% endif %}
+                  {% if marker.is_demo %}<small>Demo shop</small>{% endif %}
                 </button>
                 <a href="{{ marker.detail_url }}">Shop details</a>
               </li>

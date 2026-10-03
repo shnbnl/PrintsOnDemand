@@ -6,11 +6,25 @@ from datetime import datetime, time
 from decimal import Decimal
 from enum import StrEnum
 
-from sqlalchemy import CheckConstraint, UniqueConstraint
+from sqlalchemy import CheckConstraint, String, UniqueConstraint
+from sqlalchemy.types import TypeDecorator
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.extensions import db
 from app.models.user import utc_now
+
+
+class CoordinateDecimal(TypeDecorator):
+    """Store coordinates as exact decimal text across SQLite and SQL databases."""
+
+    impl = String(32)
+    cache_ok = True
+
+    def process_bind_param(self, value, dialect):
+        return None if value is None else format(Decimal(value), "f")
+
+    def process_result_value(self, value, dialect):
+        return None if value is None else Decimal(value)
 
 
 class ServiceType(StrEnum):
@@ -68,13 +82,13 @@ class PrintingShop(db.Model):
     description: Mapped[str] = mapped_column(db.Text, nullable=False, default="")
     address: Mapped[str] = mapped_column(db.String(255), nullable=False)
     latitude: Mapped[Decimal | None] = mapped_column(
-        db.Numeric(9, 6),
-        CheckConstraint("latitude BETWEEN -90 AND 90", name="shop_latitude_range"),
+        CoordinateDecimal(),
+        CheckConstraint("CAST(latitude AS NUMERIC) BETWEEN -90 AND 90", name="shop_latitude_range"),
         nullable=True,
     )
     longitude: Mapped[Decimal | None] = mapped_column(
-        db.Numeric(9, 6),
-        CheckConstraint("longitude BETWEEN -180 AND 180", name="shop_longitude_range"),
+        CoordinateDecimal(),
+        CheckConstraint("CAST(longitude AS NUMERIC) BETWEEN -180 AND 180", name="shop_longitude_range"),
         nullable=True,
     )
     opening_time: Mapped[time] = mapped_column(db.Time, nullable=False)

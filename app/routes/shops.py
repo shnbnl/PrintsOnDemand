@@ -2,7 +2,7 @@
 
 from flask import Blueprint, abort, current_app, render_template, request, url_for
 from flask_login import current_user
-from sqlalchemy import select
+from sqlalchemy import Numeric, cast, select
 from sqlalchemy.orm import selectinload
 
 from app.authorization import roles_required
@@ -61,8 +61,8 @@ def map_view():
     query = request.args.get("q", "").strip()[:100]
     statement = active_shop_statement(query).where(
         PrintingShop.latitude.is_not(None), PrintingShop.longitude.is_not(None),
-        PrintingShop.latitude.between(-90, 90),
-        PrintingShop.longitude.between(-180, 180),
+        cast(PrintingShop.latitude, Numeric).between(-90, 90),
+        cast(PrintingShop.longitude, Numeric).between(-180, 180),
     ).options(
         selectinload(PrintingShop.services), selectinload(PrintingShop.prices),
         selectinload(PrintingShop.fees),
