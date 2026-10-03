@@ -3,31 +3,40 @@
 {% block title %}Register | Prints On Demand{% endblock %}
 
 {% block content %}
-  <h1>Create a student account</h1>
-  <form class="account-form" method="post" novalidate>
-    {{ form.hidden_tag() }}
-    <div class="field">
-      {{ form.name.label }}
-      {{ form.name(autocomplete="name") }}
-      {% for error in form.name.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
-    </div>
-    <div class="field">
-      {{ form.email.label }}
-      {{ form.email(autocomplete="email") }}
-      {% for error in form.email.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
-    </div>
-    <div class="field">
-      {{ form.password.label }}
-      {{ form.password(autocomplete="new-password") }}
-      <p class="hint">Use at least 10 characters.</p>
-      {% for error in form.password.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
-    </div>
-    <div class="field">
-      {{ form.confirm_password.label }}
-      {{ form.confirm_password(autocomplete="new-password") }}
-      {% for error in form.confirm_password.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
-    </div>
-    {{ form.submit() }}
-  </form>
-  <p>Already registered? <a href="{{ url_for('auth.login') }}">Log-in</a></p>
+  <div class="auth-shell">
+    <div class="auth-brand" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M6 8V3h12v5M6 17H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v7H6zM18 11h.01"/></svg></div>
+    <header class="auth-heading">
+      <p class="page-eyebrow">Prints On Demand</p>
+      <h1>Create a student account</h1>
+      <p class="page-lead">Save your print settings and keep every order in one place.</p>
+    </header>
+    <section class="content-card auth-card" aria-label="Registration form">
+      <form class="account-form form-stack" method="post" novalidate>
+        {{ form.hidden_tag() }}
+        <div class="field">
+          {{ form.name.label }}
+          {{ form.name(autocomplete="name", placeholder="Your full name") }}
+          {% for error in form.name.errors %}<p class="field-error" role="alert">{{ error }}</p>{% endfor %}
+        </div>
+        <div class="field">
+          {{ form.email.label }}
+          {{ form.email(autocomplete="email", placeholder="you@example.edu") }}
+          {% for error in form.email.errors %}<p class="field-error" role="alert">{{ error }}</p>{% endfor %}
+        </div>
+        <div class="field">
+          {{ form.password.label }}
+          {{ form.password(autocomplete="new-password", placeholder="Create a password") }}
+          <p class="hint">Use at least 10 characters.</p>
+          {% for error in form.password.errors %}<p class="field-error" role="alert">{{ error }}</p>{% endfor %}
+        </div>
+        <div class="field">
+          {{ form.confirm_password.label }}
+          {{ form.confirm_password(autocomplete="new-password", placeholder="Confirm your password") }}
+          {% for error in form.confirm_password.errors %}<p class="field-error" role="alert">{{ error }}</p>{% endfor %}
+        </div>
+        {{ form.submit(class_="button button-primary button-block") }}
+      </form>
+    </section>
+    <p class="auth-switch">Already registered? <a href="{{ url_for('auth.login') }}">Log-in</a></p>
+  </div>
 {% endblock %}

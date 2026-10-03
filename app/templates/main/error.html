@@ -1,6 +1,15 @@
 {% extends "base.html" %}
 
+{% block title %}{{ message }} · Prints On Demand{% endblock %}
+
 {% block content %}
-  <h1>{{ message }}</h1>
-  <p><a href="{{ url_for('main.index') }}">Return home</a></p>
+  <div class="page-intro">
+    <p class="page-eyebrow">Prints On Demand</p>
+    <h1>We couldn't open this page</h1>
+  </div>
+  <section class="empty-state" role="alert">
+    <h2>{{ message }}</h2>
+    <p>Head back to the home page to continue.</p>
+    <a class="button" href="{{ url_for('main.index') }}">Return home</a>
+  </section>
 {% endblock %}

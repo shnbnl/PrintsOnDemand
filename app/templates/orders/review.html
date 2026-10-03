@@ -3,47 +3,61 @@
 {% block title %}Review order | Prints On Demand{% endblock %}
 
 {% block content %}
-  <p><a href="{{ url_for('orders.new', file_id=quote.uploaded_file.id, shop_id=quote.shop.id, destination=form.destination.data, professor_id=form.professor_id.data) }}">← Change selection</a></p>
-  <h1>Review order</h1>
-  {% if warning %}<p class="notice" role="alert">{{ warning }}</p>{% endif %}
+  <a class="back-link" href="{{ url_for('orders.new', file_id=quote.uploaded_file.id, shop_id=quote.shop.id, destination=form.destination.data, professor_id=form.professor_id.data) }}">← Change selection</a>
+  <header class="page-intro">
+    <p class="page-eyebrow">Step 4 · Check every detail</p>
+    <h1>Review order</h1>
+    <p class="page-lead">Confirm your file, print options, destination, and current price.</p>
+  </header>
+  {% if warning %}<p class="notice notice-warning" role="alert">{{ warning }}</p>{% endif %}
   {% if quote.is_demo %}<p class="demo-label">Demo shop or rates — sample values, not approved business rates.</p>{% endif %}
-  <p>Placing this order creates a record awaiting payment. No payment will be collected here.</p>
-  <section>
-    <h2>{{ quote.shop.name }}</h2>
-    <p>{{ quote.shop.address }}</p>
-    <div class="table-scroll">
-      <table>
-        <thead><tr><th>File</th><th>Paper</th><th>Output</th><th>Print count</th><th>Unit price</th><th>Line total</th></tr></thead>
-        <tbody>
-          <tr>
-            <td>{{ quote.uploaded_file.original_filename }}</td>
-            <td>{{ quote.paper_size.label }}</td>
-            <td>{{ quote.color_mode.label }}</td>
-            <td>{{ quote.quantity }}</td>
-            <td>{{ quote.currency }} {{ quote.unit_price }}</td>
-            <td>{{ quote.currency }} {{ quote.line_total }}</td>
-          </tr>
-        </tbody>
-      </table>
+  <div class="checkout-grid">
+    <div class="checkout-main">
+      <section class="content-card">
+        <p class="page-eyebrow">Printing shop</p>
+        <h2>{{ quote.shop.name }}</h2>
+        <p>{{ quote.shop.address }}</p>
+      </section>
+      <section class="content-card">
+        <p class="page-eyebrow">Selected file and print options</p>
+        <h2>{{ quote.uploaded_file.original_filename }}</h2>
+        <dl class="detail-list">
+          <div class="detail-row"><dt>Paper</dt><dd>{{ quote.paper_size.label }}</dd></div>
+          <div class="detail-row"><dt>Output</dt><dd>{{ quote.color_mode.label }}</dd></div>
+          <div class="detail-row"><dt>Print count</dt><dd>{{ quote.quantity }}</dd></div>
+          <div class="detail-row"><dt>Unit price</dt><dd>{{ quote.currency }} {{ quote.unit_price }}</dd></div>
+          <div class="detail-row"><dt>Line total</dt><dd>{{ quote.currency }} {{ quote.line_total }}</dd></div>
+        </dl>
+      </section>
+      {% if professor %}
+        <section class="content-card">
+          <p class="page-eyebrow">Intended recipient</p>
+          <h2>Send to professor</h2>
+          <p><strong>{{ professor.name }}</strong></p>
+          <dl class="detail-list">
+            <div class="detail-row"><dt>Department</dt><dd>{{ professor.department or 'Not listed' }}</dd></div>
+            <div class="detail-row"><dt>Office</dt><dd>{{ professor.office or 'Not listed' }}</dd></div>
+            <div class="detail-row"><dt>Email</dt><dd>{{ professor.email }}</dd></div>
+          </dl>
+          <p class="hint">This professor is the intended recipient. No file or email has been sent.</p>
+        </section>
+      {% endif %}
     </div>
-    <p>Subtotal: {{ quote.currency }} {{ quote.subtotal }}</p>
-    {% if quote.is_rush %}<p>Rush printing fee: {{ quote.currency }} {{ quote.rush_fee }}</p>{% endif %}
-    <p>Fees total: {{ quote.currency }} {{ quote.fees_total }}</p>
-    <p><strong>Total: {{ quote.currency }} {{ quote.total }}</strong></p>
-  </section>
-  {% if professor %}
-    <section>
-      <h2>Send to professor</h2>
-      <p><strong>{{ professor.name }}</strong></p>
-      <p>Department: {{ professor.department or 'Not listed' }}</p>
-      <p>Office: {{ professor.office or 'Not listed' }}</p>
-      <p>Email: {{ professor.email }}</p>
-      <p>This professor is the intended recipient. No file or email has been sent.</p>
-    </section>
-  {% endif %}
-  <p class="hint">This Stage 5 quote uses the shop's matching rate multiplied by print count. It does not inspect pages inside a document.</p>
-  <form method="post" action="{{ url_for('orders.create') }}">
-    {{ form.hidden_tag() }}
-    {{ form.submit() }}
-  </form>
+    <aside class="content-card price-summary" aria-label="Price summary">
+      <p class="page-eyebrow">Price summary</p>
+      <h2>Today's total</h2>
+      <div class="summary-list">
+        <p class="summary-row">Subtotal: {{ quote.currency }} {{ quote.subtotal }}</p>
+        {% if quote.is_rush %}<p class="summary-row">Rush printing fee: {{ quote.currency }} {{ quote.rush_fee }}</p>{% endif %}
+        <p class="summary-row">Fees total: {{ quote.currency }} {{ quote.fees_total }}</p>
+        <p class="summary-row summary-total"><strong>Total: {{ quote.currency }} {{ quote.total }}</strong></p>
+      </div>
+      <p class="hint">Placing this order creates a record awaiting payment. No payment will be collected here.</p>
+      <form method="post" action="{{ url_for('orders.create') }}">
+        {{ form.hidden_tag() }}
+        {{ form.submit(class_="button button-primary button-block") }}
+      </form>
+    </aside>
+  </div>
+  <p class="hint">The quote uses the shop's matching rate multiplied by print count. It does not inspect pages inside a document.</p>
 {% endblock %}

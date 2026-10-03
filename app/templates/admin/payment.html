@@ -3,11 +3,19 @@
 {% block title %}Payment configuration | Prints On Demand{% endblock %}
 
 {% block content %}
-  <p><a href="{{ url_for('access.admin') }}">← Admin management</a></p>
-  <h1>Payment configuration</h1>
-  <p>These are public instructions shown to students. Saving them overrides the environment defaults. This page does not verify payments.</p>
-  <p>Current source: {{ 'Admin-managed values' if saved else 'Environment defaults' }}</p>
-  <form class="account-form" method="post" novalidate>
+  <a class="back-link" href="{{ url_for('access.admin') }}">← Admin management</a>
+  <header class="page-intro">
+    <p class="eyebrow">Administration / Payment</p>
+    <h1>Payment configuration</h1>
+    <p class="page-lead">Edit the instructions students see when they select online or onsite payment.</p>
+  </header>
+
+  <div class="section-card">
+    <p class="hint">These public instructions do not verify payments. Saving them overrides environment defaults.</p>
+    <p>Current source: <span class="status-badge status-badge--muted">{{ 'Admin-managed values' if saved else 'Environment defaults' }}</span></p>
+  </div>
+
+  <form class="account-form form-card" method="post" novalidate>
     {{ form.hidden_tag() }}
     <div class="checkbox-field">{{ form.online_enabled() }} {{ form.online_enabled.label }}</div>
     {% for error in form.online_enabled.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
@@ -16,6 +24,6 @@
         {% for error in field.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
       </div>
     {% endfor %}
-    {{ form.submit() }}
+    <div class="form-actions">{{ form.submit(class_='button') }}</div>
   </form>
 {% endblock %}

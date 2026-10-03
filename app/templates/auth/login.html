@@ -3,23 +3,33 @@
 {% block title %}Log-in | Prints On Demand{% endblock %}
 
 {% block content %}
-  <h1>Log-in</h1>
-  <form class="account-form" method="post" novalidate>
-    {{ form.hidden_tag() }}
-    <div class="field">
-      {{ form.email.label }}
-      {{ form.email(autocomplete="username") }}
-      {% for error in form.email.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
-    </div>
-    <div class="field">
-      {{ form.password.label }}
-      {{ form.password(autocomplete="current-password") }}
-      {% for error in form.password.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
-    </div>
-    <div class="checkbox-field">
-      {{ form.remember_me() }} {{ form.remember_me.label }}
-    </div>
-    {{ form.submit() }}
-  </form>
-  <p>Need an account? <a href="{{ url_for('auth.register') }}">Register as a student</a></p>
+  <div class="auth-shell">
+    <div class="auth-brand" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M6 8V3h12v5M6 17H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v7H6zM18 11h.01"/></svg></div>
+    <header class="auth-heading">
+      <p class="page-eyebrow">Prints On Demand</p>
+      <h1>Welcome back</h1>
+      <p class="page-lead">Log in to prepare your files, find a shop, and follow your orders.</p>
+    </header>
+    <section class="content-card auth-card" aria-labelledby="login-heading">
+      <h2 id="login-heading">Log-in</h2>
+      <form class="account-form form-stack" method="post" novalidate>
+        {{ form.hidden_tag() }}
+        <div class="field">
+          {{ form.email.label }}
+          {{ form.email(autocomplete="username", placeholder="you@example.edu") }}
+          {% for error in form.email.errors %}<p class="field-error" role="alert">{{ error }}</p>{% endfor %}
+        </div>
+        <div class="field">
+          {{ form.password.label }}
+          {{ form.password(autocomplete="current-password", placeholder="Enter your password") }}
+          {% for error in form.password.errors %}<p class="field-error" role="alert">{{ error }}</p>{% endfor %}
+        </div>
+        <div class="checkbox-field">
+          {{ form.remember_me() }} {{ form.remember_me.label }}
+        </div>
+        {{ form.submit(class_="button button-primary button-block") }}
+      </form>
+    </section>
+    <p class="auth-switch">Need an account? <a href="{{ url_for('auth.register') }}">Register as a student</a></p>
+  </div>
 {% endblock %}

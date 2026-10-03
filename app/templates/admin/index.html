@@ -3,12 +3,36 @@
 {% block title %}Admin management | Prints On Demand{% endblock %}
 
 {% block content %}
-  <h1>Admin management</h1>
-  <p>Manage shops, staff assignments, professors, and public payment information.</p>
-  <ul>
-    <li><a href="{{ url_for('shop_admin.index') }}">Printing shops, services, and pricing</a></li>
-    <li><a href="{{ url_for('admin_management.staff_index') }}">Staff assignments</a></li>
-    <li><a href="{{ url_for('admin_management.professors') }}">Professors</a></li>
-    <li><a href="{{ url_for('admin_management.payment') }}">Payment configuration</a></li>
-  </ul>
+  <header class="page-intro">
+    <p class="eyebrow">Administration</p>
+    <h1>Admin management</h1>
+    <p class="page-lead">Keep printing shops, people, and student-facing payment instructions up to date.</p>
+  </header>
+
+  <div class="card-grid" aria-label="Management areas">
+    <a class="action-card" href="{{ url_for('shop_admin.index') }}">
+      <span class="eyebrow">Shops &amp; pricing</span>
+      <h2>Printing shops, services, and pricing</h2>
+      <p>Manage shop details, available services, print prices, and fees.</p>
+      <span class="card-action">Manage shops <span aria-hidden="true">→</span></span>
+    </a>
+    <a class="action-card" href="{{ url_for('admin_management.staff_index') }}">
+      <span class="eyebrow">Team</span>
+      <h2>Staff assignments</h2>
+      <p>See which Shop Staff account is assigned to each shop.</p>
+      <span class="card-action">View staff <span aria-hidden="true">→</span></span>
+    </a>
+    <a class="action-card" href="{{ url_for('admin_management.professors') }}">
+      <span class="eyebrow">Recipients</span>
+      <h2>Professors</h2>
+      <p>Maintain the approved professor list for Direct-to-Professor orders.</p>
+      <span class="card-action">View professors <span aria-hidden="true">→</span></span>
+    </a>
+    <a class="action-card" href="{{ url_for('admin_management.payment') }}">
+      <span class="eyebrow">Student instructions</span>
+      <h2>Payment configuration</h2>
+      <p>Edit the public information students see when choosing payment.</p>
+      <span class="card-action">Edit instructions <span aria-hidden="true">→</span></span>
+    </a>
+  </div>
 {% endblock %}

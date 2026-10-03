@@ -3,17 +3,25 @@
 {% block title %}Upload file | Prints On Demand{% endblock %}
 
 {% block content %}
-  <p><a href="{{ url_for('files.index') }}">← My files</a></p>
-  <h1>Select files to print</h1>
-  <p>Supported files: {{ extensions|sort|join(', ')|upper }}. Maximum {{ (config.UPLOAD_MAX_SIZE / 1048576)|round(1) }} MiB per file.</p>
-  <form class="account-form" method="post" enctype="multipart/form-data" novalidate>
-    {{ form.hidden_tag() }}
-    <div class="field">
-      {{ form.file.label }}
-      {{ form.file(accept=accept_types) }}
-      {% for error in form.file.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
-    </div>
-    {{ form.submit() }}
-  </form>
-  <p>Upload only stores the file. You can configure it next; no order is submitted.</p>
+  <a class="back-link" href="{{ url_for('files.index') }}">← My files</a>
+  <header class="page-intro">
+    <p class="page-eyebrow">Step 1 · Your document</p>
+    <h1>Select files to print</h1>
+    <p class="page-lead">Choose a file now, then set paper, color, and print count.</p>
+  </header>
+  <section class="content-card upload-card">
+    <form class="account-form form-stack" method="post" enctype="multipart/form-data" novalidate>
+      {{ form.hidden_tag() }}
+      <div class="field upload-picker">
+        <span class="upload-icon" aria-hidden="true">＋</span>
+        {{ form.file.label }}
+        <p class="hint">Supported files: {{ extensions|sort|join(', ')|upper }}. Maximum {{ (config.UPLOAD_MAX_SIZE / 1048576)|round(1) }} MiB per file.</p>
+        {{ form.file(accept=accept_types, class_="file-input") }}
+        <output class="selected-file-name" id="selected-file-name" aria-live="polite">No file selected</output>
+        {% for error in form.file.errors %}<p class="field-error" role="alert">{{ error }}</p>{% endfor %}
+      </div>
+      {{ form.submit(class_="button button-primary button-block") }}
+    </form>
+  </section>
+  <p class="notice notice-info">Upload only stores the file. You can configure it next; no order is submitted.</p>
 {% endblock %}

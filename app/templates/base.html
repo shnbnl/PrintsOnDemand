@@ -3,29 +3,57 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#052448">
     <title>{% block title %}Prints On Demand{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
     <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
   </head>
   <body>
-    <header class="site-header">
-      <a class="brand" href="{{ url_for('main.index') }}">Prints On Demand</a>
-      <nav aria-label="Account">
-        {% if current_user.is_authenticated %}
-          <span>{{ current_user.name }}</span>
-          {% if current_user.role.value == 'STUDENT' %}<a href="{{ url_for('orders.index') }}">Order History</a>{% endif %}
-          {% if current_user.role.value == 'ADMIN' %}<a href="{{ url_for('access.admin') }}">Admin management</a>{% endif %}
-          <form class="inline-form" method="post" action="{{ url_for('auth.logout') }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit">Log out</button>
-          </form>
-        {% else %}
-          <a href="{{ url_for('auth.login') }}">Log-in</a>
-          <a href="{{ url_for('auth.register') }}">Register</a>
+    {% macro navigation() %}
+      <a href="{{ url_for('main.index') }}">Home</a>
+      {% if current_user.is_authenticated %}
+        {% if current_user.role.value == 'STUDENT' %}
+          <a href="{{ url_for('shops.index') }}">Printing Shops</a>
+          <a href="{{ url_for('files.index') }}">My Files</a>
+          <a href="{{ url_for('orders.index') }}">Order History</a>
+        {% elif current_user.role.value == 'SHOP_STAFF' %}
+          <a href="{{ url_for('access.shop') }}">Assigned Shop</a>
+          <a href="{{ url_for('staff_orders.index') }}">Shop Orders</a>
+        {% elif current_user.role.value == 'ADMIN' %}
+          <a href="{{ url_for('access.admin') }}">Admin management</a>
+          <a href="{{ url_for('shop_admin.index') }}">Shops</a>
+          <a href="{{ url_for('admin_management.staff_index') }}">Staff</a>
+          <a href="{{ url_for('admin_management.professors') }}">Professors</a>
+          <a href="{{ url_for('admin_management.payment') }}">Payment settings</a>
         {% endif %}
-      </nav>
+        <span class="nav-account">{{ current_user.name }}</span>
+        <form class="inline-form" method="post" action="{{ url_for('auth.logout') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="nav-logout" type="submit">Log out</button>
+        </form>
+      {% else %}
+        <a href="{{ url_for('auth.login') }}">Log-in</a>
+        <a class="nav-register" href="{{ url_for('auth.register') }}">Register</a>
+      {% endif %}
+    {% endmacro %}
+
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="brand" href="{{ url_for('main.index') }}" aria-label="Prints On Demand home">
+          <span class="brand-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M6 8V3h12v5M6 17H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v7H6zM18 11h.01"/></svg>
+          </span>
+          <span>Prints On Demand</span>
+        </a>
+        <nav class="desktop-nav" aria-label="Main navigation">{{ navigation() }}</nav>
+        <details class="mobile-nav">
+          <summary>Menu</summary>
+          <nav aria-label="Mobile navigation">{{ navigation() }}</nav>
+        </details>
+      </div>
     </header>
-    <main class="page">
+
+    <main class="page" id="main-content">
       {% for category, message in get_flashed_messages(with_categories=true) %}
         <p class="notice notice-{{ category }}" role="status">{{ message }}</p>
       {% endfor %}

@@ -3,69 +3,94 @@
 {% block title %}Shop order {{ order.order_reference }} | Prints On Demand{% endblock %}
 
 {% block content %}
-  <p><a href="{{ url_for('staff_orders.index') }}">← Shop orders</a></p>
-  <h1>Order {{ order.order_reference }}</h1>
-  <section>
+  <a class="back-link" href="{{ url_for('staff_orders.index') }}">← Shop orders</a>
+  <header class="page-intro">
+    <p class="eyebrow">Shop Staff / Order detail</p>
+    <h1>Order {{ order.order_reference }}</h1>
+    <p class="page-lead">Placed by {{ order.user.name }} for {{ order.shop_name }}.</p>
+    <p class="status-group">
+      <span class="status-badge" data-status="{{ order.status.value }}">{{ order.status.value }}</span>
+      <span class="status-badge"{% if order.payment %} data-status="{{ order.payment.payment_status.value }}"{% endif %}>Payment: {{ order.payment.payment_status.value if order.payment else 'Not selected' }}</span>
+    </p>
+  </header>
+
+  <section class="section-card">
     <h2>Order and customer</h2>
-    <p>Created: <time datetime="{{ order.created_at.isoformat() }}">{{ order.created_at.strftime('%Y-%m-%d %H:%M UTC') }}</time></p>
-    <p>Printing shop: {{ order.shop_name }}</p>
-    <p>Customer: {{ order.user.name }}</p>
-    <p>Order status: {{ order.status.value }}</p>
+    <dl class="summary-list">
+      <div class="summary-row"><dt>Created</dt><dd><time datetime="{{ order.created_at.isoformat() }}">{{ order.created_at.strftime('%Y-%m-%d %H:%M UTC') }}</time></dd></div>
+      <div class="summary-row"><dt>Printing shop</dt><dd>{{ order.shop_name }}</dd></div>
+      <div class="summary-row"><dt>Customer</dt><dd>{{ order.user.name }}</dd></div>
+      <div class="summary-row"><dt>Order status</dt><dd>{{ order.status.value }}</dd></div>
+    </dl>
   </section>
-  <section>
+
+  <section class="section-card">
     <h2>Print job</h2>
-    <div class="table-scroll">
-      <table>
-        <thead><tr><th>File</th><th>Paper size</th><th>Color mode</th><th>Quantity</th><th>Rush</th><th>Unit price</th><th>Line total</th></tr></thead>
-        <tbody>
-          {% for item in order.items %}
-            <tr>
-              <td><a href="{{ url_for('staff_orders.download_file', order_reference=order.order_reference, item_id=item.id) }}">{{ item.original_filename }}</a></td>
-              <td>{{ item.paper_size.label }}</td><td>{{ item.color_mode.label }}</td>
-              <td>{{ item.quantity }}</td><td>{{ 'Yes' if item.is_rush else 'No' }}</td>
-              <td>{{ order.currency }} {{ item.unit_price }}</td>
-              <td>{{ order.currency }} {{ item.line_total }}</td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    <p>Subtotal: {{ order.currency }} {{ order.subtotal }}</p>
-    <p>Fees total: {{ order.currency }} {{ order.fees_total }}</p>
-    <p><strong>Total: {{ order.currency }} {{ order.total }}</strong></p>
+    <ul class="file-list">
+      {% for item in order.items %}
+        <li class="file-card">
+          <div class="card-heading">
+            <div>
+              <p class="eyebrow">File {{ loop.index }}</p>
+              <h3><a href="{{ url_for('staff_orders.download_file', order_reference=order.order_reference, item_id=item.id) }}">{{ item.original_filename }}</a></h3>
+            </div>
+            <strong>{{ order.currency }} {{ item.line_total }}</strong>
+          </div>
+          <p class="hint">{{ item.paper_size.label }} · {{ item.color_mode.label }} · Quantity {{ item.quantity }} · Rush: {{ 'Yes' if item.is_rush else 'No' }}</p>
+          <p class="hint">Unit price: {{ order.currency }} {{ item.unit_price }}</p>
+          <a class="card-action" href="{{ url_for('staff_orders.download_file', order_reference=order.order_reference, item_id=item.id) }}">Download file <span aria-hidden="true">↓</span></a>
+        </li>
+      {% endfor %}
+    </ul>
+    <dl class="summary-list price-summary">
+      <div class="summary-row"><dt>Subtotal</dt><dd>{{ order.currency }} {{ order.subtotal }}</dd></div>
+      <div class="summary-row"><dt>Fees total</dt><dd>{{ order.currency }} {{ order.fees_total }}</dd></div>
+      <div class="summary-row summary-row--total"><dt>Total</dt><dd>{{ order.currency }} {{ order.total }}</dd></div>
+    </dl>
   </section>
-  <section>
+
+  <section class="section-card">
     <h2>Payment</h2>
     {% if order.payment %}
-      <p>Method: {{ order.payment.payment_method.value }}</p>
-      <p>Status: {{ order.payment.payment_status.value }}</p>
-      <p>Amount: {{ order.payment.currency }} {{ order.payment.amount }}</p>
-      {% if order.payment.payment_reference %}<p>Payment reference: {{ order.payment.payment_reference }}</p>{% endif %}
-    {% else %}<p>No payment method selected. Payment has not been recorded as paid.</p>{% endif %}
+      <dl class="summary-list">
+        <div class="summary-row"><dt>Method</dt><dd>{{ order.payment.payment_method.value }}</dd></div>
+        <div class="summary-row"><dt>Status</dt><dd><span class="status-badge" data-status="{{ order.payment.payment_status.value }}">{{ order.payment.payment_status.value }}</span></dd></div>
+        <div class="summary-row"><dt>Amount</dt><dd>{{ order.payment.currency }} {{ order.payment.amount }}</dd></div>
+        {% if order.payment.payment_reference %}<div class="summary-row"><dt>Payment reference</dt><dd>{{ order.payment.payment_reference }}</dd></div>{% endif %}
+      </dl>
+    {% else %}<p class="hint">No payment method selected. Payment has not been recorded as paid.</p>{% endif %}
   </section>
-  <section>
+
+  <section class="section-card">
     <h2>Destination</h2>
-    <p>Type: {{ order.destination.value if order.destination else 'Not selected' }}</p>
-    {% if order.destination and order.destination.value == 'PROFESSOR' %}
-      <p>Professor: {{ order.professor_name }}</p>
-      <p>Department: {{ order.professor_department or 'Not listed' }}</p>
-      <p>Office: {{ order.professor_office or 'Not listed' }}</p>
-      <p>Email: {{ order.professor_email }}</p>
-    {% endif %}
+    <dl class="summary-list">
+      <div class="summary-row"><dt>Type</dt><dd>{{ order.destination.value if order.destination else 'Not selected' }}</dd></div>
+      {% if order.destination and order.destination.value == 'PROFESSOR' %}
+        <div class="summary-row"><dt>Professor</dt><dd>{{ order.professor_name }}</dd></div>
+        <div class="summary-row"><dt>Department</dt><dd>{{ order.professor_department or 'Not listed' }}</dd></div>
+        <div class="summary-row"><dt>Office</dt><dd>{{ order.professor_office or 'Not listed' }}</dd></div>
+        <div class="summary-row"><dt>Email</dt><dd>{{ order.professor_email }}</dd></div>
+      {% endif %}
+    </dl>
   </section>
-  <section>
+
+  <section class="section-card">
     <h2>Processing</h2>
-    <p>Current status: {{ order.status.value }}</p>
-    {% if order.processing_started_at %}<p>Processing started: <time datetime="{{ order.processing_started_at.isoformat() }}">{{ order.processing_started_at.strftime('%Y-%m-%d %H:%M UTC') }}</time></p>{% endif %}
-    {% if order.ready_at %}<p>Ready: <time datetime="{{ order.ready_at.isoformat() }}">{{ order.ready_at.strftime('%Y-%m-%d %H:%M UTC') }}</time></p>{% endif %}
-    {% if order.completed_at %}<p>Completed: <time datetime="{{ order.completed_at.isoformat() }}">{{ order.completed_at.strftime('%Y-%m-%d %H:%M UTC') }}</time></p>{% endif %}
+    <p>Current status: <span class="status-badge" data-status="{{ order.status.value }}">{{ order.status.value }}</span></p>
+    {% if order.processing_started_at or order.ready_at or order.completed_at %}
+      <dl class="summary-list">
+        {% if order.processing_started_at %}<div class="summary-row"><dt>Processing started</dt><dd><time datetime="{{ order.processing_started_at.isoformat() }}">{{ order.processing_started_at.strftime('%Y-%m-%d %H:%M UTC') }}</time></dd></div>{% endif %}
+        {% if order.ready_at %}<div class="summary-row"><dt>Ready</dt><dd><time datetime="{{ order.ready_at.isoformat() }}">{{ order.ready_at.strftime('%Y-%m-%d %H:%M UTC') }}</time></dd></div>{% endif %}
+        {% if order.completed_at %}<div class="summary-row"><dt>Completed</dt><dd><time datetime="{{ order.completed_at.isoformat() }}">{{ order.completed_at.strftime('%Y-%m-%d %H:%M UTC') }}</time></dd></div>{% endif %}
+      </dl>
+    {% endif %}
     {% if action %}
-      <form method="post" action="{{ url_for('staff_orders.advance', order_reference=order.order_reference) }}">
+      <form class="form-actions" method="post" action="{{ url_for('staff_orders.advance', order_reference=order.order_reference) }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button type="submit" name="action" value="{{ action }}">{% if action == 'start_processing' %}Start processing{% elif action == 'mark_ready' %}Mark ready{% else %}Complete order{% endif %}</button>
+        <button class="button" type="submit" name="action" value="{{ action }}">{% if action == 'start_processing' %}Start processing{% elif action == 'mark_ready' %}Mark ready{% else %}Complete order{% endif %} <span aria-hidden="true">→</span></button>
       </form>
     {% elif order.status.value == 'PENDING_PAYMENT' %}
-      <p>Processing is unavailable until payment is recorded as paid by an authorized process.</p>
+      <p class="notice notice-warning">Processing is unavailable until payment is recorded as paid by an authorized process.</p>
     {% endif %}
   </section>
 {% endblock %}

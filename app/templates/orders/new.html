@@ -3,50 +3,68 @@
 {% block title %}Create order | Prints On Demand{% endblock %}
 
 {% block content %}
-  <h1>Create an order</h1>
-  <p>Choose one configured file, an active printing shop, and an intended destination to review the current price.</p>
-  {% if error %}<p class="field-error" role="alert">{{ error }}</p>{% endif %}
-  {% if not files %}<p><a href="{{ url_for('files.index') }}">Upload and configure a file first.</a></p>{% endif %}
-  {% if not shops %}<p>No active printing shops are available.</p>{% endif %}
+  <header class="page-intro">
+    <p class="page-eyebrow">Step 3 · Build your order</p>
+    <h1>Create an order</h1>
+    <p class="page-lead">Choose one configured file, an active printing shop, and an intended destination to review the current price.</p>
+  </header>
+  {% if error %}<p class="notice notice-error" role="alert">{{ error }}</p>{% endif %}
+  {% if not files %}<section class="content-card empty-state"><h2>Prepare a file first</h2><p><a href="{{ url_for('files.index') }}">Upload and configure a file first.</a></p></section>{% endif %}
+  {% if not shops %}<section class="content-card empty-state"><h2>No shops available</h2><p>No active printing shops are available.</p></section>{% endif %}
   {% if files and shops %}
-    <form class="account-form" method="get" action="{{ url_for('orders.new') }}">
-      <div class="field">
-        <label for="file_id">Your configured file</label>
-        <select id="file_id" name="file_id" required>
-          <option value="">Select a file</option>
-          {% for file in files %}
-            <option value="{{ file.id }}" {% if file.id == selected_file_id %}selected{% endif %}>{{ file.original_filename }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="field">
-        <label for="shop_id">Printing shop</label>
-        <select id="shop_id" name="shop_id" required>
-          <option value="">Select a shop</option>
-          {% for shop in shops %}
-            <option value="{{ shop.id }}" {% if shop.id == selected_shop_id %}selected{% endif %}>{{ shop.name }}{% if shop.is_demo %} (demo rates){% endif %}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="field">
-        <label for="destination">Destination / claiming method</label>
-        <select id="destination" name="destination">
-          <option value="">No destination selected yet</option>
-          <option value="PROFESSOR" {% if selected_destination == 'PROFESSOR' %}selected{% endif %}>Send to professor</option>
-        </select>
-      </div>
-      <div class="field">
-        <label for="professor_id">Approved professor (for Send to professor)</label>
-        <select id="professor_id" name="professor_id">
-          <option value="">Select a professor</option>
-          {% for professor in professors %}
-            <option value="{{ professor.id }}" {% if selected_professor_id == professor.id|string %}selected{% endif %}>{{ professor.name }} — {{ professor.department or 'Department not listed' }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <p class="hint">Direct-to-Professor requires a shop that offers the service. The professor is an intended recipient; no file is sent at this stage.</p>
-      <button type="submit">Review order</button>
+    <form class="form-stack order-selection-form" method="get" action="{{ url_for('orders.new') }}">
+      <section class="content-card flow-card">
+        <span class="flow-number" aria-hidden="true">1</span>
+        <div class="field">
+          <label for="file_id">Your configured file</label>
+          <p class="hint">Select the document and print settings you saved.</p>
+          <select id="file_id" name="file_id" required>
+            <option value="">Select a file</option>
+            {% for file in files %}
+              <option value="{{ file.id }}" {% if file.id == selected_file_id %}selected{% endif %}>{{ file.original_filename }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </section>
+      <section class="content-card flow-card">
+        <span class="flow-number" aria-hidden="true">2</span>
+        <div class="field">
+          <label for="shop_id">Printing shop</label>
+          <p class="hint">Only active shops can accept new orders.</p>
+          <select id="shop_id" name="shop_id" required>
+            <option value="">Select a shop</option>
+            {% for shop in shops %}
+              <option value="{{ shop.id }}" {% if shop.id == selected_shop_id %}selected{% endif %}>{{ shop.name }}{% if shop.is_demo %} (demo rates){% endif %}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </section>
+      <section class="content-card flow-card destination-card">
+        <span class="flow-number" aria-hidden="true">3</span>
+        <div>
+          <h2>Order destination</h2>
+          <p class="hint">Choose Send to professor only when the selected shop offers Direct-to-Professor.</p>
+          <div class="field">
+            <label for="destination">Destination / claiming method</label>
+            <select id="destination" name="destination">
+              <option value="">No destination selected yet</option>
+              <option value="PROFESSOR" {% if selected_destination == 'PROFESSOR' %}selected{% endif %}>Send to professor</option>
+            </select>
+          </div>
+          <div class="field professor-selection">
+            <label for="professor_id">Approved professor (for Send to professor)</label>
+            <select id="professor_id" name="professor_id">
+              <option value="">Select a professor</option>
+              {% for professor in professors %}
+                <option value="{{ professor.id }}" {% if selected_professor_id == professor.id|string %}selected{% endif %}>{{ professor.name }} — {{ professor.department or 'Department not listed' }}{% if professor.office %} · {{ professor.office }}{% endif %}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <p class="hint">Direct-to-Professor requires an approved professor. This records an intended recipient; no file is sent at this stage.</p>
+        </div>
+      </section>
+      <div class="form-actions"><button class="button button-primary" type="submit">Review order <span aria-hidden="true">→</span></button></div>
     </form>
   {% endif %}
-  <p>Payment is not available yet. A placed order will be marked pending payment.</p>
+  <p class="hint">A placed order starts pending payment. Choose online or onsite payment after placing it.</p>
 {% endblock %}

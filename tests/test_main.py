@@ -24,7 +24,9 @@ def test_index(client):
 
     assert response.status_code == 200
     assert b"Prints On Demand" in response.data
-    assert b"application foundation is running" in response.data
+    assert b"Your campus printing desk" in response.data
+    assert b"Find a printing shop, prepare your file" in response.data
+    assert b"Create student account" in response.data
 
 
 def test_health(client):

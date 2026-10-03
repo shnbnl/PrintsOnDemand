@@ -7,11 +7,16 @@
 {% block title %}Edit {{ shop.name }} | Prints On Demand{% endblock %}
 
 {% block content %}
-  <p><a href="{{ url_for('shop_admin.index') }}">← Manage shops</a></p>
-  <h1>Edit {{ shop.name }}</h1>
-  {% if shop.is_demo %}<p class="demo-label">Seeded demo shop. Save final details and prices before real use.</p>{% endif %}
+  <a class="back-link" href="{{ url_for('shop_admin.index') }}">← Manage shops</a>
+  <header class="page-intro">
+    <p class="eyebrow">Administration / Shops</p>
+    <h1>Edit {{ shop.name }}</h1>
+    <p class="page-lead">Manage information, availability, staff, services, and pricing.</p>
+    <p><span class="status-badge status-badge--{{ 'success' if shop.is_active else 'muted' }}">{{ 'Active' if shop.is_active else 'Inactive' }}</span>{% if shop.is_demo %} <span class="status-badge status-badge--warning">Demo shop</span>{% endif %}</p>
+  </header>
+  {% if shop.is_demo %}<p class="notice demo-label">Seeded demo shop. Save final details and prices before real use.</p>{% endif %}
 
-  <section>
+  <section class="section-card" id="shop-information">
     <h2>Shop information</h2>
     <form class="account-form" method="post" action="{{ url_for('shop_admin.edit', shop_id=shop.id) }}" novalidate>
       {{ shop_form.hidden_tag() }}
@@ -20,63 +25,63 @@
       {% endfor %}
       <div class="checkbox-field">{{ shop_form.is_active() }} {{ shop_form.is_active.label }}</div>
       <div class="checkbox-field">{{ shop_form.is_demo() }} {{ shop_form.is_demo.label }}</div>
-      {{ shop_form.submit() }}
+      <div class="form-actions">{{ shop_form.submit(class_='button') }}</div>
     </form>
   </section>
 
-  <section>
+  <section class="section-card" id="shop-staff">
     <h2>Shop Staff</h2>
     {% if assigned_staff %}
-      <ul>{% for user in assigned_staff %}<li>{{ user.name }} ({{ user.email }})</li>{% endfor %}</ul>
-    {% else %}<p>No Shop Staff account is assigned yet.</p>{% endif %}
+      <ul>{% for user in assigned_staff %}<li>{{ user.name }} <span class="hint">({{ user.email }})</span></li>{% endfor %}</ul>
+    {% else %}<p class="hint">No Shop Staff account is assigned yet.</p>{% endif %}
     {% if staff_form.staff_id.choices %}
       <form class="account-form" method="post" action="{{ url_for('shop_admin.assign_staff', shop_id=shop.id) }}">
         {{ staff_form.hidden_tag() }}
         <div class="field">{{ staff_form.staff_id.label }} {{ staff_form.staff_id() }}{{ errors(staff_form.staff_id) }}</div>
-        {{ staff_form.submit() }}
+        <div class="form-actions">{{ staff_form.submit(class_='button') }}</div>
       </form>
     {% else %}<p>Create a staff account through the controlled CLI, then assign it here.</p>{% endif %}
   </section>
 
-  <section>
+  <section class="section-card" id="shop-services">
     <h2>Available services</h2>
     {% if services %}
-      <ul>{% for service in services %}<li>{{ service.service_type.label }} — {{ 'Enabled' if service.enabled else 'Disabled' }}</li>{% endfor %}</ul>
-    {% else %}<p>No services configured.</p>{% endif %}
+      <ul>{% for service in services %}<li>{{ service.service_type.label }} <span class="status-badge status-badge--{{ 'success' if service.enabled else 'muted' }}">{{ 'Enabled' if service.enabled else 'Disabled' }}</span></li>{% endfor %}</ul>
+    {% else %}<p class="hint">No services configured.</p>{% endif %}
     <form class="account-form" method="post" action="{{ url_for('shop_admin.save_service', shop_id=shop.id) }}" novalidate>
       {{ service_form.hidden_tag() }}
       <div class="field">{{ service_form.service_type.label }} {{ service_form.service_type() }}{{ errors(service_form.service_type) }}</div>
       <div class="checkbox-field">{{ service_form.enabled() }} {{ service_form.enabled.label }}</div>
-      {{ service_form.submit() }}
+      <div class="form-actions">{{ service_form.submit(class_='button') }}</div>
     </form>
   </section>
 
-  <section>
+  <section class="section-card" id="shop-prices">
     <h2>Print prices</h2>
     {% if prices %}
-      <div class="table-scroll"><table>
+      <div class="table-scroll" role="region" aria-label="Print prices" tabindex="0"><table class="data-table">
         <thead><tr><th scope="col">Paper Size</th><th scope="col">Output</th><th scope="col">Price per page</th></tr></thead>
         <tbody>{% for price in prices %}<tr><td>{{ price.paper_size.label }}</td><td>{{ price.color_mode.label }}</td><td>₱{{ '%.2f'|format(price.price) }}{% if price.is_demo %} (demo){% endif %}</td></tr>{% endfor %}</tbody>
       </table></div>
-    {% else %}<p>No print prices configured.</p>{% endif %}
+    {% else %}<p class="hint">No print prices configured.</p>{% endif %}
     <form class="account-form" method="post" action="{{ url_for('shop_admin.save_price', shop_id=shop.id) }}" novalidate>
       {{ price_form.hidden_tag() }}
       <div class="field">{{ price_form.paper_size.label }} {{ price_form.paper_size() }}{{ errors(price_form.paper_size) }}</div>
       <div class="field">{{ price_form.color_mode.label }} {{ price_form.color_mode() }}{{ errors(price_form.color_mode) }}</div>
       <div class="field">{{ price_form.price.label }} {{ price_form.price(min='0', step='0.01') }}{{ errors(price_form.price) }}</div>
-      {{ price_form.submit() }}
+      <div class="form-actions">{{ price_form.submit(class_='button') }}</div>
     </form>
   </section>
 
-  <section>
+  <section class="section-card" id="shop-fees">
     <h2>Additional fees</h2>
-    {% if fees %}<ul>{% for fee in fees %}<li>{{ fee.fee_type.label }} — ₱{{ '%.2f'|format(fee.amount) }}{% if fee.is_demo %} (demo){% endif %}</li>{% endfor %}</ul>
-    {% else %}<p>No additional fees configured.</p>{% endif %}
+    {% if fees %}<ul>{% for fee in fees %}<li>{{ fee.fee_type.label }} <strong>₱{{ '%.2f'|format(fee.amount) }}</strong>{% if fee.is_demo %} <span class="status-badge status-badge--warning">Demo</span>{% endif %}</li>{% endfor %}</ul>
+    {% else %}<p class="hint">No additional fees configured.</p>{% endif %}
     <form class="account-form" method="post" action="{{ url_for('shop_admin.save_fee', shop_id=shop.id) }}" novalidate>
       {{ fee_form.hidden_tag() }}
       <div class="field">{{ fee_form.fee_type.label }} {{ fee_form.fee_type() }}{{ errors(fee_form.fee_type) }}</div>
       <div class="field">{{ fee_form.amount.label }} {{ fee_form.amount(min='0', step='0.01') }}{{ errors(fee_form.amount) }}</div>
-      {{ fee_form.submit() }}
+      <div class="form-actions">{{ fee_form.submit(class_='button') }}</div>
     </form>
   </section>
 {% endblock %}

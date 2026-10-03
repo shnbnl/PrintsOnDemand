@@ -1,6 +1,33 @@
 {% extends "base.html" %}
 
+{% block title %}Prints On Demand | Print with confidence{% endblock %}
+
 {% block content %}
-  <h1>Prints On Demand</h1>
-  <p>The application foundation is running.</p>
+  <div class="landing-shell">
+    <header class="page-intro landing-hero">
+      <div class="auth-brand" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M6 8V3h12v5M6 17H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v7H6zM18 11h.01"/></svg></div>
+      <p class="page-eyebrow">Your campus printing desk</p>
+      <h1>Prints On Demand</h1>
+      <p class="page-lead">Find a printing shop, prepare your file, and follow your order from one place.</p>
+      <div class="form-actions">
+        {% if current_user.is_authenticated %}
+          {% if current_user.role.value == 'STUDENT' %}
+            <a class="button button-primary" href="{{ url_for('access.student') }}">Go to my printing desk</a>
+          {% elif current_user.role.value == 'SHOP_STAFF' %}
+            <a class="button button-primary" href="{{ url_for('access.shop') }}">Go to shop workspace</a>
+          {% else %}
+            <a class="button button-primary" href="{{ url_for('access.admin') }}">Go to admin management</a>
+          {% endif %}
+        {% else %}
+          <a class="button button-primary" href="{{ url_for('auth.login') }}">Log-in</a>
+          <a class="button button-secondary" href="{{ url_for('auth.register') }}">Create student account</a>
+        {% endif %}
+      </div>
+    </header>
+    <div class="card-grid landing-steps" aria-label="How ordering works">
+      <div class="content-card"><span class="action-icon" aria-hidden="true">01</span><h2>Choose a shop</h2><p>See available services, hours, and current prices.</p></div>
+      <div class="content-card"><span class="action-icon" aria-hidden="true">02</span><h2>Prepare your file</h2><p>Upload privately and choose your print settings.</p></div>
+      <div class="content-card"><span class="action-icon" aria-hidden="true">03</span><h2>Track your order</h2><p>Review payment and shop status whenever you need to.</p></div>
+    </div>
+  </div>
 {% endblock %}

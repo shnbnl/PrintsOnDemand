@@ -3,52 +3,60 @@
 {% block title %}Order History | Prints On Demand{% endblock %}
 
 {% block content %}
-  <h1>Order History</h1>
-  <form method="get" action="{{ url_for('orders.index') }}">
-    <label for="status">Order status</label>
-    <select id="status" name="status">
-      <option value="">All</option>
-      {% for value in order_statuses %}<option value="{{ value.value }}"{% if status == value.value %} selected{% endif %}>{{ value.value.replace('_', ' ').title() }}</option>{% endfor %}
-    </select>
-    <label for="payment_status">Payment status</label>
-    <select id="payment_status" name="payment_status">
-      <option value="">All</option>
-      <option value="NONE"{% if payment_status == 'NONE' %} selected{% endif %}>Not selected</option>
-      {% for value in payment_statuses %}<option value="{{ value.value }}"{% if payment_status == value.value %} selected{% endif %}>{{ value.value.title() }}</option>{% endfor %}
-    </select>
-    <button type="submit">Filter orders</button>
-    {% if status or payment_status %}<a href="{{ url_for('orders.index') }}">Clear filters</a>{% endif %}
+  <header class="page-intro page-intro-actions">
+    <div><p class="page-eyebrow">Your print journey</p><h1>Order History</h1><p class="page-lead">Find a previous order and check its payment and shop progress.</p></div>
+    <a class="button button-secondary" href="{{ url_for('shops.index') }}">Browse printing shops</a>
+  </header>
+  <form class="content-card history-filters" method="get" action="{{ url_for('orders.index') }}">
+    <div class="field">
+      <label for="status">Order status</label>
+      <select id="status" name="status">
+        <option value="">All</option>
+        {% for value in order_statuses %}<option value="{{ value.value }}"{% if status == value.value %} selected{% endif %}>{{ value.value.replace('_', ' ').title() }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="payment_status">Payment status</label>
+      <select id="payment_status" name="payment_status">
+        <option value="">All</option>
+        <option value="NONE"{% if payment_status == 'NONE' %} selected{% endif %}>Not selected</option>
+        {% for value in payment_statuses %}<option value="{{ value.value }}"{% if payment_status == value.value %} selected{% endif %}>{{ value.value.title() }}</option>{% endfor %}
+      </select>
+    </div>
+    <button class="button button-primary" type="submit">Filter orders</button>
+    {% if status or payment_status %}<a class="button button-quiet" href="{{ url_for('orders.index') }}">Clear filters</a>{% endif %}
   </form>
 
   {% if orders.items %}
-    <div class="table-scroll">
-      <table>
+    <div class="order-history-wrap">
+      <table class="order-history-table">
+        <caption class="sr-only">Your orders, newest first</caption>
         <thead><tr><th scope="col">Order reference</th><th scope="col">Placed</th><th scope="col">Printing shop</th><th scope="col">Total</th><th scope="col">Order status</th><th scope="col">Payment status</th><th scope="col">Destination</th></tr></thead>
         <tbody>
           {% for order in orders.items %}
-            <tr>
+            <tr class="order-card">
               <th scope="row"><a href="{{ url_for('orders.detail', order_reference=order.order_reference) }}">{{ order.order_reference }}</a></th>
-              <td><time datetime="{{ order.created_at.isoformat() }}">{{ order.created_at.strftime('%Y-%m-%d %H:%M UTC') }}</time></td>
-              <td>{{ order.shop_name }}</td>
-              <td>{{ order.currency }} {{ order.total }}</td>
-              <td>{{ order.status.value }}</td>
-              <td>{% if order.payment %}{{ order.payment.payment_status.value }}{% if order.payment.payment_status.value == 'SUBMITTED' %} (awaiting verification){% endif %}{% else %}Not selected{% endif %}</td>
-              <td>{% if order.destination and order.destination.value == 'PROFESSOR' %}Direct-to-Professor: {{ order.professor_name }}{% elif order.destination %}{{ order.destination.value }}{% else %}Not selected{% endif %}</td>
+              <td data-label="Placed"><time datetime="{{ order.created_at.isoformat() }}">{{ order.created_at.strftime('%Y-%m-%d %H:%M UTC') }}</time></td>
+              <td data-label="Printing shop">{{ order.shop_name }}</td>
+              <td data-label="Total" class="order-card-total">{{ order.currency }} {{ order.total }}</td>
+              <td data-label="Order status"><span class="status-badge status-{{ order.status.value|lower }}">{{ order.status.value }}</span></td>
+              <td data-label="Payment status">{% if order.payment %}<span class="status-badge status-{{ order.payment.payment_status.value|lower }}">{{ order.payment.payment_status.value }}{% if order.payment.payment_status.value == 'SUBMITTED' %} (awaiting verification){% endif %}</span>{% else %}<span class="status-badge status-muted">Not selected</span>{% endif %}</td>
+              <td data-label="Destination"><span class="order-destination">{% if order.destination and order.destination.value == 'PROFESSOR' %}Direct-to-Professor: {{ order.professor_name }}{% elif order.destination %}{{ order.destination.value }}{% else %}Not selected{% endif %}</span><a class="order-card-link" href="{{ url_for('orders.detail', order_reference=order.order_reference) }}">View order <span aria-hidden="true">→</span></a></td>
             </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
   {% elif orders.total == 0 and not status and not payment_status %}
-    <p>No orders yet. <a href="{{ url_for('shops.index') }}">Browse printing shops</a> to get started.</p>
+    <section class="content-card empty-state"><h2>No orders yet.</h2><p>When you place an order, its progress will appear here.</p><a class="button button-primary" href="{{ url_for('shops.index') }}">Browse printing shops</a></section>
   {% elif orders.total == 0 %}
-    <p>No orders match these filters.</p>
+    <section class="content-card empty-state"><h2>No orders match these filters.</h2><p>Try another status to see more of your orders.</p><a class="button button-secondary" href="{{ url_for('orders.index') }}">Clear filters</a></section>
   {% else %}
-    <p>No orders on this page. <a href="{{ url_for('orders.index', status=status, payment_status=payment_status) }}">Return to the first page</a>.</p>
+    <section class="content-card empty-state"><h2>No orders on this page.</h2><a class="button button-secondary" href="{{ url_for('orders.index', status=status, payment_status=payment_status) }}">Return to the first page</a>.</section>
   {% endif %}
 
   {% if orders.pages > 1 %}
-    <nav aria-label="Order history pages">
+    <nav class="pagination" aria-label="Order history pages">
       {% if orders.has_prev %}<a href="{{ url_for('orders.index', page=orders.prev_num, status=status, payment_status=payment_status) }}">Previous</a>{% endif %}
       <span>Page {{ orders.page }} of {{ orders.pages }}</span>
       {% if orders.has_next %}<a href="{{ url_for('orders.index', page=orders.next_num, status=status, payment_status=payment_status) }}">Next</a>{% endif %}

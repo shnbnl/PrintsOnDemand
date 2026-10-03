@@ -3,32 +3,43 @@
 {% block title %}Shop orders | Prints On Demand{% endblock %}
 
 {% block content %}
-  <p><a href="{{ url_for('access.shop') }}">← Assigned shop</a></p>
-  <h1>Shop orders</h1>
+  <a class="back-link" href="{{ url_for('access.shop') }}">← Assigned shop</a>
+  <header class="page-intro">
+    <p class="eyebrow">Shop Staff / Orders</p>
+    <h1>Shop orders</h1>
+    <p class="page-lead">Review orders placed with your assigned shop and open one to see its print job.</p>
+  </header>
+
   {% if orders %}
-    <div class="table-scroll">
-      <table>
-        <thead><tr><th>Reference</th><th>Created</th><th>Customer</th><th>Order status</th><th>Payment</th><th>Total</th><th>Destination</th><th>Latest processing event</th></tr></thead>
-        <tbody>
-          {% for order in orders %}
-            <tr>
-              <td><a href="{{ url_for('staff_orders.detail', order_reference=order.order_reference) }}">{{ order.order_reference }}</a></td>
-              <td><time datetime="{{ order.created_at.isoformat() }}">{{ order.created_at.strftime('%Y-%m-%d %H:%M UTC') }}</time></td>
-              <td>{{ order.user.name }}</td>
-              <td>{{ order.status.value }}</td>
-              <td>{{ order.payment.payment_status.value if order.payment else 'Not selected' }}</td>
-              <td>{{ order.currency }} {{ order.total }}</td>
-              <td>{{ order.destination.value if order.destination else 'Not selected' }}</td>
-              <td>
-                {% set latest = order.completed_at or order.ready_at or order.processing_started_at %}
-                {% if latest %}<time datetime="{{ latest.isoformat() }}">{{ latest.strftime('%Y-%m-%d %H:%M UTC') }}</time>{% else %}—{% endif %}
-              </td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
+    <ul class="order-list">
+      {% for order in orders %}
+        <li class="section-card order-card">
+          <div class="card-heading">
+            <div>
+              <p class="eyebrow">Order reference</p>
+              <h2><a href="{{ url_for('staff_orders.detail', order_reference=order.order_reference) }}">{{ order.order_reference }}</a></h2>
+              <p class="hint">Placed <time datetime="{{ order.created_at.isoformat() }}">{{ order.created_at.strftime('%Y-%m-%d %H:%M UTC') }}</time></p>
+            </div>
+            <strong class="order-total">{{ order.currency }} {{ order.total }}</strong>
+          </div>
+          <p class="status-group">
+            <span class="status-badge" data-status="{{ order.status.value }}">{{ order.status.value }}</span>
+            <span class="status-badge"{% if order.payment %} data-status="{{ order.payment.payment_status.value }}"{% endif %}>Payment: {{ order.payment.payment_status.value if order.payment else 'Not selected' }}</span>
+          </p>
+          <dl class="summary-list">
+            <div class="summary-row"><dt>Customer</dt><dd>{{ order.user.name }}</dd></div>
+            <div class="summary-row"><dt>Destination</dt><dd>{{ order.destination.value if order.destination else 'Not selected' }}</dd></div>
+            {% set latest = order.completed_at or order.ready_at or order.processing_started_at %}
+            {% if latest %}<div class="summary-row"><dt>Latest processing event</dt><dd><time datetime="{{ latest.isoformat() }}">{{ latest.strftime('%Y-%m-%d %H:%M UTC') }}</time></dd></div>{% endif %}
+          </dl>
+          <a class="card-action" href="{{ url_for('staff_orders.detail', order_reference=order.order_reference) }}">View order <span aria-hidden="true">→</span></a>
+        </li>
+      {% endfor %}
+    </ul>
   {% else %}
-    <p>No orders have been placed for your assigned shop.</p>
+    <div class="empty-state">
+      <h2>No shop orders yet</h2>
+      <p>No orders have been placed for your assigned shop.</p>
+    </div>
   {% endif %}
 {% endblock %}

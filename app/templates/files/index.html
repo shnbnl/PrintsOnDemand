@@ -3,20 +3,31 @@
 {% block title %}My files | Prints On Demand{% endblock %}
 
 {% block content %}
-  <h1>My files</h1>
-  <p>Uploaded files are private. Uploading and configuring a file does not submit an order.</p>
-  <p><a href="{{ url_for('files.upload') }}">Select files to print</a></p>
+  <header class="page-intro page-intro-actions">
+    <div><p class="page-eyebrow">Your private library</p><h1>My files</h1><p class="page-lead">Keep documents ready for printing. Uploading and configuring a file does not submit an order.</p></div>
+    <a class="button button-primary" href="{{ url_for('files.upload') }}">Select files to print <span aria-hidden="true">＋</span></a>
+  </header>
   {% if records %}
-    <ul class="shop-list">
+    <ul class="shop-list card-grid file-grid">
       {% for record in records %}
-        <li class="shop-card">
-          <a href="{{ url_for('files.detail', file_id=record.id) }}">{{ record.original_filename }}</a>
-          <span>({{ record.file_size }} bytes)</span>
-          <p>Uploaded {{ record.created_at.strftime('%Y-%m-%d %H:%M UTC') }}</p>
+        <li class="content-card file-card">
+          <span class="file-icon" aria-hidden="true">{{ record.file_extension|upper }}</span>
+          <div class="file-card-body">
+            <h2><a href="{{ url_for('files.detail', file_id=record.id) }}">{{ record.original_filename }}</a></h2>
+            <p class="file-meta">{{ record.file_extension|upper }} · {{ record.file_size }} bytes</p>
+            <p class="file-meta">Uploaded <time datetime="{{ record.created_at.isoformat() }}">{{ record.created_at.strftime('%Y-%m-%d %H:%M UTC') }}</time></p>
+            <span class="status-badge {{ 'status-success' if record.configuration else 'status-warning' }}">{{ 'Configured' if record.configuration else 'Needs print settings' }}</span>
+          </div>
+          <a class="button button-secondary" href="{{ url_for('files.detail', file_id=record.id) }}">View file</a>
         </li>
       {% endfor %}
     </ul>
   {% else %}
-    <p>No files uploaded yet.</p>
+    <section class="content-card empty-state">
+      <span class="empty-state-icon" aria-hidden="true">＋</span>
+      <h2>No files uploaded yet.</h2>
+      <p>Select a document to start preparing your next print order.</p>
+      <a class="button button-primary" href="{{ url_for('files.upload') }}">Upload a file</a>
+    </section>
   {% endif %}
 {% endblock %}

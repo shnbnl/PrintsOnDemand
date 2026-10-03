@@ -3,31 +3,49 @@
 {% block title %}Printing shops | Prints On Demand{% endblock %}
 
 {% block content %}
-  <h1>Printing shops</h1>
-  <form class="search-form" method="get" action="{{ url_for('shops.index') }}" role="search">
-    <label for="shop-search">Search Printing Shop</label>
-    <input id="shop-search" name="q" type="search" value="{{ query }}" maxlength="100">
-    <button type="submit">Search</button>
+  <header class="page-intro">
+    <p class="page-eyebrow">Find your place to print</p>
+    <h1>Printing shops</h1>
+    <p class="page-lead">Browse active shops and check their services before you prepare an order.</p>
+  </header>
+  <form class="search-form content-card" method="get" action="{{ url_for('shops.index') }}" role="search">
+    <div class="field search-field">
+      <label for="shop-search">Search Printing Shop</label>
+      <input id="shop-search" name="q" type="search" value="{{ query }}" maxlength="100" placeholder="Search by shop name">
+    </div>
+    <button class="button button-primary" type="submit">Search</button>
   </form>
 
   {% if shops %}
-    <ul class="shop-list">
+    <ul class="shop-list card-grid shop-grid">
       {% for shop in shops %}
-        <li class="shop-card">
-          <h2><a href="{{ url_for('shops.detail', shop_id=shop.id) }}">{{ shop.name }}</a></h2>
+        <li class="content-card shop-card">
+          <div class="shop-card-top">
+            <span class="shop-avatar" aria-hidden="true">P</span>
+            <div>
+              <span class="status-badge status-success">Available</span>
+              <h2><a href="{{ url_for('shops.detail', shop_id=shop.id) }}">{{ shop.name }}</a></h2>
+            </div>
+          </div>
           {% if shop.is_demo %}<p class="demo-label">Demo shop information</p>{% endif %}
-          <p>{{ shop.address }}</p>
-          <p>Open: {{ shop.opening_time.strftime('%I:%M %p') }} - {{ shop.closing_time.strftime('%I:%M %p') }}</p>
-          <p>Offers:
-            {% set enabled_services = shop.services | selectattr('enabled') | list %}
+          <p class="shop-address">{{ shop.address }}</p>
+          <p class="shop-hours"><strong>Hours</strong> {{ shop.opening_time.strftime('%I:%M %p') }} - {{ shop.closing_time.strftime('%I:%M %p') }}</p>
+          {% set enabled_services = shop.services | selectattr('enabled') | list %}
+          <div class="shop-offers">
+            <span class="detail-label">Offers</span>
             {% if enabled_services %}
-              {% for service in enabled_services %}{{ service.service_type.label }}{% if not loop.last %}, {% endif %}{% endfor %}
-            {% else %}No services listed{% endif %}
-          </p>
+              <ul class="chip-list">{% for service in enabled_services %}<li>{{ service.service_type.label }}</li>{% endfor %}</ul>
+            {% else %}<p class="hint">No services listed</p>{% endif %}
+          </div>
+          <a class="button button-secondary button-block" href="{{ url_for('shops.detail', shop_id=shop.id) }}">View shop details <span aria-hidden="true">→</span></a>
         </li>
       {% endfor %}
     </ul>
   {% else %}
-    <p>No active printing shops match your search.</p>
+    <section class="content-card empty-state">
+      <h2>No shops found</h2>
+      <p>No active printing shops match your search.</p>
+      {% if query %}<a class="button button-secondary" href="{{ url_for('shops.index') }}">View all shops</a>{% endif %}
+    </section>
   {% endif %}
 {% endblock %}

@@ -3,19 +3,62 @@
 {% block title %}Configure print | Prints On Demand{% endblock %}
 
 {% block content %}
-  <p><a href="{{ url_for('files.detail', file_id=record.id) }}">← {{ record.original_filename }}</a></p>
-  <h1>Customize print</h1>
-  <p>Set printing options for {{ record.original_filename }}. This does not submit an order.</p>
-  <form class="account-form" method="post" novalidate>
+  <a class="back-link" href="{{ url_for('files.detail', file_id=record.id) }}">← {{ record.original_filename }}</a>
+  <header class="page-intro">
+    <p class="page-eyebrow">Step 2 · Print options</p>
+    <h1>Customize print</h1>
+    <p class="page-lead">Choose paper, color, and print count for <strong>{{ record.original_filename }}</strong>. This does not submit an order.</p>
+  </header>
+  <form class="form-stack print-config-form" method="post" novalidate>
     {{ form.hidden_tag() }}
-    {% for field in [form.paper_size, form.color_mode, form.quantity] %}
-      <div class="field">
-        {{ field.label }} {{ field() }}
-        {% for error in field.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+    <section class="content-card">
+      <fieldset class="choice-fieldset">
+        <legend>{{ form.paper_size.label.text }}</legend>
+        <div class="choice-grid">
+          {% for value, label in form.paper_size.choices %}
+            <label class="choice-card">
+              <input type="radio" name="{{ form.paper_size.name }}" value="{{ value }}" {% if form.paper_size.data == value %}checked{% endif %} required>
+              <span>{{ label }}</span>
+            </label>
+          {% endfor %}
+        </div>
+        {% for error in form.paper_size.errors %}<p class="field-error" role="alert">{{ error }}</p>{% endfor %}
+      </fieldset>
+    </section>
+    <section class="content-card">
+      <fieldset class="choice-fieldset">
+        <legend>{{ form.color_mode.label.text }}</legend>
+        <div class="choice-grid choice-grid-short">
+          {% for value, label in form.color_mode.choices %}
+            <label class="choice-card">
+              <input type="radio" name="{{ form.color_mode.name }}" value="{{ value }}" {% if form.color_mode.data == value %}checked{% endif %} required>
+              <span>{{ label }}</span>
+            </label>
+          {% endfor %}
+        </div>
+        {% for error in form.color_mode.errors %}<p class="field-error" role="alert">{{ error }}</p>{% endfor %}
+      </fieldset>
+    </section>
+    <section class="content-card">
+      <div class="field quantity-field">
+        {{ form.quantity.label }}
+        <div class="quantity-stepper">
+          <button type="button" class="quantity-step" data-step="-1" aria-label="Decrease print count">−</button>
+          {{ form.quantity(type="number", min="1", max=max_quantity, inputmode="numeric") }}
+          <button type="button" class="quantity-step" data-step="1" aria-label="Increase print count">＋</button>
+        </div>
+        <p class="hint">Print count must be between 1 and {{ max_quantity }}.</p>
+        {% for error in form.quantity.errors %}<p class="field-error" role="alert">{{ error }}</p>{% endfor %}
       </div>
-    {% endfor %}
-    <p class="hint">Print count must be between 1 and {{ max_quantity }}.</p>
-    <div>{{ form.is_rush() }} {{ form.is_rush.label }}</div>
-    {{ form.submit() }}
+    </section>
+    <section class="content-card">
+      <p class="page-eyebrow">Printing priority</p>
+      <label class="choice-card checkbox-choice">
+        {{ form.is_rush() }}
+        <span><strong>Rush printing</strong><small>Request priority handling when the shop offers it. Any fee appears during order review.</small></span>
+      </label>
+      {% for error in form.is_rush.errors %}<p class="field-error" role="alert">{{ error }}</p>{% endfor %}
+    </section>
+    <div class="form-actions">{{ form.submit(class_="button button-primary") }}</div>
   </form>
 {% endblock %}

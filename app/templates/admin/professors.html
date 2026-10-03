@@ -3,21 +3,43 @@
 {% block title %}Professors | Prints On Demand{% endblock %}
 
 {% block content %}
-  <p><a href="{{ url_for('access.admin') }}">← Admin management</a></p>
-  <h1>Professors</h1>
-  <p><a href="{{ url_for('admin_management.new_professor') }}">Add professor</a></p>
+  <a class="back-link" href="{{ url_for('access.admin') }}">← Admin management</a>
+  <header class="page-intro page-intro--with-action">
+    <div>
+      <p class="eyebrow">Administration / Recipients</p>
+      <h1>Professors</h1>
+      <p class="page-lead">Review who can be selected for Direct-to-Professor orders.</p>
+    </div>
+    <a class="button" href="{{ url_for('admin_management.new_professor') }}">Add professor <span aria-hidden="true">→</span></a>
+  </header>
+
   {% if professors %}
-    <div class="table-scroll"><table>
-      <thead><tr><th>Name</th><th>Email</th><th>Department</th><th>Office</th><th>Active</th><th>Direct-to-Professor approval</th><th>Action</th></tr></thead>
-      <tbody>
-        {% for professor in professors %}
-          <tr><td>{{ professor.name }}</td><td>{{ professor.email }}</td>
-            <td>{{ professor.department or '—' }}</td><td>{{ professor.office or '—' }}</td>
-            <td>{{ 'Yes' if professor.is_active else 'No' }}</td>
-            <td>{{ 'Approved' if professor.direct_send_approved else 'Not approved' }}</td>
-            <td><a href="{{ url_for('admin_management.edit_professor', professor_id=professor.id) }}">Edit</a></td></tr>
-        {% endfor %}
-      </tbody>
-    </table></div>
-  {% else %}<p>No professors have been added.</p>{% endif %}
+    <div class="section-card">
+      <p class="mobile-scroll-hint">Swipe the table sideways to see all columns.</p>
+      <div class="table-scroll" role="region" aria-label="Professors" tabindex="0">
+        <table class="data-table">
+          <thead><tr><th scope="col">Name</th><th scope="col">Email</th><th scope="col">Department</th><th scope="col">Office</th><th scope="col">Active</th><th scope="col">Direct-to-Professor approval</th><th scope="col">Action</th></tr></thead>
+          <tbody>
+            {% for professor in professors %}
+              <tr>
+                <th scope="row">{{ professor.name }}</th>
+                <td>{{ professor.email }}</td>
+                <td>{{ professor.department or '—' }}</td>
+                <td>{{ professor.office or '—' }}</td>
+                <td><span class="status-badge status-badge--{{ 'success' if professor.is_active else 'muted' }}">{{ 'Yes' if professor.is_active else 'No' }}</span></td>
+                <td><span class="status-badge status-badge--{{ 'success' if professor.direct_send_approved else 'muted' }}">{{ 'Approved' if professor.direct_send_approved else 'Not approved' }}</span></td>
+                <td><a href="{{ url_for('admin_management.edit_professor', professor_id=professor.id) }}">Edit</a></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <h2>No professors yet</h2>
+      <p>Add a professor to manage future Direct-to-Professor selections.</p>
+      <a class="button" href="{{ url_for('admin_management.new_professor') }}">Add professor</a>
+    </div>
+  {% endif %}
 {% endblock %}

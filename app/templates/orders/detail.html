@@ -3,89 +3,108 @@
 {% block title %}Order {{ order.order_reference }} | Prints On Demand{% endblock %}
 
 {% block content %}
-  <p><a href="{{ url_for('orders.index') }}">← Order History</a></p>
-  <h1>Order created successfully.</h1>
+  <a class="back-link" href="{{ url_for('orders.index') }}">← Order History</a>
+  <header class="content-card success-panel order-success">
+    <span class="success-mark" aria-hidden="true">✓</span>
+    <div>
+      <p class="page-eyebrow">Your print order</p>
+      <h1>Order created successfully.</h1>
   {% if order.payment and order.payment.payment_status.value == 'PAID' %}
-    <p>Your order has been created. Payment was recorded as paid by an authorized process.</p>
+      <p>Your order has been created. Payment was recorded as paid by an authorized process.</p>
   {% else %}
-    <p>Your order has been created and is awaiting payment. Payment has not been completed.</p>
+      <p>Your order has been created and is awaiting payment. Payment has not been completed.</p>
   {% endif %}
-  <section aria-label="Order confirmation">
-    <h2>Order reference: {{ order.order_reference }}</h2>
-    <p>Printing shop: {{ order.shop_name }}</p>
-    <p><strong>Order total: {{ order.currency }} {{ order.total }}</strong></p>
-    <p>Payment method: {{ tracking.payment_method }}</p>
-    <p>Payment status: {{ tracking.payment_status }}</p>
-    <p>Order status: {{ order.status.value }}</p>
-    <p><strong>Next step:</strong> {{ tracking.next_step }}</p>
-    <p><a href="#tracking">View order tracking</a></p>
+    </div>
+  </header>
+  <section class="content-card order-confirmation" aria-label="Order confirmation">
+    <div class="order-confirmation-main">
+      <p class="page-eyebrow">Keep this reference</p>
+      <h2>Order reference: {{ order.order_reference }}</h2>
+      <p>Printing shop: {{ order.shop_name }}</p>
+      <p><strong>Order total: {{ order.currency }} {{ order.total }}</strong></p>
+    </div>
+    <div class="order-confirmation-status">
+      <p>Payment method: {{ tracking.payment_method }}</p>
+      <p>Payment status: {{ tracking.payment_status }}</p>
+      <p>Order status: {{ order.status.value }}</p>
+      <span class="status-badge status-{{ order.status.value|lower }}">{{ order.status.value }}</span>
+    </div>
+    <div class="order-next-step"><p><strong>Next step:</strong> {{ tracking.next_step }}</p><a href="#tracking">View order tracking</a></div>
   </section>
-  <section>
+  <div class="order-detail-grid">
+  <section class="content-card order-information">
+    <p class="page-eyebrow">Order</p>
     <h2>Order information</h2>
-    <p>Created: {{ order.created_at.strftime('%Y-%m-%d %H:%M UTC') }}</p>
-    <p>Printing shop: {{ order.shop_name }}</p>
+    <dl class="detail-list">
+      <div class="detail-row"><dt>Created</dt><dd>{{ order.created_at.strftime('%Y-%m-%d %H:%M UTC') }}</dd></div>
+      <div class="detail-row"><dt>Printing shop</dt><dd>{{ order.shop_name }}</dd></div>
+    </dl>
     <p>Status: {{ order.status.value }}{% if order.status.value == 'PENDING_PAYMENT' and (not order.payment or order.payment.payment_status.value != 'PAID') %} (awaiting payment){% endif %}</p>
     {% if order.destination and order.destination.value == 'PROFESSOR' %}
-      <section>
+      <div class="destination-panel">
         <h3>Send to professor</h3>
         <p>Intended recipient: <strong>{{ order.professor_name }}</strong></p>
         <p>Department: {{ order.professor_department or 'Not listed' }}</p>
         <p>Office: {{ order.professor_office or 'Not listed' }}</p>
         <p>Email: {{ order.professor_email }}</p>
         <p>The order was created with this intended recipient. No file or email has been sent to the professor.</p>
-      </section>
+      </div>
     {% elif order.destination %}
       <p>Destination recorded: {{ order.destination.value }}</p>
     {% else %}
       <p>Destination: No destination selected.</p>
     {% endif %}
-    <div class="table-scroll">
-      <table>
-        <thead><tr><th>File</th><th>Paper</th><th>Output</th><th>Print count</th><th>Unit price</th><th>Line total</th></tr></thead>
-        <tbody>
-          {% for item in order.items %}
-            <tr>
-              <td>{{ item.original_filename }}</td>
-              <td>{{ item.paper_size.label }}</td>
-              <td>{{ item.color_mode.label }}</td>
-              <td>{{ item.quantity }}</td>
-              <td>{{ order.currency }} {{ item.unit_price }}</td>
-              <td>{{ order.currency }} {{ item.line_total }}</td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    <p>Subtotal: {{ order.currency }} {{ order.subtotal }}</p>
-    {% if order.items | selectattr('is_rush') | list %}<p>Rush printing fee: {{ order.currency }} {{ order.rush_fee }}</p>{% endif %}
-    <p>Fees total: {{ order.currency }} {{ order.fees_total }}</p>
-    <p><strong>Total: {{ order.currency }} {{ order.total }}</strong></p>
   </section>
-  <section>
+  <section class="content-card print-details">
+    <p class="page-eyebrow">Your documents</p>
+    <h2>Print details</h2>
+    <div class="order-item-list">
+      {% for item in order.items %}
+        <article class="order-item-card">
+          <h3>{{ item.original_filename }}</h3>
+          <dl class="detail-list">
+            <div class="detail-row"><dt>Paper</dt><dd>{{ item.paper_size.label }}</dd></div>
+            <div class="detail-row"><dt>Output</dt><dd>{{ item.color_mode.label }}</dd></div>
+            <div class="detail-row"><dt>Print count</dt><dd>{{ item.quantity }}</dd></div>
+            <div class="detail-row"><dt>Unit price</dt><dd>{{ order.currency }} {{ item.unit_price }}</dd></div>
+            <div class="detail-row"><dt>Line total</dt><dd>{{ order.currency }} {{ item.line_total }}</dd></div>
+          </dl>
+        </article>
+      {% endfor %}
+    </div>
+  </section>
+  <section class="content-card price-summary order-total">
+    <p class="page-eyebrow">Price summary</p>
+    <h2>Total</h2>
+    <div class="summary-list">
+      <p class="summary-row">Subtotal: {{ order.currency }} {{ order.subtotal }}</p>
+      {% if order.items | selectattr('is_rush') | list %}<p class="summary-row">Rush printing fee: {{ order.currency }} {{ order.rush_fee }}</p>{% endif %}
+      <p class="summary-row">Fees total: {{ order.currency }} {{ order.fees_total }}</p>
+      <p class="summary-row summary-total"><strong>Total: {{ order.currency }} {{ order.total }}</strong></p>
+    </div>
+  </section>
+  <section class="content-card payment-panel">
+    <p class="page-eyebrow">Choose or review your method</p>
     <h2>Payment</h2>
-    {% if payment_error %}<p class="field-error" role="alert">{{ payment_error }}</p>{% endif %}
+    {% if payment_error %}<p class="notice notice-error" role="alert">{{ payment_error }}</p>{% endif %}
     {% if order.payment %}
       <p>Method selected: {{ order.payment.payment_method.value }}</p>
       <p>Payment status: {{ order.payment.payment_status.value }}</p>
+      <span class="status-badge status-{{ order.payment.payment_status.value|lower }}">{{ order.payment.payment_status.value }}{% if order.payment.payment_status.value == 'SUBMITTED' %} · awaiting verification{% endif %}</span>
       <p>{% if order.payment.payment_status.value == 'PAID' %}Payment amount{% else %}Amount to pay{% endif %}: {{ order.payment.currency }} {{ order.payment.amount }}</p>
       <p>Order reference: {{ order.order_reference }}</p>
       {% if order.payment.payment_method.value == 'ONSITE' %}
         {% if order.payment.payment_status.value == 'PENDING' %}
-          <p>Order created. Payment will be made onsite.</p>
-          <p>{{ onsite_instructions }}</p>
+          <div class="payment-instructions"><h3>Pay onsite</h3><p>Order created. Payment will be made onsite.</p><p>{{ onsite_instructions }}</p></div>
         {% elif order.payment.payment_status.value == 'PAID' %}
           <p>Onsite payment was recorded as paid.</p>
         {% endif %}
       {% elif order.payment.payment_method.value == 'ONLINE' %}
         {% if order.payment.payment_status.value == 'SUBMITTED' %}
-          <p>Payment submitted for verification. It has not been verified or completed.</p>
-          <p>Submitted reference: {{ order.payment.payment_reference }}</p>
+          <div class="payment-instructions"><h3>Awaiting verification</h3><p>Payment submitted for verification. It has not been verified or completed.</p><p>Submitted reference: {{ order.payment.payment_reference }}</p></div>
         {% elif order.payment.payment_status.value == 'PENDING' %}
           {% if online_details %}
-            <p>Use these configured manual payment instructions. Selecting online payment does not confirm a transfer.</p>
-            <p>Instructions: {{ online_details.instructions }}</p>
-            <p>Account/name: {{ online_details.account_name }}</p>
-            <p>Payment destination: {{ online_details.destination }}</p>
+            <div class="payment-instructions"><h3>Online payment instructions</h3><p>Use these configured manual payment instructions. Selecting online payment does not confirm a transfer.</p><p>Instructions: {{ online_details.instructions }}</p><p>Account/name: {{ online_details.account_name }}</p><p>Payment destination: {{ online_details.destination }}</p></div>
           {% else %}
             <p>Online payment instructions are currently unavailable. Contact the shop before making a transfer.</p>
           {% endif %}
@@ -96,50 +115,67 @@
       <p>Amount due: {{ order.currency }} {{ order.total }}</p>
     {% endif %}
     {% if method_form %}
-      <form method="post" action="{{ url_for('orders.choose_payment', order_reference=order.order_reference) }}">
+      <form class="form-stack" method="post" action="{{ url_for('orders.choose_payment', order_reference=order.order_reference) }}">
         {{ method_form.hidden_tag() }}
-        <div class="field">{{ method_form.payment_method.label }} {{ method_form.payment_method() }}</div>
-        {{ method_form.submit() }}
+        <fieldset class="choice-fieldset">
+          <legend>{{ method_form.payment_method.label.text }}</legend>
+          <div class="choice-grid choice-grid-short payment-choices">
+            {% for value, label in method_form.payment_method.choices %}
+              <label class="choice-card">
+                <input type="radio" name="{{ method_form.payment_method.name }}" value="{{ value }}" {% if method_form.payment_method.data == value %}checked{% endif %} required>
+                <span><strong>{{ label }}</strong><small>{% if value == 'ONSITE' %}Pay at the shop when instructed.{% else %}Follow the configured instructions and submit a payment reference.{% endif %}</small></span>
+              </label>
+            {% endfor %}
+          </div>
+          {% for error in method_form.payment_method.errors %}<p class="field-error" role="alert">{{ error }}</p>{% endfor %}
+        </fieldset>
+        {{ method_form.submit(class_="button button-primary") }}
       </form>
     {% endif %}
     {% if reference_form %}
-      <form method="post" action="{{ url_for('orders.submit_payment', order_reference=order.order_reference) }}">
+      <form class="form-stack payment-reference-form" method="post" action="{{ url_for('orders.submit_payment', order_reference=order.order_reference) }}">
         {{ reference_form.hidden_tag() }}
-        <div class="field">{{ reference_form.payment_reference.label }} {{ reference_form.payment_reference() }}</div>
-        {{ reference_form.submit() }}
+        <div class="field">{{ reference_form.payment_reference.label }} {{ reference_form.payment_reference(placeholder="Reference from your transfer") }}{% for error in reference_form.payment_reference.errors %}<p class="field-error" role="alert">{{ error }}</p>{% endfor %}</div>
+        {{ reference_form.submit(class_="button button-primary") }}
       </form>
     {% endif %}
   </section>
-  <section id="tracking" aria-labelledby="tracking-heading">
+  <section class="content-card timeline-card" id="tracking" aria-labelledby="tracking-heading">
+    <p class="page-eyebrow">What has happened</p>
     <h2 id="tracking-heading">Order tracking</h2>
-    <ol>
+    <ol class="tracking-list">
       {% for step in tracking.steps %}
-        <li>
-          <strong>{{ step.title }}</strong>: {{ step.detail }}
+        <li class="tracking-step {{ 'tracking-step-done' if step.timestamp else 'tracking-step-pending' }}">
+          <span class="tracking-marker" aria-hidden="true"></span>
+          <div><strong>{{ step.title }}</strong>: {{ step.detail }}
           {% if step.timestamp %}
             <time datetime="{{ step.timestamp.isoformat() }}">{{ step.timestamp.strftime('%Y-%m-%d %H:%M UTC') }}</time>
           {% endif %}
+          </div>
         </li>
       {% endfor %}
     </ol>
-    <p><strong>Next step:</strong> {{ tracking.next_step }}</p>
+    <p class="order-next-step"><strong>Next step:</strong> {{ tracking.next_step }}</p>
   </section>
   {% if professor_form %}
-    <section>
+    <section class="content-card">
+      <p class="page-eyebrow">Recipient details</p>
       <h2>{% if order.professor_id %}Change intended professor{% else %}Select intended professor{% endif %}</h2>
-      {% if professor_error %}<p class="field-error" role="alert">{{ professor_error }}</p>{% endif %}
-      <form method="post" action="{{ url_for('orders.select_professor', order_reference=order.order_reference) }}">
+      {% if professor_error %}<p class="notice notice-error" role="alert">{{ professor_error }}</p>{% endif %}
+      <p class="hint">Choose an active, approved professor for this order. The selected profile is recorded with the order.</p>
+      <form class="form-stack" method="post" action="{{ url_for('orders.select_professor', order_reference=order.order_reference) }}">
         {{ professor_form.hidden_tag() }}
         <div class="field">{{ professor_form.professor_id.label }} {{ professor_form.professor_id() }}</div>
-        {{ professor_form.submit() }}
+        {{ professor_form.submit(class_="button button-primary") }}
       </form>
     </section>
   {% endif %}
+  </div>
   {% if order.processing_started_at %}
-    <p>Shop processing is reflected in the tracking timeline above.</p>
+    <p class="hint">Shop processing is reflected in the tracking timeline above.</p>
   {% elif not order.payment or order.payment.payment_status.value != 'PAID' %}
-    <p>No payment or shop processing has been confirmed.</p>
+    <p class="hint">No payment or shop processing has been confirmed.</p>
   {% else %}
-    <p>No shop processing has been confirmed.</p>
+    <p class="hint">No shop processing has been confirmed.</p>
   {% endif %}
 {% endblock %}

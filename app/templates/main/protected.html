@@ -3,9 +3,34 @@
 {% block title %}{{ title }} | Prints On Demand{% endblock %}
 
 {% block content %}
-  <h1>{{ title }}</h1>
-  <p>This page checks access for your account role. More features will be added in later stages.</p>
-  {% if next_url %}<p><a href="{{ next_url }}">{{ next_label }}</a></p>{% endif %}
-  {% if files_url %}<p><a href="{{ files_url }}">My uploaded files</a></p>{% endif %}
-  {% if orders_url %}<p><a href="{{ orders_url }}">Order History</a></p>{% endif %}
+  {% if files_url and orders_url %}
+    <header class="page-intro home-intro">
+      <p class="page-eyebrow">Your printing desk</p>
+      <h1>Ready to print?</h1>
+      <p class="page-lead">Choose a shop, prepare a file, and keep track of what happens next.</p>
+    </header>
+    <div class="card-grid action-grid">
+      <article class="content-card action-card action-card-primary">
+        <span class="action-icon" aria-hidden="true">01</span>
+        <div><h2>Find a printing shop</h2><p>Explore available shops, services, hours, and prices.</p></div>
+        <a class="button button-primary" href="{{ next_url }}">{{ next_label }}</a>
+      </article>
+      <article class="content-card action-card">
+        <span class="action-icon" aria-hidden="true">02</span>
+        <div><h2>My Files</h2><p>Upload a document and set its print options before ordering.</p></div>
+        <a class="button button-secondary" href="{{ files_url }}">My uploaded files</a>
+      </article>
+      <article class="content-card action-card">
+        <span class="action-icon" aria-hidden="true">03</span>
+        <div><h2>My Orders</h2><p>Check payment, shop progress, and your previous orders.</p></div>
+        <a class="button button-secondary" href="{{ orders_url }}">Order History</a>
+      </article>
+    </div>
+  {% else %}
+    <header class="page-intro"><h1>{{ title }}</h1></header>
+    <section class="content-card empty-state">
+      <p>This account does not have an assigned printing shop yet.</p>
+      {% if next_url %}<p><a class="button button-secondary" href="{{ next_url }}">{{ next_label }}</a></p>{% endif %}
+    </section>
+  {% endif %}
 {% endblock %}

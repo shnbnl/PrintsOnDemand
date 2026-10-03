@@ -3,48 +3,63 @@
 {% block title %}{{ shop.name }} | Prints On Demand{% endblock %}
 
 {% block content %}
-  {% if not staff_view %}<p><a href="{{ url_for('shops.index') }}">← Printing shops</a></p>{% endif %}
-  <h1>{{ shop.name }}</h1>
-  {% if staff_view %}<p class="notice">Your assigned shop{% if not shop.is_active %} — inactive{% endif %}</p>{% endif %}
-  {% if staff_view %}<p><a href="{{ url_for('staff_orders.index') }}">View this shop's orders</a></p>{% endif %}
-  {% if shop.is_demo %}<p class="demo-label">Demo shop information and pricing — not final business rates.</p>{% endif %}
-  {% if shop.description %}<p>{{ shop.description }}</p>{% endif %}
-  <p><strong>Address:</strong> {{ shop.address }}</p>
-  <p><strong>Open:</strong> {{ shop.opening_time.strftime('%I:%M %p') }} - {{ shop.closing_time.strftime('%I:%M %p') }}</p>
+  {% if not staff_view %}<a class="back-link" href="{{ url_for('shops.index') }}">← Printing shops</a>{% endif %}
+  <header class="content-card shop-detail-hero">
+    <span class="shop-avatar shop-avatar-large" aria-hidden="true">P</span>
+    <div>
+      {% if staff_view %}<span class="status-badge {{ 'status-warning' if not shop.is_active else 'status-success' }}">Your assigned shop{% if not shop.is_active %} — inactive{% endif %}</span>{% endif %}
+      <h1>{{ shop.name }}</h1>
+      {% if shop.is_demo %}<p class="demo-label">Demo shop information and pricing — not final business rates.</p>{% endif %}
+      {% if shop.description %}<p>{{ shop.description }}</p>{% endif %}
+      <p><strong>Address:</strong> {{ shop.address }}</p>
+      <p><strong>Hours:</strong> {{ shop.opening_time.strftime('%I:%M %p') }} - {{ shop.closing_time.strftime('%I:%M %p') }}</p>
+    </div>
+  </header>
+  {% if staff_view %}<p><a class="button button-primary" href="{{ url_for('staff_orders.index') }}">View this shop's orders</a></p>{% endif %}
 
-  <h2>Services offered</h2>
-  {% if services %}
-    <ul>{% for service in services %}<li>{{ service.service_type.label }}</li>{% endfor %}</ul>
-  {% else %}<p>No services are currently listed.</p>{% endif %}
-
-  <h2>Pricelist</h2>
-  <p>Current shop rates for paper and color. Checkout calculates the total from the selected file's print count.</p>
-  <div class="table-scroll">
-    <table>
-      <thead><tr><th scope="col">Paper Size</th><th scope="col">Grayscale/page</th><th scope="col">Colored/page</th></tr></thead>
-      <tbody>
-        {% for row in price_rows %}
-          <tr>
-            <th scope="row">{{ row.size.label }}</th>
-            <td>{% if row.grayscale %}₱{{ '%.2f'|format(row.grayscale.price) }}{% if row.grayscale.is_demo %} (demo){% endif %}{% else %}Not set{% endif %}</td>
-            <td>{% if row.color %}₱{{ '%.2f'|format(row.color.price) }}{% if row.color.is_demo %} (demo){% endif %}{% else %}Not set{% endif %}</td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+  <div class="shop-detail-grid">
+    <section class="content-card">
+      <p class="page-eyebrow">What this shop offers</p>
+      <h2>Services offered</h2>
+      {% if services %}
+        <ul class="chip-list">{% for service in services %}<li>{{ service.service_type.label }}</li>{% endfor %}</ul>
+      {% else %}<p>No services are currently listed.</p>{% endif %}
+    </section>
+    <section class="content-card pricelist-card">
+      <p class="page-eyebrow">Current rates</p>
+      <h2>Pricelist</h2>
+      <p class="hint">Paper and color rates. Checkout calculates the total from the selected file's print count.</p>
+      <div class="table-scroll">
+        <table class="data-table pricing-table">
+          <thead><tr><th scope="col">Paper Size</th><th scope="col">Grayscale/page</th><th scope="col">Colored/page</th></tr></thead>
+          <tbody>
+            {% for row in price_rows %}
+              <tr>
+                <th scope="row">{{ row.size.label }}</th>
+                <td data-label="Grayscale/page">{% if row.grayscale %}₱{{ '%.2f'|format(row.grayscale.price) }}{% if row.grayscale.is_demo %} (demo){% endif %}{% else %}Not set{% endif %}</td>
+                <td data-label="Colored/page">{% if row.color %}₱{{ '%.2f'|format(row.color.price) }}{% if row.color.is_demo %} (demo){% endif %}{% else %}Not set{% endif %}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+    {% if fees %}
+      <section class="content-card">
+        <h2>Additional fees</h2>
+        <ul class="summary-list">{% for fee in fees %}<li class="summary-row"><span>{{ fee.fee_type.label }}{% if fee.is_demo %} (demo){% endif %}</span><strong>₱{{ '%.2f'|format(fee.amount) }}</strong></li>{% endfor %}</ul>
+      </section>
+    {% endif %}
   </div>
 
-  {% if fees %}
-    <h2>Additional fees</h2>
-    <ul>{% for fee in fees %}<li>{{ fee.fee_type.label }}: ₱{{ '%.2f'|format(fee.amount) }}{% if fee.is_demo %} (demo){% endif %}</li>{% endfor %}</ul>
-  {% endif %}
-
   {% if not staff_view %}
-    {% if can_order %}
-      <p><a href="{{ url_for('orders.new', shop_id=shop.id) }}">Proceed to order review</a></p>
-    {% else %}
-      <button type="button" disabled>Proceed</button>
-      <p class="hint"><a href="{{ url_for('files.index') }}">Upload and configure a file</a> before ordering.</p>
-    {% endif %}
+    <section class="content-card action-panel">
+      <div><h2>Ready to continue?</h2><p>Choose a configured file and review the live price before placing an order.</p></div>
+      {% if can_order %}
+        <a class="button button-primary" href="{{ url_for('orders.new', shop_id=shop.id) }}">Proceed to order review <span aria-hidden="true">→</span></a>
+      {% else %}
+        <div><button type="button" disabled>Proceed</button><p class="hint"><a href="{{ url_for('files.index') }}">Upload and configure a file</a> before ordering.</p></div>
+      {% endif %}
+    </section>
   {% endif %}
 {% endblock %}

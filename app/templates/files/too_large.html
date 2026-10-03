@@ -3,7 +3,9 @@
 {% block title %}File too large | Prints On Demand{% endblock %}
 
 {% block content %}
-  <h1>File is too large</h1>
-  <p>The upload exceeded the configured size limit.</p>
-  <p><a href="{{ url_for('files.upload') }}">Choose a smaller file</a></p>
+  <section class="content-card empty-state error-state">
+    <h1>File is too large</h1>
+    <p>The upload exceeded the configured size limit.</p>
+    <a class="button button-primary" href="{{ url_for('files.upload') }}">Choose a smaller file</a>
+  </section>
 {% endblock %}
