@@ -42,15 +42,17 @@
     <p>Status: {{ order.status.value }}{% if order.status.value == 'PENDING_PAYMENT' and (not order.payment or order.payment.payment_status.value != 'PAID') %} (awaiting payment){% endif %}</p>
     {% if order.destination and order.destination.value == 'PROFESSOR' %}
       <div class="destination-panel">
-        <h3>Send to professor</h3>
+        <h3>Direct-to-Professor</h3>
         <p>Intended recipient: <strong>{{ order.professor_name }}</strong></p>
         <p>Department: {{ order.professor_department or 'Not listed' }}</p>
         <p>Office: {{ order.professor_office or 'Not listed' }}</p>
         <p>Email: {{ order.professor_email }}</p>
         <p>The order was created with this intended recipient. No file or email has been sent to the professor.</p>
       </div>
-    {% elif order.destination %}
-      <p>Destination recorded: {{ order.destination.value }}</p>
+    {% elif order.destination and order.destination.value == 'PICKUP' %}
+      <div class="destination-panel"><h3>Scheduled Pickup</h3><p>Requested pickup date: {{ order.pickup_date }}</p><p>Requested pickup time: {{ order.pickup_slot }} (Philippine time)</p><p>Check order tracking for processing progress.</p></div>
+    {% elif order.destination and order.destination.value == 'DELIVERY' %}
+      <div class="destination-panel"><h3>Delivery</h3><p>Recipient: {{ order.delivery_recipient_name }}</p><p>Contact: {{ order.delivery_recipient_phone }}</p><p>Address: {{ order.delivery_address }}</p><p>Requested delivery date: {{ order.delivery_date }}</p><p>Requested delivery time: {{ order.delivery_slot }} (Philippine time)</p><p>This is a delivery request. No courier has been booked automatically.</p></div>
     {% else %}
       <p>Destination: No destination selected.</p>
     {% endif %}
@@ -79,6 +81,7 @@
     <div class="summary-list">
       <p class="summary-row">Subtotal: {{ order.currency }} {{ order.subtotal }}</p>
       {% if order.items | selectattr('is_rush') | list %}<p class="summary-row">Rush printing fee: {{ order.currency }} {{ order.rush_fee }}</p>{% endif %}
+      {% if order.destination and order.destination.value == 'DELIVERY' %}<p class="summary-row">Delivery fee: {{ order.currency }} {{ order.delivery_fee }}</p>{% endif %}
       <p class="summary-row">Fees total: {{ order.currency }} {{ order.fees_total }}</p>
       <p class="summary-row summary-total"><strong>Total: {{ order.currency }} {{ order.total }}</strong></p>
     </div>

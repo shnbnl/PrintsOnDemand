@@ -10,6 +10,13 @@ class PlaceOrderForm(FlaskForm):
     shop_id = HiddenField(validators=[DataRequired()])
     destination = HiddenField()
     professor_id = HiddenField()
+    pickup_date = HiddenField()
+    pickup_slot = HiddenField()
+    delivery_recipient_name = HiddenField()
+    delivery_recipient_phone = HiddenField()
+    delivery_address = HiddenField()
+    delivery_date = HiddenField()
+    delivery_slot = HiddenField()
     submit = SubmitField("Place Order")
 
 

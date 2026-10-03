@@ -44,6 +44,8 @@
     </ul>
     <dl class="summary-list price-summary">
       <div class="summary-row"><dt>Subtotal</dt><dd>{{ order.currency }} {{ order.subtotal }}</dd></div>
+      {% if order.items | selectattr('is_rush') | list %}<div class="summary-row"><dt>Rush printing fee</dt><dd>{{ order.currency }} {{ order.rush_fee }}</dd></div>{% endif %}
+      {% if order.destination and order.destination.value == 'DELIVERY' %}<div class="summary-row"><dt>Delivery fee</dt><dd>{{ order.currency }} {{ order.delivery_fee }}</dd></div>{% endif %}
       <div class="summary-row"><dt>Fees total</dt><dd>{{ order.currency }} {{ order.fees_total }}</dd></div>
       <div class="summary-row summary-row--total"><dt>Total</dt><dd>{{ order.currency }} {{ order.total }}</dd></div>
     </dl>
@@ -62,16 +64,27 @@
   </section>
 
   <section class="section-card">
-    <h2>Destination</h2>
+    <h2>Fulfillment</h2>
     <dl class="summary-list">
-      <div class="summary-row"><dt>Type</dt><dd>{{ order.destination.value if order.destination else 'Not selected' }}</dd></div>
+      <div class="summary-row"><dt>Type</dt><dd>{{ order.destination.label if order.destination else 'Not selected' }}</dd></div>
       {% if order.destination and order.destination.value == 'PROFESSOR' %}
         <div class="summary-row"><dt>Professor</dt><dd>{{ order.professor_name }}</dd></div>
         <div class="summary-row"><dt>Department</dt><dd>{{ order.professor_department or 'Not listed' }}</dd></div>
         <div class="summary-row"><dt>Office</dt><dd>{{ order.professor_office or 'Not listed' }}</dd></div>
         <div class="summary-row"><dt>Email</dt><dd>{{ order.professor_email }}</dd></div>
       {% endif %}
+      {% if order.destination and order.destination.value == 'PICKUP' %}
+        <div class="summary-row"><dt>Requested pickup date</dt><dd>{{ order.pickup_date }}</dd></div>
+        <div class="summary-row"><dt>Requested pickup time</dt><dd>{{ order.pickup_slot }} (Philippine time)</dd></div>
+      {% elif order.destination and order.destination.value == 'DELIVERY' %}
+        <div class="summary-row"><dt>Recipient</dt><dd>{{ order.delivery_recipient_name }}</dd></div>
+        <div class="summary-row"><dt>Contact</dt><dd>{{ order.delivery_recipient_phone }}</dd></div>
+        <div class="summary-row"><dt>Address</dt><dd>{{ order.delivery_address }}</dd></div>
+        <div class="summary-row"><dt>Requested delivery date</dt><dd>{{ order.delivery_date }}</dd></div>
+        <div class="summary-row"><dt>Requested delivery time</dt><dd>{{ order.delivery_slot }} (Philippine time)</dd></div>
+      {% endif %}
     </dl>
+    {% if order.destination and order.destination.value == 'DELIVERY' %}<p class="hint">Delivery is requested; no courier is automatically booked.</p>{% endif %}
   </section>
 
   <section class="section-card">

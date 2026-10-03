@@ -2,7 +2,8 @@
 
 import hashlib
 import re
-from datetime import time
+from datetime import datetime, time, timedelta
+from zoneinfo import ZoneInfo
 from decimal import Decimal
 from pathlib import Path
 
@@ -57,6 +58,9 @@ def shop(app, *, name="Campus Prints", active=True, price="2.25", rush=False, ru
         )
         db.session.add(record)
         db.session.flush()
+        db.session.add(ShopService(
+            shop_id=record.id, service_type=ServiceType.PICKUP, enabled=True,
+        ))
         if price is not None:
             db.session.add(PrintPrice(
                 shop_id=record.id, paper_size=PaperSize.A4,
@@ -95,13 +99,24 @@ def file(app, user_id, *, name="notes.pdf", configured=True, quantity=3, rush=Fa
 
 
 def review(client, file_id, shop_id):
-    return client.get(f"/orders/new?file_id={file_id}&shop_id={shop_id}")
+    return client.get("/orders/new", query_string={
+        "file_id": file_id, "shop_id": shop_id, **pickup_fields(),
+    })
+
+
+def pickup_fields():
+    return {
+        "destination": "PICKUP",
+        "pickup_date": (datetime.now(ZoneInfo("Asia/Manila")).date() + timedelta(days=3)).isoformat(),
+        "pickup_slot": "14:00-15:00",
+    }
 
 
 def place(client, file_id, shop_id, **extras):
     return client.post("/orders/create", data={
         "csrf_token": token(client.get("/student")),
-        "file_id": str(file_id), "shop_id": str(shop_id), **extras,
+        "file_id": str(file_id), "shop_id": str(shop_id),
+        **(pickup_fields() if "destination" not in extras else {}), **extras,
     })
 
 
@@ -155,7 +170,7 @@ def test_professor_checkout_review_confirmation_and_snapshot(client, test_app):
     approved_professor(test_app, active=False, name="Liza Navarro")
     sign_in(client, user_id)
     selection = client.get("/orders/new")
-    assert b"Send to professor" in selection.data
+    assert b"Direct-to-Professor" in selection.data
     assert b"Maria Santos" in selection.data
     assert b"Ana Reyes" not in selection.data
     assert b"Liza Navarro" not in selection.data
@@ -305,9 +320,12 @@ def test_owner_can_select_professor_on_existing_order_but_other_user_cannot(clie
     professor_id = approved_professor(test_app)
     sign_in(client, owner)
     assert review(client, file_id, shop_id).status_code == 200
-    url = place(client, file_id, shop_id).headers["Location"]
     with test_app.app_context():
-        total_before = db.session.scalar(select(Order)).total
+        legacy = create_order(quote_order(
+            user_id=owner, file_id=file_id, shop_id=shop_id, max_quantity=999,
+        ))
+        total_before = legacy.total
+        url = f"/orders/{legacy.order_reference}"
     sign_in(client, other)
     assert client.get(url).status_code == 404
     assert client.post(

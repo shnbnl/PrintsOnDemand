@@ -145,3 +145,7 @@ Tracking must use the specification's statuses: `SUBMITTED`, `PAYMENT_PENDING`, 
 - Payment verification and onsite collection policy; the simultaneous `Paid` and QR prompt settles neither.
 
 The actual PDF review is complete. These questions and extensions are recorded for later stages. No application functionality or UI redesign is included in this follow-up.
+
+## Stage 16 implementation note
+
+The PDF's claiming-method cards and pickup/delivery slot lists inform the implemented checkout choice. New orders now require one shop-supported method: Direct-to-Professor, Scheduled Pickup, or Delivery. Pickup and delivery collect dates as well as slots; the PDF shows slots only. The server validates both against configured Philippine-time windows and shop hours. Delivery additionally records recipient name, phone, and address and uses the shop's configured delivery fee. The order stores these details and fee as historical snapshots, displayed at review, confirmation/tracking, history, and staff detail. The PDF's “via Lalamove” wording remains reference terminology; Stage 16 does not book a courier. Direct-to-Professor still uses an approved professor dropdown, and online/onsite payment retains its separate manual state. The earlier screen inventory and future-looking questions above remain a record of what the original PDF did and did not show.

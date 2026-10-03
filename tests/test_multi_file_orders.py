@@ -13,7 +13,7 @@ from app.models import (
 )
 from test_orders import (
     PDF, approved_professor, file, offer_professor_service, place, review,
-    shop, sign_in, student, token,
+    pickup_fields, shop, sign_in, student, token,
 )
 
 
@@ -28,6 +28,7 @@ def extra_rate(app, shop_id, size=PaperSize.A3, mode=ColorMode.COLOR, price="7.2
 def selection(first, second, shop_id, *, rush=True):
     result = {
         "file_id": [str(first), str(second)], "shop_id": str(shop_id),
+        **pickup_fields(),
         f"paper_size_{first}": "A4", f"color_mode_{first}": "GRAYSCALE",
         f"quantity_{first}": "2",
         f"paper_size_{second}": "A3", f"color_mode_{second}": "COLOR",
@@ -43,6 +44,8 @@ def multi_review(client, fields):
 
 
 def multi_place(client, fields, **extras):
+    if fields.get("destination") == "PROFESSOR":
+        fields = {key: value for key, value in fields.items() if key not in {"pickup_date", "pickup_slot"}}
     return client.post("/orders/create", data={
         **fields, "csrf_token": token(client.get("/student")), **extras,
     })
@@ -142,7 +145,7 @@ def test_removing_and_readding_file_only_changes_draft(client, test_app):
     draft = client.get(remove_url)
     assert draft.status_code == 200
     assert b"Poster.pdf" in draft.data and b"Thesis.pdf" in draft.data
-    removed = {"file_id": [str(first)], "shop_id": str(shop_id)}
+    removed = {"file_id": [str(first)], "shop_id": str(shop_id), **pickup_fields()}
     assert multi_review(client, removed).status_code == 200
     with test_app.app_context():
         assert db.session.get(UploadedFile, second).user_id == owner
@@ -244,7 +247,9 @@ def test_multi_order_professor_payment_and_staff_file_isolation(client, test_app
         db.session.commit()
     offer_professor_service(test_app, shop_id)
     professor = approved_professor(test_app)
-    fields = {**selection(first, second, shop_id), "destination": "PROFESSOR", "professor_id": str(professor)}
+    fields = {key: value for key, value in selection(first, second, shop_id).items()
+              if key not in {"pickup_date", "pickup_slot"}}
+    fields.update(destination="PROFESSOR", professor_id=str(professor))
     reviewed = multi_review(client, fields)
     assert reviewed.status_code == 200 and b"Maria Santos" in reviewed.data
     assert client.post("/orders/create", data=fields).status_code == 400  # CSRF

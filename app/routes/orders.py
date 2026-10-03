@@ -2,6 +2,7 @@
 
 from flask import Blueprint, abort, current_app, redirect, render_template, request, session, url_for
 from flask_login import current_user
+from datetime import timedelta
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import selectinload
@@ -15,6 +16,9 @@ from app.models import (
 from app.order_forms import PlaceOrderForm, SelectProfessorForm
 from app.payment_forms import PaymentMethodForm, PaymentReferenceForm
 from app.services.orders import create_order
+from app.services.fulfillment import (
+    FIELDS, FulfillmentError, availability, slot_options, today, validate_fulfillment,
+)
 from app.services.payments import (
     PaymentError, online_payment_details, owned_order, payment_configuration,
     select_payment_method, submit_online_reference,
@@ -22,7 +26,7 @@ from app.services.payments import (
 from app.services.pricing import PricingError, PrintOptions, quote_cart
 from app.services.professors import (
     ProfessorSelectionError, assign_professor, professor_service_available,
-    professor_snapshot, selectable_professors, validate_professor_selection,
+    selectable_professors, validate_professor_selection,
 )
 from app.services.tracking import build_tracking
 
@@ -98,7 +102,9 @@ def choices():
     return files, shops
 
 
-def quote_for(file_ids: list[int], shop_id: int, options: dict[int, PrintOptions]):
+def quote_for(file_ids: list[int], shop_id: int, options: dict[int, PrintOptions],
+              *, delivery_fee=None, delivery_fee_is_demo=False):
+    from decimal import Decimal
     return quote_cart(
         user_id=current_user.id,
         file_ids=file_ids,
@@ -107,6 +113,8 @@ def quote_for(file_ids: list[int], shop_id: int, options: dict[int, PrintOptions
         max_files=current_app.config["ORDER_MAX_FILES"],
         currency=current_app.config["ORDER_CURRENCY"],
         options=options,
+        delivery_fee=delivery_fee if delivery_fee is not None else Decimal("0.00"),
+        delivery_fee_is_demo=delivery_fee_is_demo,
     )
 
 
@@ -147,36 +155,47 @@ def parse_files(values):
 
 
 def render_selection(*, file_ids=None, shop_id=None, destination=None, professor_id=None,
-                     options=None, error=None, status=200):
+                     options=None, fulfillment_fields=None, error=None, status=200):
     files, shops = choices()
+    professors = selectable_professors()
+    shop_availability = {shop.id: availability(shop) for shop in shops}
+    if not professors:
+        for offered in shop_availability.values():
+            offered[OrderDestination.PROFESSOR.value] = False
     selected_order = {file_id: index for index, file_id in enumerate(file_ids or [])}
     files.sort(key=lambda file: (0, selected_order[file.id]) if file.id in selected_order else (1, 0))
     return render_template(
         "orders/new.html", files=files, shops=shops,
-        professors=selectable_professors(), selected_file_ids=set(file_ids or []),
+        professors=professors, selected_file_ids=set(file_ids or []),
         selected_shop_id=shop_id, selected_destination=destination,
         selected_professor_id=professor_id, selected_options=options or {},
+        fulfillment_fields=fulfillment_fields or {},
+        shop_availability=shop_availability,
+        pickup_slots=slot_options(OrderDestination.PICKUP),
+        delivery_slots=slot_options(OrderDestination.DELIVERY),
+        pickup_min=(today() + timedelta(days=max(1, current_app.config["PICKUP_LEAD_DAYS"]))).isoformat(),
+        pickup_max=(today() + timedelta(days=current_app.config["PICKUP_MAX_DAYS"])).isoformat(),
+        delivery_min=(today() + timedelta(days=max(1, current_app.config["DELIVERY_LEAD_DAYS"]))).isoformat(),
+        delivery_max=(today() + timedelta(days=current_app.config["DELIVERY_MAX_DAYS"])).isoformat(),
         paper_sizes=PaperSize, color_modes=ColorMode,
         max_quantity=current_app.config["UPLOAD_MAX_QUANTITY"],
         max_files=current_app.config["ORDER_MAX_FILES"], error=error,
     ), status
 
 
-def review_state(quote, destination, professor):
+def review_state(quote, fulfillment):
     return {
         "file_ids": [item.uploaded_file.id for item in quote.items],
         "shop_id": quote.shop.id,
-        "fingerprint": quote.fingerprint, "destination": destination or None,
-        "professor": professor_snapshot(professor),
+        "fingerprint": quote.fingerprint, "fulfillment": fulfillment.snapshot(),
     }
 
 
-def selection_url(quote, destination, professor, *, remove_file_id=None):
+def selection_url(quote, fulfillment, *, remove_file_id=None):
     items = [item for item in quote.items if item.uploaded_file.id != remove_file_id]
     args = {
         "edit": "1", "file_id": [item.uploaded_file.id for item in items],
-        "shop_id": quote.shop.id, "destination": destination or "",
-        "professor_id": professor.id if professor else "",
+        "shop_id": quote.shop.id,
     }
     for item in items:
         suffix = f"_{item.uploaded_file.id}"
@@ -188,61 +207,72 @@ def selection_url(quote, destination, professor, *, remove_file_id=None):
     return url_for("orders.new", **args)
 
 
-def render_review(quote, *, destination=None, professor=None, warning=None, status=200):
+def render_review(quote, *, fulfillment, warning=None, status=200):
     form = PlaceOrderForm(formdata=None)
     form.file_id.data = str(quote.items[0].uploaded_file.id)
     form.shop_id.data = str(quote.shop.id)
-    form.destination.data = destination or ""
-    form.professor_id.data = str(professor.id) if professor else ""
+    for field, value in fulfillment.fields().items():
+        getattr(form, field).data = value
     return render_template(
-        "orders/review.html", quote=quote, form=form, professor=professor,
-        warning=warning, selection_url=selection_url(quote, destination, professor),
+        "orders/review.html", quote=quote, form=form, fulfillment=fulfillment,
+        warning=warning, selection_url=selection_url(quote, fulfillment),
         remove_urls={item.uploaded_file.id: selection_url(
-            quote, destination, professor, remove_file_id=item.uploaded_file.id,
+            quote, fulfillment, remove_file_id=item.uploaded_file.id,
         ) for item in quote.items},
     ), status
 
 
-@orders_bp.get("/new")
+@orders_bp.route("/new", methods=["GET", "POST"])
 @roles_required(UserRole.STUDENT)
 def new():
-    session.pop("order_quote", None)
-    raw_shop = request.args.get("shop_id")
-    destination = request.args.get("destination") or None
-    professor_id = request.args.get("professor_id") or None
+    previous_review = session.pop("order_quote", None)
+    values = request.form if request.method == "POST" else request.args
+    raw_shop = values.get("shop_id")
+    fulfillment_fields = {field: values.get(field, "") for field in FIELDS}
+    if values.get("edit") == "1" and previous_review:
+        saved = previous_review.get("fulfillment") or {}
+        for field in FIELDS:
+            fulfillment_fields[field] = saved.get(field) or ""
+        fulfillment_fields["professor_id"] = str((saved.get("professor") or {}).get("id") or "")
+    destination = fulfillment_fields["destination"] or None
+    professor_id = fulfillment_fields["professor_id"] or None
     shop_id = positive_id(raw_shop)
     try:
-        file_ids, options = parse_files(request.args)
+        file_ids, options = parse_files(values)
     except PricingError as error:
         return render_selection(error=str(error), status=error.status_code)
     if raw_shop and shop_id is None:
         return render_selection(file_ids=file_ids, options=options,
                                 error="Select a valid printing shop.", status=400)
-    if request.args.get("edit") == "1" or not file_ids or shop_id is None:
-        error = "Select at least one file for this order." if request.args.get("review") == "1" and not file_ids else None
+    if values.get("edit") == "1" or not file_ids or shop_id is None:
+        error = "Select at least one file for this order." if values.get("review") == "1" and not file_ids else None
         return render_selection(
             file_ids=file_ids, shop_id=shop_id, options=options,
             destination=destination, professor_id=professor_id,
+            fulfillment_fields=fulfillment_fields,
             error=error, status=400 if error else 200,
         )
     try:
-        quote = quote_for(file_ids, shop_id, options)
-        professor = validate_professor_selection(
-            shop_id=shop_id, destination=destination, professor_id=professor_id
-        )
+        preliminary = quote_for(file_ids, shop_id, options)
+        shop = preliminary.shop
+        fulfillment = validate_fulfillment(shop=shop, values=values)
+        quote = (quote_for(file_ids, shop_id, options, delivery_fee=fulfillment.delivery_fee,
+                           delivery_fee_is_demo=fulfillment.delivery_fee_is_demo)
+                 if fulfillment.destination == OrderDestination.DELIVERY else preliminary)
     except PricingError as error:
         return render_selection(
             file_ids=file_ids, shop_id=shop_id, options=options,
             error=str(error), status=error.status_code,
         )
-    except ProfessorSelectionError as error:
+    except FulfillmentError as error:
         return render_selection(
             file_ids=file_ids, shop_id=shop_id, options=options,
             destination=destination, professor_id=professor_id,
+            fulfillment_fields=fulfillment_fields,
             error=str(error), status=400,
         )
-    session["order_quote"] = review_state(quote, destination, professor)
-    return render_review(quote, destination=destination, professor=professor)
+    session["order_quote"] = review_state(quote, fulfillment)
+    return render_review(quote, fulfillment=fulfillment)
 
 
 @orders_bp.post("/create")
@@ -262,39 +292,40 @@ def create():
         return render_selection(file_ids=file_ids, options=options,
                                 error="Select a valid printing shop.", status=400)
     try:
-        quote = quote_for(file_ids, shop_id, options)
-        professor = validate_professor_selection(
-            shop_id=shop_id, destination=form.destination.data,
-            professor_id=form.professor_id.data,
-        )
+        preliminary = quote_for(file_ids, shop_id, options)
+        shop = preliminary.shop
+        fulfillment = validate_fulfillment(shop=shop, values=request.form)
+        quote = (quote_for(file_ids, shop_id, options, delivery_fee=fulfillment.delivery_fee,
+                           delivery_fee_is_demo=fulfillment.delivery_fee_is_demo)
+                 if fulfillment.destination == OrderDestination.DELIVERY else preliminary)
     except PricingError as error:
         return render_selection(
             file_ids=file_ids, shop_id=shop_id, options=options,
             error=str(error), status=error.status_code,
         )
-    except ProfessorSelectionError as error:
+    except FulfillmentError as error:
         return render_selection(
             file_ids=file_ids, shop_id=shop_id, options=options,
             destination=form.destination.data, professor_id=form.professor_id.data,
+            fulfillment_fields={field: request.form.get(field, "") for field in FIELDS},
             error=str(error), status=400,
         )
     reviewed = session.get("order_quote")
-    current_review = review_state(quote, form.destination.data, professor)
+    current_review = review_state(quote, fulfillment)
     if reviewed != current_review:
         session["order_quote"] = current_review
         return render_review(
-            quote, destination=form.destination.data, professor=professor,
+            quote, fulfillment=fulfillment,
             warning="The order or price changed, including any professor details. Review the current details and place the order again.",
             status=409,
         )
     try:
-        order = create_order(
-            quote, destination=form.destination.data, professor_id=form.professor_id.data
-        )
-    except ProfessorSelectionError as error:
+        order = create_order(quote, fulfillment=fulfillment)
+    except (ProfessorSelectionError, FulfillmentError) as error:
         return render_selection(
             file_ids=file_ids, shop_id=shop_id, options=options,
             destination=form.destination.data, professor_id=form.professor_id.data,
+            fulfillment_fields={field: request.form.get(field, "") for field in FIELDS},
             error=str(error), status=400,
         )
     except (SQLAlchemyError, RuntimeError):
@@ -396,7 +427,9 @@ def submit_payment(order_reference: str):
 
 
 def professor_form(order):
-    if order.status != OrderStatus.PENDING_PAYMENT or not professor_service_available(order.shop_id):
+    if (order.destination not in (None, OrderDestination.PROFESSOR)
+            or order.status != OrderStatus.PENDING_PAYMENT
+            or not professor_service_available(order.shop_id)):
         return None
     professors = selectable_professors()
     if not professors:

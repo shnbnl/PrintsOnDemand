@@ -39,18 +39,30 @@
         </div>
         <p class="form-actions"><a class="button button-secondary" href="{{ selection_url }}">Edit, remove, or add files</a></p>
       </section>
-      {% if professor %}
+      {% if fulfillment.destination.value == 'PROFESSOR' %}
         <section class="content-card">
           <p class="page-eyebrow">Intended recipient</p>
-          <h2>Send to professor</h2>
-          <p><strong>{{ professor.name }}</strong></p>
+          <h2>Direct-to-Professor</h2>
+          <p><strong>{{ fulfillment.professor_details.name }}</strong></p>
           <dl class="detail-list">
-            <div class="detail-row"><dt>Department</dt><dd>{{ professor.department or 'Not listed' }}</dd></div>
-            <div class="detail-row"><dt>Office</dt><dd>{{ professor.office or 'Not listed' }}</dd></div>
-            <div class="detail-row"><dt>Email</dt><dd>{{ professor.email }}</dd></div>
+            <div class="detail-row"><dt>Department</dt><dd>{{ fulfillment.professor_details.department or 'Not listed' }}</dd></div>
+            <div class="detail-row"><dt>Office</dt><dd>{{ fulfillment.professor_details.office or 'Not listed' }}</dd></div>
+            <div class="detail-row"><dt>Email</dt><dd>{{ fulfillment.professor_details.email }}</dd></div>
           </dl>
           <p class="hint">This professor is the intended recipient. No file or email has been sent.</p>
         </section>
+      {% elif fulfillment.destination.value == 'PICKUP' %}
+        <section class="content-card"><p class="page-eyebrow">Fulfillment</p><h2>Scheduled Pickup</h2>
+          <p>Requested pickup date: {{ fulfillment.pickup_date }}</p><p>Requested pickup time: {{ fulfillment.pickup_slot }} (Philippine time)</p>
+          <p class="hint">The shop will prepare your order. This is your requested pickup time.</p></section>
+      {% elif fulfillment.destination.value == 'DELIVERY' %}
+        <section class="content-card"><p class="page-eyebrow">Fulfillment</p><h2>Delivery</h2>
+          <dl class="detail-list"><div class="detail-row"><dt>Recipient</dt><dd>{{ fulfillment.delivery_recipient_name }}</dd></div>
+            <div class="detail-row"><dt>Contact</dt><dd>{{ fulfillment.delivery_recipient_phone }}</dd></div>
+            <div class="detail-row"><dt>Address</dt><dd>{{ fulfillment.delivery_address }}</dd></div>
+            <div class="detail-row"><dt>Requested delivery date</dt><dd>{{ fulfillment.delivery_date }}</dd></div>
+            <div class="detail-row"><dt>Requested delivery time</dt><dd>{{ fulfillment.delivery_slot }} (Philippine time)</dd></div></dl>
+          <p class="hint">This is a delivery request. No courier has been booked.</p></section>
       {% endif %}
     </div>
     <aside class="content-card price-summary" aria-label="Price summary">
@@ -59,6 +71,7 @@
       <div class="summary-list">
         <p class="summary-row">Subtotal: {{ quote.currency }} {{ quote.subtotal }}</p>
         {% if quote.items | selectattr('is_rush') | list %}<p class="summary-row">Rush printing fee: {{ quote.currency }} {{ quote.rush_fee }}</p>{% endif %}
+        {% if fulfillment.destination.value == 'DELIVERY' %}<p class="summary-row">Delivery fee: {{ quote.currency }} {{ quote.delivery_fee }}</p>{% endif %}
         <p class="summary-row">Fees total: {{ quote.currency }} {{ quote.fees_total }}</p>
         <p class="summary-row summary-total"><strong>Total: {{ quote.currency }} {{ quote.total }}</strong></p>
       </div>

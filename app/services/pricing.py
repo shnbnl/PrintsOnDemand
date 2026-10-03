@@ -72,6 +72,7 @@ class CartQuote:
     items: tuple[OrderQuote, ...]
     subtotal: Decimal
     rush_fee: Decimal
+    delivery_fee: Decimal
     fees_total: Decimal
     total: Decimal
     currency: str
@@ -82,7 +83,8 @@ class CartQuote:
         values = (
             self.user_id, self.shop.id, self.shop.name,
             *(item.fingerprint for item in self.items),
-            self.subtotal, self.rush_fee, self.fees_total, self.total, self.currency,
+            self.subtotal, self.rush_fee, self.delivery_fee, self.fees_total, self.total,
+            self.currency, self.is_demo,
         )
         return hashlib.sha256("|".join(map(str, values)).encode()).hexdigest()
 
@@ -186,6 +188,8 @@ def quote_cart(
     *, user_id: int, file_ids: list[int], shop_id: int, max_quantity: int,
     max_files: int, currency: str = "PHP",
     options: dict[int, PrintOptions] | None = None,
+    delivery_fee: Decimal = Decimal("0.00"),
+    delivery_fee_is_demo: bool = False,
 ) -> CartQuote:
     """Quote unique owned files; apply a shop's rush fee once per order."""
     if not file_ids:
@@ -201,10 +205,12 @@ def quote_cart(
     ) for file_id in file_ids)
     subtotal = money(sum((item.line_total for item in items), Decimal("0.00")), "Order subtotal")
     rush_fee = next((item.rush_fee for item in items if item.is_rush), Decimal("0.00"))
-    fees_total = rush_fee
+    delivery_fee = money(delivery_fee, "Delivery fee")
+    fees_total = money(rush_fee + delivery_fee, "Order fees")
     total = money(subtotal + fees_total, "Order total")
     return CartQuote(
         user_id=user_id, shop=items[0].shop, items=items,
-        subtotal=subtotal, rush_fee=rush_fee, fees_total=fees_total, total=total,
-        currency=currency, is_demo=any(item.is_demo for item in items),
+        subtotal=subtotal, rush_fee=rush_fee, delivery_fee=delivery_fee,
+        fees_total=fees_total, total=total,
+        currency=currency, is_demo=any(item.is_demo for item in items) or delivery_fee_is_demo,
     )

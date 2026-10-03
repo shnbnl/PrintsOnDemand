@@ -8,21 +8,34 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
-from app.models import Order, OrderItem, OrderStatus
+from app.models import Order, OrderDestination, OrderItem, OrderStatus
 from app.models.user import utc_now
 from app.services.pricing import CartQuote, OrderQuote
 from app.services.professors import assign_professor, validate_professor_selection
+from app.services.fulfillment import Fulfillment, FulfillmentError, validate_fulfillment
 
 
 def create_order(
     quote: CartQuote | OrderQuote, *, destination: str | None = None,
     professor_id: str | int | None = None,
+    fulfillment: Fulfillment | None = None,
 ) -> Order:
     """Commit one order and all quoted items, retrying rare reference collisions."""
     for _ in range(5):
-        professor = validate_professor_selection(
-            shop_id=quote.shop.id, destination=destination, professor_id=professor_id
-        )
+        if fulfillment is not None:
+            refreshed = validate_fulfillment(shop=quote.shop, values=fulfillment.fields())
+            if refreshed.snapshot() != fulfillment.snapshot() or refreshed.delivery_fee != getattr(quote, "delivery_fee", 0):
+                raise FulfillmentError("Fulfillment details or delivery fee changed. Review the order again.")
+            professor = None
+            if refreshed.professor_id is not None:
+                professor = validate_professor_selection(
+                    shop_id=quote.shop.id, destination=OrderDestination.PROFESSOR,
+                    professor_id=refreshed.professor_id,
+                )
+        else:
+            professor = validate_professor_selection(
+                shop_id=quote.shop.id, destination=destination, professor_id=professor_id
+            )
         reference = f"POD-{utc_now().year}-{secrets.token_hex(6).upper()}"
         order = Order(
             user_id=quote.user_id,
@@ -32,12 +45,22 @@ def create_order(
             status=OrderStatus.PENDING_PAYMENT,
             subtotal=quote.subtotal,
             rush_fee=quote.rush_fee,
+            delivery_fee=getattr(quote, "delivery_fee", 0),
             fees_total=quote.fees_total,
             total=quote.total,
             currency=quote.currency,
         )
         if professor is not None:
             assign_professor(order, professor)
+        if fulfillment is not None:
+            order.destination = fulfillment.destination
+            order.pickup_date = fulfillment.pickup_date
+            order.pickup_slot = fulfillment.pickup_slot
+            order.delivery_recipient_name = fulfillment.delivery_recipient_name
+            order.delivery_recipient_phone = fulfillment.delivery_recipient_phone
+            order.delivery_address = fulfillment.delivery_address
+            order.delivery_date = fulfillment.delivery_date
+            order.delivery_slot = fulfillment.delivery_slot
         for item in quote.items if isinstance(quote, CartQuote) else (quote,):
             order.items.append(OrderItem(
                 uploaded_file_id=item.uploaded_file.id,

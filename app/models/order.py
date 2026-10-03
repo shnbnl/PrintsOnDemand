@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from enum import StrEnum
 
@@ -25,6 +25,14 @@ class OrderDestination(StrEnum):
     PROFESSOR = "PROFESSOR"
     PICKUP = "PICKUP"
     DELIVERY = "DELIVERY"
+
+    @property
+    def label(self) -> str:
+        return {
+            self.PROFESSOR: "Direct-to-Professor",
+            self.PICKUP: "Scheduled Pickup",
+            self.DELIVERY: "Delivery",
+        }[self]
 
 
 class Order(db.Model):
@@ -57,6 +65,18 @@ class Order(db.Model):
     professor_email: Mapped[str | None] = mapped_column(db.String(254), nullable=True)
     professor_department: Mapped[str | None] = mapped_column(db.String(120), nullable=True)
     professor_office: Mapped[str | None] = mapped_column(db.String(120), nullable=True)
+    pickup_date: Mapped[date | None] = mapped_column(db.Date, nullable=True)
+    pickup_slot: Mapped[str | None] = mapped_column(db.String(32), nullable=True)
+    delivery_recipient_name: Mapped[str | None] = mapped_column(db.String(120), nullable=True)
+    delivery_recipient_phone: Mapped[str | None] = mapped_column(db.String(32), nullable=True)
+    delivery_address: Mapped[str | None] = mapped_column(db.String(500), nullable=True)
+    delivery_date: Mapped[date | None] = mapped_column(db.Date, nullable=True)
+    delivery_slot: Mapped[str | None] = mapped_column(db.String(32), nullable=True)
+    delivery_fee: Mapped[Decimal] = mapped_column(
+        db.Numeric(14, 2),
+        CheckConstraint("delivery_fee >= 0", name="order_delivery_fee_nonnegative"),
+        nullable=False, default=Decimal("0.00"), server_default="0.00",
+    )
     status: Mapped[OrderStatus] = mapped_column(
         db.Enum(OrderStatus, name="order_status", native_enum=False, create_constraint=True),
         nullable=False, default=OrderStatus.PENDING_PAYMENT,

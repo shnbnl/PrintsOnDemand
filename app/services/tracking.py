@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 
-from app.models import Order, OrderStatus, PaymentMethod, PaymentStatus
+from app.models import Order, OrderDestination, OrderStatus, PaymentMethod, PaymentStatus
 
 
 @dataclass(frozen=True)
@@ -76,6 +76,19 @@ def build_tracking(order: Order) -> OrderTracking:
     steps = [TrackingStep(
         "Order created", f"Order {order.order_reference} was created.", order.created_at
     ), payment_step]
+    if order.destination == OrderDestination.PROFESSOR:
+        fulfillment_detail = f"Direct-to-Professor: {order.professor_name} is the intended recipient."
+    elif order.destination == OrderDestination.PICKUP:
+        fulfillment_detail = f"Scheduled Pickup requested for {order.pickup_date}, {order.pickup_slot} Philippine time."
+    elif order.destination == OrderDestination.DELIVERY:
+        fulfillment_detail = (
+            f"Delivery requested for {order.delivery_date}, {order.delivery_slot} Philippine time. "
+            "No courier booking is recorded."
+        )
+    else:
+        fulfillment_detail = None
+    if fulfillment_detail:
+        order_detail = f"{order_detail} {fulfillment_detail}"
     if order.processing_started_at:
         steps.append(TrackingStep("Processing started", "The shop began processing the print job.", order.processing_started_at))
     if order.ready_at:
