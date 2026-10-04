@@ -5,8 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#052448">
     <title>{% block title %}Prints On Demand{% endblock %}</title>
-    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/favicon.svg') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/prints-on-demand-logo.png') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+    {% if not current_user.is_authenticated and request.method == 'GET' and request.endpoint in ('main.index', 'auth.login', 'auth.register') %}
+      <style>@view-transition { navigation: auto; } @media (prefers-reduced-motion: reduce) { @view-transition { navigation: none; } }</style>
+      <link rel="stylesheet" href="{{ url_for('static', filename='css/entry-transitions.css') }}">
+    {% endif %}
     <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
   </head>
   <body>
@@ -43,12 +47,10 @@
       {% endif %}
     {% endmacro %}
 
-    <header class="site-header{% if not current_user.is_authenticated and request.endpoint in ('auth.login', 'auth.register') %} site-header-auth{% endif %}">
+    <header class="site-header">
       <div class="header-inner">
         <a class="brand" href="{{ url_for('main.index') }}" aria-label="Prints On Demand home">
-          <span class="brand-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M6 8V3h12v5M6 17H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v7H6zM18 11h.01"/></svg>
-          </span>
+          <img class="brand-logo" src="{{ url_for('static', filename='img/prints-on-demand-logo.png') }}" alt="" width="48" height="48">
           <span>Prints On Demand</span>
         </a>
         {% if current_user.is_authenticated %}
@@ -58,7 +60,9 @@
             <nav aria-label="Mobile navigation">{{ navigation() }}</nav>
           </details>
         {% elif request.endpoint in ('auth.login', 'auth.register') %}
-          <a class="auth-back" href="{{ url_for('main.index') }}">Back to landing page</a>
+          <a class="auth-back" href="{{ url_for('main.index') }}" aria-label="Back to landing page" title="Back to landing page">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m12 5-7 7 7 7"/><path d="M5 12h14"/></svg>
+          </a>
         {% endif %}
       </div>
     </header>

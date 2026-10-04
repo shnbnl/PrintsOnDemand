@@ -1,0 +1,22 @@
+/* Native, same-origin page transitions for the public entry screens. */
+.site-header .brand {
+  view-transition-name: entry-brand;
+}
+
+::view-transition-old(root) {
+  animation: 150ms ease-in both entry-leave;
+}
+
+::view-transition-new(root) {
+  animation: 240ms cubic-bezier(0.2, 0.8, 0.2, 1) both entry-arrive;
+}
+
+@keyframes entry-leave {
+  to { opacity: 0; transform: translateY(-4px); }
+}
+
+@keyframes entry-arrive {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+

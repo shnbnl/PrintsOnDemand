@@ -47,7 +47,8 @@ def test_landing_registration_prefills_account_type(client, role):
     assert selected_role(response, role)
     other = "PROFESSOR" if role == "STUDENT" else "STUDENT"
     assert not selected_role(response, other)
-    assert b'href="/">Back to landing page</a>' in response.data
+    assert b'aria-label="Back to landing page"' in response.data
+    assert b'>Back to landing page</a>' not in response.data
     assert b'<nav class="desktop-nav"' not in response.data
 
 
@@ -66,7 +67,11 @@ def test_registration_query_never_overrides_submitted_role(client, test_app):
 def test_auth_pages_have_single_landing_header_link(client):
     for path in ("/auth/login", "/auth/register"):
         response = client.get(path)
-        assert b'href="/">Back to landing page</a>' in response.data
+        assert b'aria-label="Back to landing page"' in response.data
+        assert b'>Back to landing page</a>' not in response.data
+        assert b'<svg viewBox="0 0 24 24"' in response.data
+        assert response.data.count(b"prints-on-demand-logo.png") >= 3
+        assert b"entry-transitions.css" in response.data
         assert b'<nav class="desktop-nav"' not in response.data
         assert b'<details class="mobile-nav"' not in response.data
 

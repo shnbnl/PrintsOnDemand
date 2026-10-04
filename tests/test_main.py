@@ -32,6 +32,10 @@ def test_index(client):
     assert b'href="/auth/register?account_type=PROFESSOR"' in response.data
     assert b'<nav class="desktop-nav"' not in response.data
     assert b'<details class="mobile-nav"' not in response.data
+    assert response.data.count(b"prints-on-demand-logo.png") >= 3
+    assert b"entry-transitions.css" in response.data
+    logo = client.get("/static/img/prints-on-demand-logo.png")
+    assert logo.status_code == 200 and logo.mimetype == "image/png"
 
 
 def test_health(client):
