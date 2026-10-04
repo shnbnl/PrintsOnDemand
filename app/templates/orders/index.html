@@ -42,7 +42,7 @@
               <td data-label="Total" class="order-card-total">{{ order.currency }} {{ order.total }}</td>
               <td data-label="Order status">{{ order_badge(order) }}</td>
               <td data-label="Payment status">{{ payment_badge(order.payment) }}</td>
-              <td data-label="Fulfillment"><span class="order-destination">{% if order.destination and order.destination.value == 'PROFESSOR' %}Professor Delivery: {{ order.professor_name }}{% elif order.destination and order.destination.value == 'PICKUP' %}Scheduled Pickup: {{ order.pickup_date }} {{ order.pickup_slot }}{% elif order.destination and order.destination.value == 'DELIVERY' %}Delivery: {{ order.delivery_date }} {{ order.delivery_slot }}{% else %}Not selected{% endif %}</span><a class="order-card-link" href="{{ url_for('orders.detail', order_reference=order.order_reference) }}">View order <span aria-hidden="true">→</span></a></td>
+              <td data-label="Fulfillment"><span class="order-destination">{% if order.destination and order.destination.value == 'PROFESSOR' %}Professor Delivery: {{ order.professor_name }} · Faculty {{ order.professor_faculty or 'not recorded' }}{% elif order.destination and order.destination.value == 'PICKUP' %}Scheduled Pickup: {{ order.pickup_date }} {{ order.pickup_slot }}{% elif order.destination and order.destination.value == 'DELIVERY' %}Delivery: {{ order.delivery_date }} {{ order.delivery_slot }}{% else %}Not selected{% endif %}</span><a class="order-card-link" href="{{ url_for('orders.detail', order_reference=order.order_reference) }}">View order <span aria-hidden="true">→</span></a></td>
             </tr>
           {% endfor %}
         </tbody>

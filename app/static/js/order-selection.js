@@ -37,7 +37,7 @@
     const selected = professor.selectedOptions[0];
     professorPreview.hidden = !selected?.value;
     if (!selected?.value) return;
-    for (const field of ["name", "department", "office", "email"]) {
+    for (const field of ["name", "department", "faculty", "office", "email"]) {
       professorPreview.querySelector(`[data-professor-${field}]`).textContent = selected.dataset[field];
     }
   }

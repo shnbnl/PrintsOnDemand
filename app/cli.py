@@ -6,7 +6,7 @@ from flask import Flask, current_app
 from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
-from app.models import Professor, User, UserRole
+from app.models import PrintingShop, Professor, User, UserRole
 
 
 def register_commands(app: Flask) -> None:
@@ -17,10 +17,11 @@ def register_commands(app: Flask) -> None:
         required=True,
     )
     @click.option("--professor-id", type=int)
+    @click.option("--shop-id", type=int)
     @click.option("--name", prompt=True)
     @click.option("--email", prompt=True)
     @click.password_option(confirmation_prompt=True)
-    def create_privileged_user(role: str, professor_id: int | None, name: str, email: str, password: str) -> None:
+    def create_privileged_user(role: str, professor_id: int | None, shop_id: int | None, name: str, email: str, password: str) -> None:
         """Create a staff/admin/professor account from a trusted server shell."""
         name = name.strip()
         if len(name) < 2 or len(name) > 120:
@@ -42,7 +43,14 @@ def register_commands(app: Flask) -> None:
                 raise click.ClickException("Select an active, unlinked professor with a matching email.")
         elif professor_id is not None:
             raise click.ClickException("--professor-id is only valid for a professor account.")
-        user = User(name=name, email=email, role=UserRole(role), professor=professor)
+        shop = None
+        if role == UserRole.SHOP_STAFF and shop_id is not None:
+            shop = db.session.get(PrintingShop, shop_id)
+            if shop is None:
+                raise click.ClickException("Select an existing printing shop.")
+        elif shop_id is not None:
+            raise click.ClickException("--shop-id is only valid for a shop staff account.")
+        user = User(name=name, email=email, role=UserRole(role), professor=professor, shop=shop)
         user.set_password(password)
         db.session.add(user)
         try:

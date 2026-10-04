@@ -120,13 +120,14 @@ def place(client, file_id, shop_id, **extras):
     })
 
 
-def approved_professor(app, *, active=True, approved=True, accepts=True, name="Maria Santos"):
+def approved_professor(app, *, active=True, approved=True, accepts=True, faculty="MITL", name="Maria Santos"):
     with app.app_context():
         professor = Professor(
             name=name, email=f"{name.lower().replace(' ', '.')}@example.edu",
             department="Computer Engineering", office="Engineering Building 204",
             is_active=active, direct_send_approved=approved,
             accepts_student_deliveries=accepts,
+            faculty=faculty,
         )
         db.session.add(professor)
         db.session.commit()

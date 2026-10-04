@@ -26,6 +26,7 @@
           <a href="{{ url_for('access.shop') }}">Assigned Shop</a>
           <a href="{{ url_for('staff_orders.index') }}">Shop Orders</a>
           <a href="{{ url_for('payment_verification.index') }}">Payment verification</a>
+          {% if current_user.shop and current_user.shop.name == 'Blue and Silver Bookstore' %}<a href="{{ url_for('admin_management.professors') }}">Professor Management</a>{% endif %}
         {% elif current_user.role.value == 'ADMIN' %}
           <a href="{{ url_for('access.admin') }}">Admin management</a>
           <a href="{{ url_for('shop_admin.index') }}">Shops</a>

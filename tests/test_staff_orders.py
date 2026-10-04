@@ -161,6 +161,7 @@ def test_paid_record_allows_only_sequential_processing_and_tracking(client, test
         datetime(2026, 10, 3, 1, tzinfo=timezone.utc),
         datetime(2026, 10, 3, 2, tzinfo=timezone.utc),
         datetime(2026, 10, 3, 3, tzinfo=timezone.utc),
+        datetime(2026, 10, 3, 4, tzinfo=timezone.utc),
     ])
     monkeypatch.setattr(order_processing, "utc_now", lambda: next(times))
     with test_app.app_context():
@@ -176,17 +177,19 @@ def test_paid_record_allows_only_sequential_processing_and_tracking(client, test
     assert action_post(client, a, "start_processing").status_code == 409
     assert action_post(client, a, "complete").status_code == 409
     assert action_post(client, a, "mark_ready").status_code == 302
-    assert action_post(client, a, "complete").status_code == 302
+    assert action_post(client, a, "complete").status_code == 409
+    assert action_post(client, a, "mark_delivered").status_code == 302
+    assert action_post(client, a, "complete_professor").status_code == 302
     assert action_post(client, a, "complete").status_code == 409
     with test_app.app_context():
         order = db.session.scalar(select(Order).where(Order.order_reference == url_a.rsplit("/", 1)[1]))
         assert order.status == OrderStatus.COMPLETED
-        assert (order.processing_started_at.hour, order.ready_at.hour, order.completed_at.hour) == (1, 2, 3)
+        assert (order.processing_started_at.hour, order.ready_at.hour, order.delivered_at.hour, order.completed_at.hour) == (1, 2, 3, 4)
         assert (order.user_id, order.shop_id, order.total, order.professor_name, order.items[0].unit_price) == original
         assert order.payment.payment_status == PaymentStatus.PAID
         steps = build_tracking(order).steps
-        assert [step.title for step in steps] == ["Order created", "Payment", "Processing started", "Order ready", "Order completed", "Current order status"]
-        assert [step.timestamp.hour for step in steps[2:5]] == [1, 2, 3]
+        assert [step.title for step in steps] == ["Order created", "Payment", "Processing started", "Order ready", "Delivered to Faculty", "Order completed", "Current order status"]
+        assert [step.timestamp.hour for step in steps[2:6]] == [1, 2, 3, 4]
     sign_in(client, owner)
     tracking = client.get(url_a)
     assert tracking.status_code == 200

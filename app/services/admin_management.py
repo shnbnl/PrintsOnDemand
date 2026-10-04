@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
-from app.models import PaymentSettings, PrintingShop, Professor, User, UserRole
+from app.models import Faculty, PaymentSettings, PrintingShop, Professor, User, UserRole
 
 
 class ManagementError(ValueError):
@@ -15,7 +15,8 @@ class ManagementError(ValueError):
 def save_professor(record: Professor | None, *, name: str, email: str,
                    department: str | None, office: str | None,
                    is_active: bool, direct_send_approved: bool,
-                   accepts_student_deliveries: bool = False) -> Professor:
+                   accepts_student_deliveries: bool = False,
+                   faculty: str | None = None, account_id: int | None = None) -> Professor:
     try:
         normalized = validate_email(email, check_deliverability=False).normalized.casefold()
     except (EmailNotValidError, TypeError, ValueError) as error:
@@ -23,6 +24,21 @@ def save_professor(record: Professor | None, *, name: str, email: str,
     existing = db.session.scalar(select(Professor).where(Professor.email == normalized))
     if existing is not None and (record is None or existing.id != record.id):
         raise ManagementError("A professor with this email already exists.")
+    try:
+        parsed_faculty = Faculty(faculty) if faculty else None
+    except ValueError as error:
+        raise ManagementError("Select a valid Faculty.") from error
+    account = db.session.get(User, account_id) if account_id else None
+    if account_id and (account is None or account.role != UserRole.PROFESSOR
+                       or (account.email != normalized
+                           and (record is None or account.professor_id != record.id))
+                       or (account.professor_id is not None
+                           and (record is None or account.professor_id != record.id))):
+        raise ManagementError("Select an unlinked professor account with the same email.")
+    if account is not None and db.session.scalar(select(User.id).where(
+        User.email == normalized, User.id != account.id,
+    )) is not None:
+        raise ManagementError("Another account already uses this email.")
     record = record or Professor()
     try:
         record.name = name
@@ -30,10 +46,14 @@ def save_professor(record: Professor | None, *, name: str, email: str,
     except ValueError as error:
         raise ManagementError(str(error)) from error
     record.department = department or None
+    record.faculty = parsed_faculty.value if parsed_faculty else None
     record.office = office or None
     record.is_active = is_active
     record.direct_send_approved = direct_send_approved
     record.accepts_student_deliveries = accepts_student_deliveries
+    record.account = account
+    if account is not None:
+        account.email = normalized
     db.session.add(record)
     try:
         db.session.commit()

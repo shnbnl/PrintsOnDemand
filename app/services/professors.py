@@ -3,7 +3,7 @@
 from sqlalchemy import select
 
 from app.extensions import db
-from app.models import OrderDestination, PrintingShop, Professor, ServiceType, ShopService, User, UserRole
+from app.models import Faculty, OrderDestination, PrintingShop, Professor, ServiceType, ShopService, User, UserRole
 
 PROFESSOR_DELIVERY_SHOP = "Blue and Silver Bookstore"
 
@@ -25,6 +25,7 @@ def selectable_professors() -> list[Professor]:
             Professor.is_active.is_(True),
             Professor.direct_send_approved.is_(True),
             Professor.accepts_student_deliveries.is_(True),
+            Professor.faculty.is_not(None),
         ).order_by(Professor.name, Professor.id)
     ).all()
 
@@ -36,6 +37,7 @@ def selectable_professor(professor_id: int) -> Professor | None:
             Professor.is_active.is_(True),
             Professor.direct_send_approved.is_(True),
             Professor.accepts_student_deliveries.is_(True),
+            Professor.faculty.is_not(None),
         ).execution_options(populate_existing=True)
     )
 
@@ -85,7 +87,7 @@ def validate_professor_selection(
     return professor
 
 
-def professor_snapshot(professor: Professor | None) -> dict | None:
+def professor_snapshot(professor: Professor | None, *, faculty: str | None = None) -> dict | None:
     if professor is None:
         return None
     return {
@@ -93,14 +95,16 @@ def professor_snapshot(professor: Professor | None) -> dict | None:
         "name": professor.name,
         "email": professor.email,
         "department": professor.department,
+        "faculty": faculty or professor.faculty,
         "office": professor.office,
     }
 
 
-def assign_professor(order, professor: Professor) -> None:
+def assign_professor(order, professor: Professor, *, faculty: str | None = None) -> None:
     order.destination = OrderDestination.PROFESSOR
     order.professor = professor
     order.professor_name = professor.name
     order.professor_email = professor.email
     order.professor_department = professor.department
+    order.professor_faculty = faculty or professor.faculty
     order.professor_office = professor.office

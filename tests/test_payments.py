@@ -89,7 +89,7 @@ def test_online_payment_submission_is_unverified_and_idempotent(client, test_app
     assert b"Payment successful" not in detail.data
     assert submit(client, url, "DEMO-REF-1234").status_code == 302
     assert submit(client, url, "DIFFERENT-REF").status_code == 409
-    assert choose(client, url, "ONSITE").status_code == 409
+    assert choose(client, url, "ONSITE").status_code == 400
     with test_app.app_context():
         assert len(db.session.scalars(select(Payment)).all()) == 1
         payment = db.session.scalar(select(Payment))

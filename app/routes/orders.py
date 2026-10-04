@@ -11,7 +11,7 @@ from app.authorization import roles_required
 from app.extensions import db
 from app.models import (
     Order, OrderDestination, OrderStatus, Payment, PaymentMethod, PaymentStatus,
-    ColorMode, PaperSize, PrintConfiguration, PrintingShop, UploadedFile, UserRole,
+    ColorMode, Faculty, PaperSize, PrintConfiguration, PrintingShop, UploadedFile, UserRole,
 )
 from app.order_forms import PlaceOrderForm, SelectProfessorForm
 from app.payment_forms import PaymentMethodForm, PaymentReferenceForm
@@ -174,6 +174,7 @@ def render_selection(*, file_ids=None, shop_id=None, destination=None, professor
         "orders/new.html", files=files, shops=shops,
         professors=professors, selected_file_ids=set(file_ids or []),
         own_professor=current_user.professor if current_user.role == UserRole.PROFESSOR else None,
+        faculties=list(Faculty),
         selected_shop_id=shop_id, selected_destination=destination,
         selected_professor_id=professor_id, selected_options=options or {},
         fulfillment_fields=fulfillment_fields or {},
@@ -242,6 +243,8 @@ def new():
             fulfillment_fields[field] = saved.get(field) or ""
         fulfillment_fields["professor_id"] = (str((saved.get("professor") or {}).get("id") or "")
                                               if current_user.role == UserRole.STUDENT else "")
+        fulfillment_fields["professor_faculty"] = ((saved.get("professor") or {}).get("faculty") or ""
+                                                    if current_user.role == UserRole.PROFESSOR else "")
     destination = fulfillment_fields["destination"] or None
     professor_id = fulfillment_fields["professor_id"] or None
     shop_id = positive_id(raw_shop)
@@ -262,6 +265,11 @@ def new():
         )
     try:
         preliminary = quote_for(file_ids, shop_id, options)
+        if request.method == "GET" and "destination" not in values:
+            return render_selection(
+                file_ids=file_ids, shop_id=shop_id, options=options,
+                fulfillment_fields=fulfillment_fields,
+            )
         shop = preliminary.shop
         fulfillment = validate_fulfillment(shop=shop, values=values, actor=current_user)
         quote = (quote_for(file_ids, shop_id, options, delivery_fee=fulfillment.delivery_fee,
@@ -364,9 +372,12 @@ def render_order_detail(order, *, payment_error=None, professor_error=None, stat
         order.payment is None or order.payment.payment_status == PaymentStatus.PENDING
     ):
         method_form = PaymentMethodForm()
-        method_form.payment_method.choices = [(PaymentMethod.ONSITE.value, "Onsite payment")]
+        method_form.payment_method.choices = ([] if order.destination == OrderDestination.PROFESSOR
+                                              else [(PaymentMethod.ONSITE.value, "Onsite payment")])
         if online_details is not None:
             method_form.payment_method.choices.append((PaymentMethod.ONLINE.value, "Online payment"))
+        if not method_form.payment_method.choices:
+            method_form = None
         if request.method == "GET" and order.payment is not None:
             method_form.payment_method.data = order.payment.payment_method.value
     reference_form = None
@@ -396,7 +407,8 @@ def choose_payment(order_reference: str):
     except PaymentError:
         abort(404)
     form = PaymentMethodForm()
-    form.payment_method.choices = [(PaymentMethod.ONSITE.value, "Onsite payment")]
+    form.payment_method.choices = ([] if order.destination == OrderDestination.PROFESSOR
+                                   else [(PaymentMethod.ONSITE.value, "Onsite payment")])
     if online_payment_details() is not None:
         form.payment_method.choices.append((PaymentMethod.ONLINE.value, "Online payment"))
     if not form.validate_on_submit():
@@ -437,8 +449,9 @@ def submit_payment(order_reference: str):
 
 def professor_form(order):
     if (current_user.role != UserRole.STUDENT
-            or order.destination not in (None, OrderDestination.PROFESSOR)
+            or order.destination is not None
             or order.status != OrderStatus.PENDING_PAYMENT
+            or (order.payment is not None and order.payment.payment_method == PaymentMethod.ONSITE)
             or not professor_service_available(order.shop_id)):
         return None
     professors = selectable_professors()

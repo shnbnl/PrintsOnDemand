@@ -12,7 +12,7 @@ from flask import current_app
 from sqlalchemy import select
 
 from app.extensions import db
-from app.models import FeeType, OrderDestination, PrintingShop, ServiceType, ShopFee, ShopService
+from app.models import Faculty, FeeType, OrderDestination, PrintingShop, ServiceType, ShopFee, ShopService, UserRole
 from app.services.pricing import PricingError, money
 from app.services.professors import ProfessorSelectionError, professor_snapshot, professor_service_available, validate_professor_selection
 
@@ -21,7 +21,7 @@ class FulfillmentError(ValueError):
     pass
 
 
-FIELDS = ("destination", "professor_id", "pickup_date", "pickup_slot",
+FIELDS = ("destination", "professor_id", "professor_faculty", "pickup_date", "pickup_slot",
           "delivery_recipient_name", "delivery_recipient_phone", "delivery_address",
           "delivery_date", "delivery_slot")
 
@@ -61,6 +61,7 @@ class Fulfillment:
         return {
             "destination": self.destination.value,
             "professor_id": str(self.professor_id or "") if self.professor_recipient_type != "SELF" else "",
+            "professor_faculty": (self.professor_details or {}).get("faculty", "") if self.professor_recipient_type == "SELF" else "",
             "pickup_date": self.pickup_date.isoformat() if self.pickup_date else "",
             "pickup_slot": self.pickup_slot or "",
             "delivery_recipient_name": self.delivery_recipient_name or "",
@@ -178,7 +179,7 @@ def validate_fulfillment(*, shop: PrintingShop, values, actor=None) -> Fulfillme
     except ValueError as error:
         raise FulfillmentError("Select a valid fulfillment method.") from error
     allowed = {
-        OrderDestination.PROFESSOR: {"destination", "professor_id"},
+        OrderDestination.PROFESSOR: {"destination", "professor_id", "professor_faculty"},
         OrderDestination.PICKUP: {"destination", "pickup_date", "pickup_slot"},
         OrderDestination.DELIVERY: {"destination", "delivery_recipient_name", "delivery_recipient_phone",
                                     "delivery_address", "delivery_date", "delivery_slot"},
@@ -192,8 +193,20 @@ def validate_fulfillment(*, shop: PrintingShop, values, actor=None) -> Fulfillme
             )
         except ProfessorSelectionError as error:
             raise FulfillmentError(str(error)) from error
-        return Fulfillment(destination, professor.id, professor_snapshot(professor),
-                           "SELF" if actor is not None and actor.role.value == "PROFESSOR" else "STUDENT_SELECTED")
+        self_order = actor is not None and actor.role == UserRole.PROFESSOR
+        if self_order:
+            try:
+                faculty = Faculty(data["professor_faculty"] or professor.faculty).value
+            except (TypeError, ValueError) as error:
+                raise FulfillmentError("Select a valid Faculty for delivery.") from error
+        else:
+            if data["professor_faculty"]:
+                raise FulfillmentError("The selected professor determines the Faculty.")
+            faculty = professor.faculty
+            if faculty is None:
+                raise FulfillmentError("The selected professor needs a Faculty on their profile.")
+        return Fulfillment(destination, professor.id, professor_snapshot(professor, faculty=faculty),
+                           "SELF" if self_order else "STUDENT_SELECTED")
     service = ServiceType.PICKUP if destination == OrderDestination.PICKUP else ServiceType.DELIVERY
     if not service_available(shop.id, service):
         raise FulfillmentError(f"This shop does not offer {destination.label}.")

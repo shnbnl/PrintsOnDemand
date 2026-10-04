@@ -43,6 +43,7 @@
     <dl class="detail-list">
       <div class="detail-row"><dt>Created</dt><dd>{{ order.created_at.strftime('%Y-%m-%d %H:%M UTC') }}</dd></div>
       <div class="detail-row"><dt>Printing shop</dt><dd>{{ order.shop_name }}</dd></div>
+      <div class="detail-row"><dt>Customer</dt><dd>{{ order.user.name }}</dd></div>
     </dl>
     {% if order.destination and order.destination.value == 'PROFESSOR' %}
       <div class="destination-panel">
@@ -50,9 +51,10 @@
         <p>{{ 'Deliver to Me' if order.professor_recipient_type == 'SELF' else 'Deliver to Professor' }}</p>
         <p>Intended recipient: <strong>{{ order.professor_name }}</strong></p>
         <p>Department: {{ order.professor_department or 'Not listed' }}</p>
+        <p>Faculty: {{ order.professor_faculty or 'Not recorded for this older order' }}</p>
         <p>Office: {{ order.professor_office or 'Not listed' }}</p>
         <p>Email: {{ order.professor_email }}</p>
-        <p>Blue and Silver staff will physically deliver the printed papers to this recipient. The order record does not confirm handoff. No file is sent electronically.</p>
+        <p>Blue and Silver staff physically deliver the printed papers to this Faculty. {% if order.delivered_at %}Staff recorded the handoff at {{ order.delivered_at.strftime('%Y-%m-%d %H:%M UTC') }}.{% else %}No physical handoff has been confirmed yet.{% endif %} No file is sent electronically.</p>
       </div>
     {% elif order.destination and order.destination.value == 'PICKUP' %}
       <div class="destination-panel"><h3>Scheduled Pickup</h3><p>Requested pickup date: {{ order.pickup_date }}</p><p>Requested pickup time: {{ order.pickup_slot }} (Philippine time)</p><p>Check order tracking for processing progress.</p></div>
@@ -101,6 +103,7 @@
   <section class="content-card payment-panel">
     <p class="page-eyebrow">Choose or review your method</p>
     <h2>Payment</h2>
+    {% if order.destination and order.destination.value == 'PROFESSOR' %}<p class="notice notice-warning">Professor delivery requires online payment.{% if not online_details and not order.payment %} Online payment is currently unavailable; contact the shop before placing another order.{% endif %}</p>{% endif %}
     {% if payment_error %}<p class="notice notice-error" role="alert">{{ payment_error }}</p>{% endif %}
     {% if order.payment %}
       <p>Payment status: {{ payment_badge(order.payment) }}</p>

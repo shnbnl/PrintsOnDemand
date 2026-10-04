@@ -10,7 +10,7 @@ from sqlalchemy import exists, select, update
 from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
-from app.models import Order, OrderStatus, Payment, PaymentMethod, PaymentSettings, PaymentStatus
+from app.models import Order, OrderDestination, OrderStatus, Payment, PaymentMethod, PaymentSettings, PaymentStatus
 from app.models.user import utc_now
 
 
@@ -103,6 +103,8 @@ def select_payment_method(*, order_reference: str, user_id: int, method: str) ->
         selected = PaymentMethod(method)
     except ValueError as error:
         raise PaymentError("Select a valid payment method.") from error
+    if order.destination == OrderDestination.PROFESSOR and selected != PaymentMethod.ONLINE:
+        raise PaymentError("Professor delivery requires online payment.")
     if selected == PaymentMethod.ONLINE and online_payment_details() is None:
         raise PaymentError("Online payment is not configured for this service.")
 

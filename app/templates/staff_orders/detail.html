@@ -71,8 +71,9 @@
       <div class="summary-row"><dt>Type</dt><dd>{{ order.destination.label if order.destination else 'Not selected' }}</dd></div>
       {% if order.destination and order.destination.value == 'PROFESSOR' %}
         <div class="summary-row"><dt>Physical handoff</dt><dd>Deliver printed papers to professor</dd></div>
-        <div class="summary-row"><dt>Recipient type</dt><dd>{{ 'Professor self-order' if order.professor_recipient_type == 'SELF' else 'Student-selected professor' }}</dd></div>
+        <div class="summary-row"><dt>Recipient type</dt><dd>{{ 'Deliver to Me' if order.professor_recipient_type == 'SELF' else 'Deliver to Professor' }}</dd></div>
         <div class="summary-row"><dt>Professor</dt><dd>{{ order.professor_name }}</dd></div>
+        <div class="summary-row"><dt>Faculty</dt><dd>{{ order.professor_faculty or 'Not recorded for this older order' }}</dd></div>
         <div class="summary-row"><dt>Department</dt><dd>{{ order.professor_department or 'Not listed' }}</dd></div>
         <div class="summary-row"><dt>Office</dt><dd>{{ order.professor_office or 'Not listed' }}</dd></div>
         <div class="summary-row"><dt>Email</dt><dd>{{ order.professor_email }}</dd></div>
@@ -94,17 +95,18 @@
   <section class="section-card">
     <h2>Processing</h2>
     <p>Current status: {{ order_badge(order) }}</p>
-    {% if order.processing_started_at or order.ready_at or order.completed_at %}
+    {% if order.processing_started_at or order.ready_at or order.delivered_at or order.completed_at %}
       <dl class="summary-list">
         {% if order.processing_started_at %}<div class="summary-row"><dt>Processing started</dt><dd><time datetime="{{ order.processing_started_at.isoformat() }}">{{ order.processing_started_at.strftime('%Y-%m-%d %H:%M UTC') }}</time></dd></div>{% endif %}
         {% if order.ready_at %}<div class="summary-row"><dt>Ready</dt><dd><time datetime="{{ order.ready_at.isoformat() }}">{{ order.ready_at.strftime('%Y-%m-%d %H:%M UTC') }}</time></dd></div>{% endif %}
+        {% if order.delivered_at %}<div class="summary-row"><dt>Delivered to Faculty</dt><dd><time datetime="{{ order.delivered_at.isoformat() }}">{{ order.delivered_at.strftime('%Y-%m-%d %H:%M UTC') }}</time></dd></div>{% endif %}
         {% if order.completed_at %}<div class="summary-row"><dt>Completed</dt><dd><time datetime="{{ order.completed_at.isoformat() }}">{{ order.completed_at.strftime('%Y-%m-%d %H:%M UTC') }}</time></dd></div>{% endif %}
       </dl>
     {% endif %}
     {% if action %}
       <form class="form-actions" method="post" action="{{ url_for('staff_orders.advance', order_reference=order.order_reference) }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button class="button" type="submit" name="action" value="{{ action }}">{% if action == 'start_processing' %}Start processing{% elif action == 'mark_ready' %}Mark ready{% else %}Complete order{% endif %} <span aria-hidden="true">→</span></button>
+        <button class="button" type="submit" name="action" value="{{ action }}">{% if action == 'start_processing' %}Start processing{% elif action == 'mark_ready' %}Mark ready{% elif action == 'mark_delivered' %}Mark delivered to Faculty{% else %}Complete order{% endif %} <span aria-hidden="true">→</span></button>
       </form>
     {% elif order.status.value == 'PENDING_PAYMENT' %}
       <p class="notice notice-warning">Processing is unavailable until payment is recorded as paid by an authorized process.</p>

@@ -3,7 +3,7 @@
 {% block title %}Professors | Prints On Demand{% endblock %}
 
 {% block content %}
-  <a class="back-link" href="{{ url_for('access.admin') }}">← Admin management</a>
+  <a class="back-link" href="{{ url_for('access.admin') if current_user.role.value == 'ADMIN' else url_for('access.shop') }}">← {{ 'Admin management' if current_user.role.value == 'ADMIN' else 'Assigned shop' }}</a>
   <header class="page-intro page-intro--with-action">
     <div>
       <p class="eyebrow">Administration / Recipients</p>
@@ -18,14 +18,16 @@
       <p class="mobile-scroll-hint">Swipe the table sideways to see all columns.</p>
       <div class="table-scroll" role="region" aria-label="Professors" tabindex="0">
         <table class="data-table">
-          <thead><tr><th scope="col">Name</th><th scope="col">Email</th><th scope="col">Department</th><th scope="col">Office</th><th scope="col">Active</th><th scope="col">Direct-to-Professor approval</th><th scope="col">Accept student deliveries</th><th scope="col">Action</th></tr></thead>
+          <thead><tr><th scope="col">Name</th><th scope="col">Email</th><th scope="col">Department</th><th scope="col">Faculty</th><th scope="col">Office</th><th scope="col">Linked account</th><th scope="col">Active</th><th scope="col">Direct-to-Professor approval</th><th scope="col">Accept student deliveries</th><th scope="col">Action</th></tr></thead>
           <tbody>
             {% for professor in professors %}
               <tr>
                 <th scope="row">{{ professor.name }}</th>
                 <td>{{ professor.email }}</td>
                 <td>{{ professor.department or '—' }}</td>
+                <td>{{ professor.faculty or 'Not assigned' }}</td>
                 <td>{{ professor.office or '—' }}</td>
+                <td>{{ professor.account.email if professor.account else 'Unlinked' }}</td>
                 <td><span class="status-badge status-badge--{{ 'success' if professor.is_active else 'muted' }}">{{ 'Yes' if professor.is_active else 'No' }}</span></td>
                 <td><span class="status-badge status-badge--{{ 'success' if professor.direct_send_approved else 'muted' }}">{{ 'Approved' if professor.direct_send_approved else 'Not approved' }}</span></td>
                 <td><span class="status-badge status-badge--{{ 'success' if professor.accepts_student_deliveries else 'muted' }}">{{ 'On' if professor.accepts_student_deliveries else 'Off' }}</span></td>

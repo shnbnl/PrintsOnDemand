@@ -5,8 +5,9 @@ from dataclasses import dataclass
 from sqlalchemy import exists, select, update
 
 from app.extensions import db
-from app.models import Order, OrderStatus, Payment, PaymentStatus, UserRole
+from app.models import Order, OrderDestination, OrderStatus, Payment, PaymentStatus, UserRole
 from app.models.user import utc_now
+from app.services.professors import PROFESSOR_DELIVERY_SHOP
 
 
 @dataclass(frozen=True)
@@ -20,6 +21,8 @@ class ProcessingError(Exception):
 TRANSITIONS = {
     "start_processing": (OrderStatus.PENDING_PAYMENT, OrderStatus.PROCESSING, "processing_started_at"),
     "mark_ready": (OrderStatus.PROCESSING, OrderStatus.READY, "ready_at"),
+    "mark_delivered": (OrderStatus.READY, OrderStatus.DELIVERED, "delivered_at"),
+    "complete_professor": (OrderStatus.DELIVERED, OrderStatus.COMPLETED, "completed_at"),
     "complete": (OrderStatus.READY, OrderStatus.COMPLETED, "completed_at"),
 }
 NEXT_ACTION = {current: action for action, (current, _, _) in TRANSITIONS.items()}
@@ -59,7 +62,12 @@ def available_action(order: Order) -> str | None:
         or order.payment.currency != order.currency
     ):
         return None
-    return NEXT_ACTION.get(order.status)
+    if order.destination == OrderDestination.PROFESSOR and order.shop.name == PROFESSOR_DELIVERY_SHOP:
+        return {
+            OrderStatus.READY: "mark_delivered",
+            OrderStatus.DELIVERED: "complete_professor",
+        }.get(order.status, NEXT_ACTION.get(order.status))
+    return NEXT_ACTION.get(order.status) if order.status != OrderStatus.DELIVERED else None
 
 
 def advance_order(actor, order_reference: str, action: str) -> Order:
@@ -69,6 +77,10 @@ def advance_order(actor, order_reference: str, action: str) -> Order:
         raise ProcessingError("This processing action is not available for the order's current state.", 409)
     if available_action(order) != action:
         raise ProcessingError("Payment must be recorded as paid for this order's total before processing.", 409)
+    if action == "mark_delivered" and (
+        order.destination != OrderDestination.PROFESSOR or actor.shop.name != PROFESSOR_DELIVERY_SHOP
+    ):
+        raise ProcessingError("Only Blue and Silver staff can confirm professor delivery.", 403)
 
     now = utc_now()
     paid_payment = exists(select(Payment.id).where(

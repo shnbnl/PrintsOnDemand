@@ -28,7 +28,8 @@ def build_tracking(order: Order) -> OrderTracking:
         method = "Not selected"
         status = "Not started"
         payment_step = TrackingStep("Payment", "No payment method has been selected.")
-        next_step = "Choose online or onsite payment for this order."
+        next_step = ("Choose online payment for professor delivery." if order.destination == OrderDestination.PROFESSOR
+                     else "Choose online or onsite payment for this order.")
     elif payment.payment_status == PaymentStatus.PAID:
         method = payment.payment_method.value.title()
         status = PaymentStatus.PAID.value
@@ -39,7 +40,9 @@ def build_tracking(order: Order) -> OrderTracking:
         next_step = {
             OrderStatus.PENDING_PAYMENT: "Wait for the printing shop to start processing.",
             OrderStatus.PROCESSING: "The printing shop is processing your order.",
-            OrderStatus.READY: "The print job is ready for the applicable next step.",
+            OrderStatus.READY: ("The printed papers are ready for physical delivery to the professor's Faculty."
+                                if order.destination == OrderDestination.PROFESSOR else "The print job is ready for the applicable next step."),
+            OrderStatus.DELIVERED: "Blue and Silver staff recorded delivery to the professor's Faculty.",
             OrderStatus.COMPLETED: "The shop processing workflow is complete.",
         }[order.status]
     elif payment.payment_status == PaymentStatus.REJECTED:
@@ -81,8 +84,9 @@ def build_tracking(order: Order) -> OrderTracking:
     ), payment_step]
     if order.destination == OrderDestination.PROFESSOR:
         fulfillment_detail = (
-            f"Professor Delivery: {order.professor_name} is the intended physical recipient. "
-            "No handoff confirmation is recorded."
+            f"Professor Delivery: {order.professor_name} at Faculty {order.professor_faculty or 'not recorded'} "
+            "is the intended physical recipient. "
+            + ("Staff recorded the physical handoff." if order.delivered_at else "No handoff confirmation is recorded.")
         )
     elif order.destination == OrderDestination.PICKUP:
         fulfillment_detail = f"Scheduled Pickup requested for {order.pickup_date}, {order.pickup_slot} Philippine time."
@@ -99,6 +103,8 @@ def build_tracking(order: Order) -> OrderTracking:
         steps.append(TrackingStep("Processing started", "The shop began processing the print job.", order.processing_started_at))
     if order.ready_at:
         steps.append(TrackingStep("Order ready", "The shop finished the print job.", order.ready_at))
+    if order.delivered_at:
+        steps.append(TrackingStep("Delivered to Faculty", "Blue and Silver staff confirmed physical handoff of the printed papers.", order.delivered_at))
     if order.completed_at:
         steps.append(TrackingStep("Order completed", "The shop completed its processing workflow.", order.completed_at))
     steps.append(TrackingStep("Current order status", order_detail))

@@ -46,10 +46,11 @@
           <p><strong>{{ fulfillment.professor_details.name }}</strong></p>
           <dl class="detail-list">
             <div class="detail-row"><dt>Department</dt><dd>{{ fulfillment.professor_details.department or 'Not listed' }}</dd></div>
+            <div class="detail-row"><dt>Faculty</dt><dd>{{ fulfillment.professor_details.faculty or 'Not recorded' }}</dd></div>
             <div class="detail-row"><dt>Office</dt><dd>{{ fulfillment.professor_details.office or 'Not listed' }}</dd></div>
             <div class="detail-row"><dt>Email</dt><dd>{{ fulfillment.professor_details.email }}</dd></div>
           </dl>
-          <p class="hint">Blue and Silver staff will physically deliver the printed papers to this professor. No file is sent electronically.</p>
+          <p class="hint">Blue and Silver staff will physically deliver the printed papers to this professor's Faculty. Online payment is required. No file is sent electronically.</p>
         </section>
       {% elif fulfillment.destination.value == 'PICKUP' %}
         <section class="content-card"><p class="page-eyebrow">Fulfillment</p><h2>Scheduled Pickup</h2>

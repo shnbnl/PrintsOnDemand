@@ -8,9 +8,9 @@
 {%- endmacro %}
 
 {% macro order_badge(order) -%}
-  {% set labels = {'PENDING_PAYMENT': 'Awaiting payment', 'PROCESSING': 'Printing', 'COMPLETED': 'Completed'} %}
+  {% set labels = {'PENDING_PAYMENT': 'Awaiting payment', 'PROCESSING': 'Printing', 'DELIVERED': 'Delivered to Faculty', 'COMPLETED': 'Completed'} %}
   {% if order.status.value == 'READY' %}
-    {% set label = 'Ready for pickup' if order.destination and order.destination.value == 'PICKUP' else 'Ready for fulfillment' %}
+    {% set label = 'Ready for pickup' if order.destination and order.destination.value == 'PICKUP' else ('Ready for Professor Delivery' if order.destination and order.destination.value == 'PROFESSOR' else 'Ready for fulfillment') %}
   {% else %}
     {% set label = labels.get(order.status.value, order.status.value.replace('_', ' ').title()) %}
   {% endif %}

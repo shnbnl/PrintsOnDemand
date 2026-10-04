@@ -49,7 +49,7 @@ def create_order(
             currency=quote.currency,
         )
         if professor is not None:
-            assign_professor(order, professor)
+            assign_professor(order, professor, faculty=(fulfillment.professor_details or {}).get("faculty") if fulfillment else None)
             order.professor_recipient_type = (fulfillment.professor_recipient_type if fulfillment
                                               else "STUDENT_SELECTED")
         if fulfillment is not None:

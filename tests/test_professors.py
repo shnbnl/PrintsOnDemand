@@ -60,6 +60,7 @@ def test_selectable_filter_all_four_states(test_app):
                 email=f"demo-{active}-{approved}@example.edu",
                 is_active=active, direct_send_approved=approved,
                 accepts_student_deliveries=True,
+                faculty="MITL",
             ))
         db.session.commit()
         assert [p.email for p in selectable_professors()] == ["demo-True-True@example.edu".casefold()]

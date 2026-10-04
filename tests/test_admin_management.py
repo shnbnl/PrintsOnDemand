@@ -18,6 +18,8 @@ from test_staff_orders import setup_orders, staff_url
 
 
 def post_with_token(client, path, data, *, token_page=None):
+    if path.startswith("/admin/professors"):
+        data = {"faculty": "MITL", "account_id": "0", **data}
     return client.post(path, data={
         "csrf_token": token(client.get(token_page or path)), **data,
     })

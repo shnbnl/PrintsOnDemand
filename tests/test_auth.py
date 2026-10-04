@@ -23,6 +23,7 @@ def csrf_token(response):
 
 def register(client, **changes):
     data = {
+        "account_type": "STUDENT",
         "name": "Student Name",
         "email": "student@example.com",
         "password": PASSWORD,

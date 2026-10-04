@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from enum import StrEnum
 
 from email_validator import EmailNotValidError, validate_email
 from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
@@ -11,13 +12,29 @@ from app.extensions import db
 from app.models.user import utc_now
 
 
+class Faculty(StrEnum):
+    MITL = "MITL"
+    CAS = "CAS"
+    ETYCB = "ETYCB"
+    CCIS = "CCIS"
+    CHS = "CHS"
+    GE = "GE"
+    IECELL = "IECELL"
+    SHS = "SHS"
+
+
 class Professor(db.Model):
     __tablename__ = "professors"
+    __table_args__ = (db.CheckConstraint(
+        "faculty IS NULL OR faculty IN ('MITL', 'CAS', 'ETYCB', 'CCIS', 'CHS', 'GE', 'IECELL', 'SHS')",
+        name="professor_faculty_valid",
+    ),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(db.String(120), nullable=False)
     email: Mapped[str] = mapped_column(db.String(254), unique=True, nullable=False, index=True)
     department: Mapped[str | None] = mapped_column(db.String(120), nullable=True)
+    faculty: Mapped[str | None] = mapped_column(db.String(16), nullable=True)
     office: Mapped[str | None] = mapped_column(db.String(120), nullable=True)
     is_active: Mapped[bool] = mapped_column(db.Boolean, nullable=False, default=True)
     direct_send_approved: Mapped[bool] = mapped_column(db.Boolean, nullable=False, default=False)
@@ -50,3 +67,12 @@ class Professor(db.Model):
         if len(email) > 254:
             raise ValueError("Professor email is too long.")
         return email
+
+    @validates("faculty")
+    def validate_faculty(self, key: str, value: str | Faculty | None) -> str | None:
+        if value in (None, ""):
+            return None
+        try:
+            return Faculty(value).value
+        except ValueError as error:
+            raise ValueError("Select a valid Faculty.") from error

@@ -237,6 +237,8 @@ def test_old_single_file_order_and_multi_order_history_keep_snapshots(client, te
 
 
 def test_multi_order_professor_payment_and_staff_file_isolation(client, test_app):
+    from test_payments import configured_online
+    configured_online(test_app)
     owner, shop_id, first, second = prepared(client, test_app)
     other_shop = shop(test_app, name="Other Shop")
     staff = student(test_app, "staff@example.edu", UserRole.SHOP_STAFF)
@@ -257,13 +259,13 @@ def test_multi_order_professor_payment_and_staff_file_isolation(client, test_app
     assert client.get(order_url).status_code == 200
     assert b"Maria Santos" in client.get(order_url).data
     method = client.post(order_url + "/payment", data={
-        "csrf_token": token(client.get(order_url)), "payment_method": "ONSITE",
+        "csrf_token": token(client.get(order_url)), "payment_method": "ONLINE",
     })
     assert method.status_code == 302
     with test_app.app_context():
         order = db.session.scalar(select(Order))
         assert order.professor_id == professor
-        assert order.payment.payment_method == PaymentMethod.ONSITE
+        assert order.payment.payment_method == PaymentMethod.ONLINE
         assert order.payment.amount == order.total
         item_ids = [item.id for item in order.items]
     staff_url = order_url.replace("/orders/", "/staff/orders/", 1)

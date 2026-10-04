@@ -1,4 +1,4 @@
-"""Student registration and account sessions."""
+"""Student and professor registration and account sessions."""
 
 from urllib.parse import urlsplit
 
@@ -50,7 +50,7 @@ def register():
         if existing:
             form.email.errors.append("Unable to create account with these details.")
         else:
-            user = User(name=form.name.data.strip(), email=email, role=UserRole.STUDENT)
+            user = User(name=form.name.data.strip(), email=email, role=UserRole(form.account_type.data))
             user.set_password(form.password.data)
             db.session.add(user)
             try:
@@ -59,7 +59,7 @@ def register():
                 db.session.rollback()
                 form.email.errors.append("Unable to create account with these details.")
             else:
-                flash("Account created. Please log in.", "success")
+                flash("Account created. Please log in. Professor delivery to yourself requires Blue and Silver to link your professor profile.", "success")
                 return redirect(url_for("auth.login"))
 
     return render_template("auth/register.html", form=form)

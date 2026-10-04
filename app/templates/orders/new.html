@@ -85,23 +85,29 @@
           </fieldset>
           <div class="field fulfillment-fields" data-method-fields="PROFESSOR" {% if selected_destination != 'PROFESSOR' %}hidden{% endif %}>
             {% if current_user.role.value == 'PROFESSOR' %}
-              <p>Your printed papers will be physically delivered to your saved professor profile.</p>
+              <p>Your printed papers will be physically delivered to your saved professor profile and selected Faculty. Professor delivery requires online payment.</p>
               {% if own_professor %}<dl class="detail-list"><div class="detail-row"><dt>Name</dt><dd>{{ own_professor.name }}</dd></div>
                 <div class="detail-row"><dt>Department</dt><dd>{{ own_professor.department or 'Not listed' }}</dd></div>
                 <div class="detail-row"><dt>Office</dt><dd>{{ own_professor.office or 'Not listed' }}</dd></div>
                 <div class="detail-row"><dt>Email</dt><dd>{{ own_professor.email }}</dd></div></dl>{% endif %}
+              <label for="professor_faculty">Faculty</label>
+              <select id="professor_faculty" name="professor_faculty" required>
+                <option value="">Select Faculty</option>
+                {% for faculty in faculties %}<option value="{{ faculty.value }}" {% if (fulfillment_fields.get('professor_faculty') or (own_professor.faculty if own_professor else '')) == faculty.value %}selected{% endif %}>{{ faculty.value }}</option>{% endfor %}
+              </select>
             {% else %}
             <label for="professor_id">Approved professor</label>
             <select id="professor_id" name="professor_id" aria-describedby="professor-hint">
               <option value="">Select a professor</option>
               {% for professor in professors %}
-                <option value="{{ professor.id }}" data-name="{{ professor.name }}" data-department="{{ professor.department or 'Not listed' }}" data-office="{{ professor.office or 'Not listed' }}" data-email="{{ professor.email }}" {% if selected_professor_id == professor.id|string %}selected{% endif %}>{{ professor.name }} — {{ professor.department or 'Department not listed' }}{% if professor.office %} · {{ professor.office }}{% endif %}</option>
+                <option value="{{ professor.id }}" data-name="{{ professor.name }}" data-department="{{ professor.department or 'Not listed' }}" data-faculty="{{ professor.faculty }}" data-office="{{ professor.office or 'Not listed' }}" data-email="{{ professor.email }}" {% if selected_professor_id == professor.id|string %}selected{% endif %}>{{ professor.name }} — {{ professor.faculty }}{% if professor.office %} · {{ professor.office }}{% endif %}</option>
               {% endfor %}
             </select>
-            <p class="hint" id="professor-hint">Blue and Silver staff will physically deliver the printed papers. No file is sent electronically to the professor.</p>
+            <p class="hint" id="professor-hint">The selected professor determines the Faculty. Blue and Silver staff will physically deliver the printed papers there. Online payment is required; no file is sent electronically.</p>
             <dl class="professor-preview summary-list" id="professor-preview" aria-live="polite" hidden>
               <div class="summary-row"><dt>Name</dt><dd data-professor-name></dd></div>
               <div class="summary-row"><dt>Department</dt><dd data-professor-department></dd></div>
+              <div class="summary-row"><dt>Faculty</dt><dd data-professor-faculty></dd></div>
               <div class="summary-row"><dt>Office</dt><dd data-professor-office></dd></div>
               <div class="summary-row"><dt>Email</dt><dd data-professor-email></dd></div>
             </dl>
@@ -126,5 +132,5 @@
     </form>
     <script src="{{ url_for('static', filename='js/order-selection.js') }}" defer></script>
   {% endif %}
-  <p class="hint">A placed order starts pending payment. Choose online or onsite payment after placing it.</p>
+  <p class="hint">A placed order starts pending payment. Choose an available payment method afterward; Professor Delivery requires online payment.</p>
 {% endblock %}

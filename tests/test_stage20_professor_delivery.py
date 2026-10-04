@@ -82,9 +82,9 @@ def test_professor_self_delivery_and_setting_do_not_expose_dropdown(client, test
     paid_later = client.post(placed.headers["Location"] + "/payment", data={
         "csrf_token": token(detail), "payment_method": "ONSITE",
     })
-    assert paid_later.status_code == 302
+    assert paid_later.status_code == 400
     with test_app.app_context():
-        assert db.session.scalar(select(Payment)).payment_method.value == "ONSITE"
+        assert db.session.scalar(select(Payment)) is None
 
 
 def test_professor_can_toggle_student_delivery_consent(client, test_app):
@@ -132,6 +132,7 @@ def test_admin_can_enable_and_disable_student_deliveries(client, test_app):
     fields = {
         "name": "Maria Santos", "email": "maria.santos@example.edu",
         "department": "Computer Engineering", "office": "Engineering Building 204",
+        "faculty": "MITL", "account_id": "0",
         "is_active": "y", "direct_send_approved": "y",
     }
     assert client.post(path, data={

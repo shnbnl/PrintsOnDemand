@@ -101,21 +101,21 @@ def seed_demo_shops() -> tuple[int, int]:
 
 
 DEMO_PROFESSORS = (
-    ("Maria Santos", "maria.santos@example.edu", "Computer Engineering", "Engineering Building 204", True, True),
-    ("Juan Dela Cruz", "juan.delacruz@example.edu", "Information Technology", "ICT Building 301", True, True),
-    ("Ana Reyes", "ana.reyes@example.edu", "Electronics Engineering", "Engineering Building 105", True, False),
-    ("Liza Navarro", "liza.navarro@example.edu", "Mathematics", "Science Building 102", False, True),
+    ("Maria Santos", "maria.santos@example.edu", "Computer Engineering", "Engineering Building 204", "MITL", True, True),
+    ("Juan Dela Cruz", "juan.delacruz@example.edu", "Information Technology", "ICT Building 301", "CCIS", True, True),
+    ("Ana Reyes", "ana.reyes@example.edu", "Electronics Engineering", "Engineering Building 105", "MITL", True, False),
+    ("Liza Navarro", "liza.navarro@example.edu", "Mathematics", "Science Building 102", "CAS", False, True),
 )
 
 
 def seed_demo_professors() -> int:
     """Insert missing fictional professors; never change existing approvals."""
     added = 0
-    for name, email, department, office, is_active, approved in DEMO_PROFESSORS:
+    for name, email, department, office, faculty, is_active, approved in DEMO_PROFESSORS:
         if db.session.scalar(select(Professor.id).where(Professor.email == email)):
             continue
         db.session.add(Professor(
-            name=name, email=email, department=department, office=office,
+            name=name, email=email, department=department, office=office, faculty=faculty,
             is_active=is_active, direct_send_approved=approved,
         ))
         added += 1

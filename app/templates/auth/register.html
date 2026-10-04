@@ -7,12 +7,17 @@
     <div class="auth-brand" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M6 8V3h12v5M6 17H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v7H6zM18 11h.01"/></svg></div>
     <header class="auth-heading">
       <p class="page-eyebrow">Prints On Demand</p>
-      <h1>Create a student account</h1>
+      <h1>Create an account</h1>
       <p class="page-lead">Save your print settings and keep every order in one place.</p>
     </header>
     <section class="content-card auth-card" aria-label="Registration form">
       <form class="account-form form-stack" method="post" novalidate>
         {{ form.hidden_tag() }}
+        <fieldset class="choice-fieldset"><legend>{{ form.account_type.label.text }}</legend>
+          <div class="choice-grid choice-grid-short">{% for option in form.account_type %}<label class="choice-card">{{ option() }}<span><strong>{{ option.label.text }}</strong></span></label>{% endfor %}</div>
+          {% for error in form.account_type.errors %}<p class="field-error" role="alert">{{ error }}</p>{% endfor %}
+          <p class="hint">Professor accounts need their profile linked by Blue and Silver staff before Deliver to Me is available. Shop accounts are provisioned separately.</p>
+        </fieldset>
         <div class="field">
           {{ form.name.label }}
           {{ form.name(autocomplete="name", placeholder="Your full name") }}
