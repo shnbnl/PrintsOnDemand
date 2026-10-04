@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 import uuid
 from pathlib import Path
-from typing import Protocol
+from typing import Callable, Protocol
 
 from flask import current_app
 
@@ -65,6 +65,84 @@ class LocalStorage:
         except FileNotFoundError:
             pass
 
+    def stage_deletion(self, keys: list[str]) -> StagedDeletion:
+        """Move exact private uploads aside until the database commits.
+
+        The staging directory is on the same filesystem as the originals so a
+        failed transaction can restore them without copying document contents.
+        """
+        if not keys:
+            return StagedDeletion(None, [])
+        self.root.mkdir(mode=0o700, parents=True, exist_ok=True)
+        directory = self.root / f".account-deletion-{uuid.uuid4().hex}"
+        directory.mkdir(mode=0o700)
+        staged = StagedDeletion(directory, [])
+        try:
+            for key in keys:
+                source = self._path(key)
+                if not source.exists():
+                    continue  # A missing upload has no remaining bytes to remove.
+                if not source.is_file():
+                    raise StorageError("Private upload is not a regular file.")
+                destination = directory / key
+                source.replace(destination)
+                staged.files.append((source, destination))
+            return staged
+        except Exception:
+            staged.restore()
+            raise
+
+    def recover_staged_deletions(self, is_referenced: Callable[[str], bool]) -> tuple[int, int]:
+        """Recover interrupted deletion while the application is offline.
+
+        A live metadata row means its transaction rolled back and bytes must be
+        restored. Otherwise the account/file row committed and bytes are purged.
+        """
+        if not self.root.exists():
+            return 0, 0
+        restored = purged = 0
+        for directory in self.root.glob(".account-deletion-*"):
+            if (not re.fullmatch(r"\.account-deletion-[0-9a-f]{32}", directory.name)
+                    or directory.is_symlink() or not directory.is_dir()):
+                raise StorageError("Invalid staged-deletion directory.")
+            for staged in directory.iterdir():
+                if staged.is_symlink() or not staged.is_file():
+                    raise StorageError("Invalid staged private upload.")
+                original = self._path(staged.name)
+                if is_referenced(staged.name):
+                    if original.exists():
+                        raise StorageError("A referenced private upload already exists.")
+                    staged.replace(original)
+                    restored += 1
+                else:
+                    staged.unlink()
+                    purged += 1
+            directory.rmdir()
+        return restored, purged
+
+
+class StagedDeletion:
+    """Private files pending a matching account-deletion transaction."""
+
+    def __init__(self, directory: Path | None, files: list[tuple[Path, Path]]):
+        self.directory = directory
+        self.files = files
+
+    def restore(self) -> None:
+        for source, staged in reversed(self.files):
+            if staged.exists():
+                if source.exists():
+                    raise StorageError("Cannot restore a private upload over another file.")
+                staged.replace(source)
+        if self.directory is not None:
+            self.directory.rmdir()
+
+    def purge(self) -> None:
+        for _, staged in self.files:
+            staged.unlink(missing_ok=True)
+        if self.directory is not None:
+            self.directory.rmdir()
+
 
 def get_storage() -> StorageBackend:
     """Select the backend without binding routes to filesystem operations."""
@@ -72,4 +150,15 @@ def get_storage() -> StorageBackend:
         raise StorageError("Configure durable private storage before production uploads.")
     if current_app.config["STORAGE_BACKEND"] != "local":
         raise StorageError("Storage backend is unavailable.")
+    return LocalStorage(current_app.config["UPLOAD_STORAGE_ROOT"], current_app.static_folder)
+
+
+def get_account_deletion_storage() -> LocalStorage:
+    """Access existing local private files for erasure in every environment.
+
+    Production's upload guard remains in get_storage; deleting older local
+    uploads must still be possible when the configured backend is local.
+    """
+    if current_app.config["STORAGE_BACKEND"] != "local":
+        raise StorageError("Account deletion requires private local storage.")
     return LocalStorage(current_app.config["UPLOAD_STORAGE_ROOT"], current_app.static_folder)

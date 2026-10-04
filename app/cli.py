@@ -3,13 +3,29 @@
 import click
 from email_validator import EmailNotValidError, validate_email
 from flask import Flask, current_app
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
-from app.models import PrintingShop, Professor, User, UserRole
+from app.models import PrintingShop, Professor, UploadedFile, User, UserRole
+from app.storage import StorageError, get_account_deletion_storage
 
 
 def register_commands(app: Flask) -> None:
+    @app.cli.command("recover-account-deletions")
+    def recover_account_deletions() -> None:
+        """Resolve interrupted private-file cleanup while the app is offline."""
+        try:
+            storage = get_account_deletion_storage()
+            restored, purged = storage.recover_staged_deletions(
+                lambda key: db.session.scalar(
+                    select(UploadedFile.id).where(UploadedFile.storage_key == key)
+                ) is not None
+            )
+        except (OSError, StorageError) as error:
+            raise click.ClickException("Private-file recovery could not finish. Check server logs and storage permissions.") from error
+        click.echo(f"Restored {restored} referenced uploads; removed {purged} unreferenced uploads.")
+
     @app.cli.command("create-privileged-user")
     @click.option(
         "--role",

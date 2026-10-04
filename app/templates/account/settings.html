@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Account settings | Prints On Demand{% endblock %}
+{% block content %}
+  <header class="page-intro">
+    <p class="page-eyebrow">Your account</p>
+    <h1>Account settings</h1>
+    <p class="page-lead">Manage your Prints On Demand account.</p>
+  </header>
+  <section class="content-card account-settings-card">
+    <h2>{{ current_user.name }}</h2>
+    <p>{{ current_user.email }}</p>
+    <p class="hint">{{ 'Professor' if current_user.role.value == 'PROFESSOR' else 'Student' }} account</p>
+  </section>
+  <section class="content-card danger-zone" aria-labelledby="delete-account-heading">
+    <p class="page-eyebrow">Permanent action</p>
+    <h2 id="delete-account-heading">Delete Account</h2>
+    <p>Deleting your account permanently removes your account, private uploads, print settings, orders, and their payment information. This cannot be undone.</p>
+    <a class="button button-danger" href="{{ url_for('account.delete_account') }}">Delete Account</a>
+  </section>
+{% endblock %}

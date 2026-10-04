@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Confirm account deletion | Prints On Demand{% endblock %}
+{% block content %}
+  <a class="back-link" href="{{ url_for('account.settings') }}">← Account settings</a>
+  <header class="page-intro">
+    <p class="page-eyebrow">Permanent action</p>
+    <h1>Delete Account</h1>
+    <p class="page-lead">Confirm the permanent removal of your Prints On Demand account.</p>
+  </header>
+  <section class="content-card danger-zone account-delete-card">
+    <h2>This cannot be undone</h2>
+    <p>Your login, private uploads, print settings, orders, order history, payment details, and payment references will be deleted.</p>
+    {% if current_user.role.value == 'PROFESSOR' and current_user.professor_id %}
+      <p class="notice notice-info">Blue and Silver's separately managed professor directory entry and other customers' past orders will remain. Your login will be unlinked, and acceptance of new student deliveries will be turned off.</p>
+    {% else %}
+      <p class="hint">Other customers' orders and shared shop information remain.</p>
+    {% endif %}
+    {% if error %}<p class="notice notice-error" role="alert">{{ error }}</p>{% endif %}
+    <form class="form-stack" method="post" novalidate>
+      {{ form.hidden_tag() }}
+      <div class="field">
+        {{ form.password.label }}
+        {{ form.password(autocomplete="current-password", required=true) }}
+        {% for message in form.password.errors %}<p class="field-error" role="alert">{{ message }}</p>{% endfor %}
+      </div>
+      <div class="checkbox-field">
+        {{ form.confirm() }} {{ form.confirm.label }}
+      </div>
+      {% for message in form.confirm.errors %}<p class="field-error" role="alert">{{ message }}</p>{% endfor %}
+      <div class="form-actions">
+        {{ form.submit(class_="button button-danger") }}
+        <a class="button button-secondary" href="{{ url_for('account.settings') }}">Cancel</a>
+      </div>
+    </form>
+  </section>
+{% endblock %}

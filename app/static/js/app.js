@@ -78,3 +78,9 @@ window.addEventListener("pageshow", () => {
   document.querySelectorAll('form[aria-busy="true"]').forEach((form) => form.removeAttribute("aria-busy"));
   document.querySelectorAll(".submission-feedback").forEach((feedback) => feedback.remove());
 });
+
+window.addEventListener("pageshow", (event) => {
+  if (event.persisted && window.location.pathname.startsWith("/account")) {
+    window.location.reload();
+  }
+});
