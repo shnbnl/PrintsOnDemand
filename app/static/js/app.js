@@ -75,9 +75,9 @@ document.querySelectorAll('form[method="post"]:not(.inline-form)').forEach((form
 });
 
 const professorDepartment = document.querySelector("[data-professor-department]");
-if (professorDepartment) {
+const departmentInput = professorDepartment?.querySelector("select, input");
+if (professorDepartment && departmentInput) {
   const registrationForm = professorDepartment.closest("form");
-  const departmentInput = professorDepartment.querySelector("input");
   const updateProfessorDepartment = () => {
     const professorSelected = registrationForm.querySelector('input[name="account_type"][value="PROFESSOR"]:checked') !== null;
     professorDepartment.hidden = !professorSelected;

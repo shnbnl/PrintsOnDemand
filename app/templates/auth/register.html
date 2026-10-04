@@ -30,8 +30,8 @@
         </div>
         <div class="field professor-department-field" data-professor-department>
           {{ form.professor_department.label }}
-          {{ form.professor_department(placeholder="e.g. Information Technology") }}
-          <p class="hint">Required for Professor accounts. Blue and Silver confirms your managed Faculty separately.</p>
+          {{ form.professor_department() }}
+          <p class="hint">Required for Professor accounts.</p>
           {% for error in form.professor_department.errors %}<p class="field-error" role="alert">{{ error }}</p>{% endfor %}
         </div>
         <div class="field">

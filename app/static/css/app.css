@@ -202,6 +202,12 @@ input[type="checkbox"], input[type="radio"] { width: 1.15rem; height: 1.15rem; a
 .form-actions { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-top: 0.5rem; }
 .field-error { margin: 0.1rem 0 0; color: var(--danger); font-size: 0.92rem; font-weight: 650; }
 .professor-department-field[hidden] { display: none; }
+.professor-settings-card { max-width: 42rem; }
+.professor-settings-card .detail-row select { min-width: 11rem; text-align: left; }
+.professor-settings-card input[role="switch"] { appearance: none; position: relative; flex: none; width: 3rem; height: 1.75rem; border: 2px solid var(--border); border-radius: 99px; background: var(--surface-muted); cursor: pointer; transition: background 150ms ease; }
+.professor-settings-card input[role="switch"]::before { content: ""; position: absolute; top: 0.17rem; left: 0.18rem; width: 1.12rem; height: 1.12rem; border-radius: 50%; background: white; box-shadow: 0 1px 3px rgb(5 36 72 / 22%); transition: transform 150ms ease; }
+.professor-settings-card input[role="switch"]:checked { border-color: var(--cobalt); background: var(--cobalt); }
+.professor-settings-card input[role="switch"]:checked::before { transform: translateX(1.2rem); }
 .hint { margin: 0; font-size: 0.92rem; }
 .button-block { width: 100%; }
 .choice-fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
