@@ -8,8 +8,9 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
-from app.forms import LoginForm, RegistrationForm
-from app.models import User, UserRole
+from app.forms import BlueStaffLoginForm, LoginForm, RegistrationForm
+from app.models import PrintingShop, User, UserRole
+from app.services.professors import PROFESSOR_DELIVERY_SHOP
 
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
@@ -80,16 +81,28 @@ def login():
     if current_user.is_authenticated:
         return redirect(role_home(current_user.role))
 
-    form = LoginForm()
+    blue_login = request.args.get("blue") == "1"
+    form = BlueStaffLoginForm() if blue_login else LoginForm()
     if form.validate_on_submit():
-        email = User.normalize_email(form.email.data)
-        user = db.session.scalar(select(User).where(User.email == email))
+        if blue_login:
+            candidates = db.session.scalars(
+                select(User).join(PrintingShop, User.shop_id == PrintingShop.id).where(
+                    User.role == UserRole.SHOP_STAFF,
+                    PrintingShop.name == PROFESSOR_DELIVERY_SHOP,
+                    User.is_active.is_(True),
+                )
+            ).all()
+            matches = [user for user in candidates if user.name.casefold() == form.name.data.casefold()]
+            user = matches[0] if len(matches) == 1 else None
+        else:
+            email = User.normalize_email(form.email.data)
+            user = db.session.scalar(select(User).where(User.email == email))
         if user and user.is_active and user.check_password(form.password.data):
-            login_user(user, remember=bool(form.remember_me.data))
+            login_user(user, remember=bool(form.remember_me.data) if not blue_login else False)
             return redirect(safe_next_url(request.args.get("next")) or role_home(user.role))
-        form.password.errors.append("Invalid email or password.")
+        form.password.errors.append("Invalid name or password." if blue_login else "Invalid email or password.")
 
-    return render_template("auth/login.html", form=form)
+    return render_template("auth/login.html", form=form, blue_login=blue_login)
 
 
 @auth_bp.post("/logout")

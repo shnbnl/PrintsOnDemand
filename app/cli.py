@@ -1,6 +1,7 @@
 """Controlled account provisioning for staff and administrators."""
 
 import click
+from uuid import uuid4
 from email_validator import EmailNotValidError, validate_email
 from flask import Flask, current_app
 from sqlalchemy import select
@@ -8,7 +9,9 @@ from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
 from app.models import PrintingShop, Professor, UploadedFile, User, UserRole
+from app.models.user import BLUE_STAFF_EMAIL_DOMAIN
 from app.storage import StorageError, get_account_deletion_storage
+from app.services.professors import PROFESSOR_DELIVERY_SHOP
 
 
 def register_commands(app: Flask) -> None:
@@ -75,6 +78,39 @@ def register_commands(app: Flask) -> None:
             db.session.rollback()
             raise click.ClickException("Account could not be created.") from error
         click.echo(f"Created {role} account for {user.email}.")
+
+    @app.cli.command("create-blue-staff")
+    @click.option("--name", prompt=True)
+    @click.password_option(confirmation_prompt=True)
+    def create_blue_staff(name: str, password: str) -> None:
+        """Create a local Blue and Silver staff account using a name and password."""
+        if current_app.config["ENV_NAME"] not in {"development", "testing"}:
+            raise click.ClickException("Short-password Blue and Silver accounts are for local development only.")
+        name = name.strip()
+        if not 2 <= len(name) <= 120:
+            raise click.ClickException("Name must be between 2 and 120 characters.")
+        if not (5 <= len(password) <= 8 and password.isascii() and password.isalpha()):
+            raise click.ClickException("Password must contain 5 to 8 letters.")
+        shop = db.session.scalar(select(PrintingShop).where(PrintingShop.name == PROFESSOR_DELIVERY_SHOP))
+        if shop is None:
+            raise click.ClickException("Create Blue and Silver Bookstore before its staff account.")
+        staff = db.session.scalars(select(User).where(
+            User.role == UserRole.SHOP_STAFF, User.shop_id == shop.id,
+        )).all()
+        if any(user.name.casefold() == name.casefold() for user in staff):
+            raise click.ClickException("This Blue and Silver staff name is already in use.")
+        user = User(
+            name=name, email=f"{uuid4().hex}@{BLUE_STAFF_EMAIL_DOMAIN}",
+            role=UserRole.SHOP_STAFF, shop=shop,
+        )
+        user.set_password(password)
+        db.session.add(user)
+        try:
+            db.session.commit()
+        except IntegrityError as error:
+            db.session.rollback()
+            raise click.ClickException("Account could not be created.") from error
+        click.echo(f"Created Blue and Silver staff account for {user.name}.")
 
     @app.cli.command("seed-demo-shops")
     def seed_demo_shops_command() -> None:

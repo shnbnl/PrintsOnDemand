@@ -6,6 +6,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
 from app.models import Faculty, PaymentSettings, PrintingShop, Professor, ProfessorVerificationStatus, User, UserRole
+from app.services.professors import PROFESSOR_DELIVERY_SHOP
 
 
 class ManagementError(ValueError):
@@ -77,6 +78,14 @@ def assign_staff_to_shop(staff_id: int, shop_id: int | None) -> User:
     shop = db.session.get(PrintingShop, shop_id) if shop_id is not None else None
     if shop_id is not None and shop is None:
         raise ManagementError("Select an existing printing shop.")
+    if user.uses_name_login and (shop is None or shop.name != PROFESSOR_DELIVERY_SHOP):
+        raise ManagementError("This name-only account must stay assigned to Blue and Silver Bookstore.")
+    if shop is not None and shop.name == PROFESSOR_DELIVERY_SHOP:
+        blue_staff = db.session.scalars(select(User).where(
+            User.role == UserRole.SHOP_STAFF, User.shop_id == shop.id, User.id != user.id,
+        )).all()
+        if any(other.name.casefold() == user.name.casefold() for other in blue_staff):
+            raise ManagementError("A Blue and Silver staff account already uses this name.")
     user.shop = shop
     db.session.commit()
     return user

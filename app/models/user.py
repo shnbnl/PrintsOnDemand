@@ -26,6 +26,9 @@ class ProfessorVerificationStatus(StrEnum):
     REJECTED = "REJECTED"
 
 
+BLUE_STAFF_EMAIL_DOMAIN = "blue-staff.invalid"
+
+
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
@@ -76,6 +79,14 @@ class User(UserMixin, db.Model):
     @staticmethod
     def normalize_email(value: str) -> str:
         return value.strip().casefold()
+
+    @property
+    def uses_name_login(self) -> bool:
+        return self.role == UserRole.SHOP_STAFF and self.email.endswith(f"@{BLUE_STAFF_EMAIL_DOMAIN}")
+
+    @property
+    def login_identifier(self) -> str:
+        return self.name if self.uses_name_login else self.email
 
     @validates("email")
     def validate_email(self, key: str, value: str) -> str:

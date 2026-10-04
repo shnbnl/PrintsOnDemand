@@ -39,3 +39,9 @@ class LoginForm(FlaskForm):
     password = PasswordField("Password", validators=[DataRequired()])
     remember_me = BooleanField("Remember me")
     submit = SubmitField("Log-in")
+
+
+class BlueStaffLoginForm(FlaskForm):
+    name = StringField("Name", filters=[strip_text], validators=[DataRequired()])
+    password = PasswordField("Password", validators=[DataRequired()])
+    submit = SubmitField("Log-in")

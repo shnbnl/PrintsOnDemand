@@ -14,12 +14,12 @@
     <div class="section-card">
       <div class="table-scroll" role="region" aria-label="Staff assignments" tabindex="0">
         <table class="data-table responsive-table">
-          <thead><tr><th scope="col">Name</th><th scope="col">Email</th><th scope="col">Assigned shop</th><th scope="col">Action</th></tr></thead>
+          <thead><tr><th scope="col">Name</th><th scope="col">Login</th><th scope="col">Assigned shop</th><th scope="col">Action</th></tr></thead>
           <tbody>
             {% for user in staff %}
               <tr>
                 <th scope="row">{{ user.name }}</th>
-                <td data-label="Email">{{ user.email }}</td>
+                <td data-label="Login">{{ user.login_identifier }}</td>
                 <td data-label="Assigned shop"><span class="status-badge status-badge--{{ 'success' if user.shop else 'warning' }}">{{ user.shop.name if user.shop else 'Unassigned' }}</span></td>
                 <td data-label="Action"><a href="{{ url_for('admin_management.staff_assignment', staff_id=user.id) }}">Change assignment</a></td>
               </tr>

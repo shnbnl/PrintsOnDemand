@@ -30,7 +30,7 @@ def staff_choices() -> list[tuple[int, str]]:
     users = db.session.scalars(
         select(User).where(User.role == UserRole.SHOP_STAFF).order_by(User.name)
     ).all()
-    return [(user.id, f"{user.name} ({user.email})") for user in users]
+    return [(user.id, user.name if user.uses_name_login else f"{user.name} ({user.email})") for user in users]
 
 
 def render_editor(shop: PrintingShop, *, shop_form=None, service_form=None, price_form=None, fee_form=None, staff_form=None):

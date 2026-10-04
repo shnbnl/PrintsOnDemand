@@ -40,7 +40,7 @@
   <section class="section-card" id="shop-staff">
     <h2>Shop Staff</h2>
     {% if assigned_staff %}
-      <ul>{% for user in assigned_staff %}<li>{{ user.name }} <span class="hint">({{ user.email }})</span></li>{% endfor %}</ul>
+      <ul>{% for user in assigned_staff %}<li>{{ user.name }}{% if not user.uses_name_login %} <span class="hint">({{ user.email }})</span>{% endif %}</li>{% endfor %}</ul>
     {% else %}<p class="hint">No Shop Staff account is assigned yet.</p>{% endif %}
     {% if staff_form.staff_id.choices %}
       <form class="account-form form-grid" method="post" action="{{ url_for('shop_admin.assign_staff', shop_id=shop.id) }}">
