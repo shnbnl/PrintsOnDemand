@@ -40,14 +40,10 @@
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button class="nav-logout" type="submit">Log out</button>
         </form>
-      {% else %}
-        <a href="{{ url_for('main.index') }}">Home</a>
-        <a href="{{ url_for('auth.login') }}">Log-in</a>
-        <a class="nav-register" href="{{ url_for('auth.register') }}">Register</a>
       {% endif %}
     {% endmacro %}
 
-    <header class="site-header">
+    <header class="site-header{% if not current_user.is_authenticated and request.endpoint in ('auth.login', 'auth.register') %} site-header-auth{% endif %}">
       <div class="header-inner">
         <a class="brand" href="{{ url_for('main.index') }}" aria-label="Prints On Demand home">
           <span class="brand-icon" aria-hidden="true">
@@ -55,11 +51,15 @@
           </span>
           <span>Prints On Demand</span>
         </a>
-        <nav class="desktop-nav" aria-label="Main navigation">{{ navigation() }}</nav>
-        <details class="mobile-nav">
-          <summary>Menu</summary>
-          <nav aria-label="Mobile navigation">{{ navigation() }}</nav>
-        </details>
+        {% if current_user.is_authenticated %}
+          <nav class="desktop-nav" aria-label="Main navigation">{{ navigation() }}</nav>
+          <details class="mobile-nav">
+            <summary>Menu</summary>
+            <nav aria-label="Mobile navigation">{{ navigation() }}</nav>
+          </details>
+        {% elif request.endpoint in ('auth.login', 'auth.register') %}
+          <a class="auth-back" href="{{ url_for('main.index') }}">Back to landing page</a>
+        {% endif %}
       </div>
     </header>
 

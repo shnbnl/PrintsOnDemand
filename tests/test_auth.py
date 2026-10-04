@@ -34,6 +34,43 @@ def register(client, **changes):
     return client.post("/auth/register", data=data)
 
 
+def selected_role(response, role):
+    option = re.search(rb'<input[^>]*value="' + role.encode() + rb'"[^>]*>', response.data)
+    assert option is not None
+    return b"checked" in option.group(0)
+
+
+@pytest.mark.parametrize("role", ["STUDENT", "PROFESSOR"])
+def test_landing_registration_prefills_account_type(client, role):
+    response = client.get(f"/auth/register?account_type={role}")
+    assert response.status_code == 200
+    assert selected_role(response, role)
+    other = "PROFESSOR" if role == "STUDENT" else "STUDENT"
+    assert not selected_role(response, other)
+    assert b'href="/">Back to landing page</a>' in response.data
+    assert b'<nav class="desktop-nav"' not in response.data
+
+
+def test_registration_query_never_overrides_submitted_role(client, test_app):
+    page = client.get("/auth/register?account_type=PROFESSOR")
+    response = client.post("/auth/register?account_type=PROFESSOR", data={
+        "csrf_token": csrf_token(page), "account_type": "STUDENT",
+        "name": "Student Name", "email": "student@example.com",
+        "password": PASSWORD, "confirm_password": PASSWORD,
+    })
+    assert response.status_code == 302
+    with test_app.app_context():
+        assert db.session.scalar(select(User)).role == UserRole.STUDENT
+
+
+def test_auth_pages_have_single_landing_header_link(client):
+    for path in ("/auth/login", "/auth/register"):
+        response = client.get(path)
+        assert b'href="/">Back to landing page</a>' in response.data
+        assert b'<nav class="desktop-nav"' not in response.data
+        assert b'<details class="mobile-nav"' not in response.data
+
+
 def login(client, email="student@example.com", password=PASSWORD, next_url=""):
     path = "/auth/login" + (f"?next={next_url}" if next_url else "")
     token = csrf_token(client.get(path))

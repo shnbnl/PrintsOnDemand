@@ -44,6 +44,10 @@ def register():
         return redirect(role_home(current_user.role))
 
     form = RegistrationForm()
+    if request.method == "GET" and request.args.get("account_type") in {
+        UserRole.STUDENT.value, UserRole.PROFESSOR.value,
+    }:
+        form.account_type.data = request.args["account_type"]
     if form.validate_on_submit():
         email = User.normalize_email(form.email.data)
         existing = db.session.scalar(select(User).where(User.email == email))

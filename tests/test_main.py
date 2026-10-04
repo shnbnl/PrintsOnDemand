@@ -27,6 +27,11 @@ def test_index(client):
     assert b"Your campus printing desk" in response.data
     assert b"Find a printing shop, prepare your file" in response.data
     assert b"Create student account" in response.data
+    assert b"Create professor account" in response.data
+    assert b'href="/auth/register?account_type=STUDENT"' in response.data
+    assert b'href="/auth/register?account_type=PROFESSOR"' in response.data
+    assert b'<nav class="desktop-nav"' not in response.data
+    assert b'<details class="mobile-nav"' not in response.data
 
 
 def test_health(client):

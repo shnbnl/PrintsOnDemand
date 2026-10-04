@@ -13,6 +13,8 @@
         {% if current_user.is_authenticated %}
           {% if current_user.role.value == 'STUDENT' %}
             <a class="button button-primary" href="{{ url_for('access.student') }}">Go to my printing desk</a>
+          {% elif current_user.role.value == 'PROFESSOR' %}
+            <a class="button button-primary" href="{{ url_for('access.professor') }}">Go to my printing desk</a>
           {% elif current_user.role.value == 'SHOP_STAFF' %}
             <a class="button button-primary" href="{{ url_for('access.shop') }}">Go to shop workspace</a>
           {% else %}
@@ -20,7 +22,8 @@
           {% endif %}
         {% else %}
           <a class="button button-primary" href="{{ url_for('auth.login') }}">Log-in</a>
-          <a class="button button-secondary" href="{{ url_for('auth.register') }}">Create student account</a>
+          <a class="button button-secondary" href="{{ url_for('auth.register', account_type='STUDENT') }}">Create student account</a>
+          <a class="button button-secondary" href="{{ url_for('auth.register', account_type='PROFESSOR') }}">Create professor account</a>
         {% endif %}
       </div>
     </header>
