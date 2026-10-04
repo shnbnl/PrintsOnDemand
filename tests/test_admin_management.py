@@ -7,7 +7,7 @@ from sqlalchemy import select
 from app.extensions import db
 from app.models import (
     Order, Payment, PaymentSettings, PaymentStatus, PrintPrice, PrintingShop,
-    Professor, User, UserRole,
+    Professor, ProfessorVerificationStatus, User, UserRole,
 )
 from test_orders import (
     file, offer_professor_service, place, professor_place, professor_review,
@@ -45,11 +45,11 @@ def test_dashboard_and_every_new_admin_route_are_role_guarded(client, test_app):
     sign_in(client, admin)
     dashboard = client.get("/admin")
     assert dashboard.status_code == 200
-    for label in (b"Printing shops", b"Staff assignments", b"Professors", b"Payment configuration"):
+    for label in (b"Printing shops", b"Staff assignments", b"Payment configuration"):
         assert label in dashboard.data
     assert b"Admin management" in dashboard.data
     assert client.get("/admin/staff").status_code == 200
-    assert client.get("/admin/professors").status_code == 200
+    assert client.get("/admin/professors").status_code == 403
     assert client.get("/admin/payment").status_code == 200
     assert b"password_hash" not in client.get("/admin/staff").data
 
@@ -86,11 +86,17 @@ def test_staff_reassignment_and_unassignment_change_access_immediately(client, t
 
 
 def test_professor_management_eligibility_normalization_and_snapshots(client, test_app):
-    admin = student(test_app, "admin@example.edu", UserRole.ADMIN)
+    admin = student(test_app, "blue@example.edu", UserRole.SHOP_STAFF)
     owner = student(test_app)
     shop_id = shop(test_app)
     file_id = file(test_app, owner)
     offer_professor_service(test_app, shop_id)
+    account_id = student(test_app, "maria.santos@example.edu", UserRole.PROFESSOR)
+    with test_app.app_context():
+        db.session.get(User, admin).shop_id = shop_id
+        db.session.get(User, account_id).name = "Maria Santos"
+        db.session.get(User, account_id).professor_verification_status = ProfessorVerificationStatus.VERIFIED
+        db.session.commit()
     sign_in(client, admin)
     path = "/admin/professors/new"
     assert client.post(path, data={"name": "No CSRF"}).status_code == 400
@@ -98,6 +104,7 @@ def test_professor_management_eligibility_normalization_and_snapshots(client, te
         "name": "Maria Santos", "email": "  MARIA.SANTOS@EXAMPLE.EDU  ",
         "department": "Engineering", "office": "Room 204",
         "is_active": "y", "direct_send_approved": "y", "accepts_student_deliveries": "y", "role": "ADMIN",
+        "account_id": str(account_id),
     })
     assert created.status_code == 302
     with test_app.app_context():
@@ -115,7 +122,7 @@ def test_professor_management_eligibility_normalization_and_snapshots(client, te
     edit = f"/admin/professors/{professor_id}/edit"
     assert post_with_token(client, edit, {
         "name": "Maria Updated", "email": "new.maria@example.edu",
-        "department": "New Department", "office": "New Office",
+        "department": "New Department", "office": "New Office", "account_id": str(account_id),
     }).status_code == 302
     with test_app.app_context():
         old = db.session.scalar(select(Order))
@@ -130,7 +137,7 @@ def test_professor_management_eligibility_normalization_and_snapshots(client, te
     assert post_with_token(client, edit, {
         "name": "Maria Updated", "email": "new.maria@example.edu",
         "department": "New Department", "office": "New Office",
-        "is_active": "y", "direct_send_approved": "y", "accepts_student_deliveries": "y",
+        "is_active": "y", "direct_send_approved": "y", "accepts_student_deliveries": "y", "account_id": str(account_id),
     }).status_code == 302
     sign_in(client, owner)
     new_file = file(test_app, owner, name="new.pdf")
@@ -143,7 +150,7 @@ def test_professor_management_eligibility_normalization_and_snapshots(client, te
     assert b"new.maria@example.edu" in client.get(new_url).data
     sign_in(client, admin)
     assert post_with_token(client, edit, {
-        "name": "Maria Updated", "email": "new.maria@example.edu", "is_active": "y",
+        "name": "Maria Updated", "email": "new.maria@example.edu", "is_active": "y", "account_id": str(account_id),
     }).status_code == 302
     sign_in(client, owner)
     assert b"Maria Updated" not in client.get("/orders/new").data
@@ -249,14 +256,21 @@ def test_admin_shop_changes_preserve_old_order_and_affect_new_quotes(client, tes
 
 def test_disabling_professor_service_blocks_new_use_but_keeps_old_order(client, test_app):
     admin = student(test_app, "admin@example.edu", UserRole.ADMIN)
+    blue_staff = student(test_app, "blue@example.edu", UserRole.SHOP_STAFF)
     owner = student(test_app)
     shop_id = shop(test_app)
     file_id = file(test_app, owner)
     offer_professor_service(test_app, shop_id)
-    sign_in(client, admin)
+    account_id = student(test_app, "professor.one@example.edu", UserRole.PROFESSOR)
+    with test_app.app_context():
+        db.session.get(User, blue_staff).shop_id = shop_id
+        db.session.get(User, account_id).name = "Professor One"
+        db.session.get(User, account_id).professor_verification_status = ProfessorVerificationStatus.VERIFIED
+        db.session.commit()
+    sign_in(client, blue_staff)
     created = post_with_token(client, "/admin/professors/new", {
         "name": "Professor One", "email": "professor.one@example.edu",
-        "is_active": "y", "direct_send_approved": "y", "accepts_student_deliveries": "y",
+        "is_active": "y", "direct_send_approved": "y", "accepts_student_deliveries": "y", "account_id": str(account_id),
     })
     assert created.status_code == 302
     with test_app.app_context():

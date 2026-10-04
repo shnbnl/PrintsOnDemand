@@ -3,7 +3,7 @@
 from sqlalchemy import select
 
 from app.extensions import db
-from app.models import Order, Payment, Professor, User, UserRole
+from app.models import Order, Payment, Professor, ProfessorVerificationStatus, User, UserRole
 from app.services.professors import professor_service_available
 from test_orders import (approved_professor, file, offer_professor_service,
                          professor_place, professor_review, shop, sign_in,
@@ -40,10 +40,11 @@ def test_professor_self_delivery_and_setting_do_not_expose_dropdown(client, test
     other = shop(test_app, name="CHALECOSPOT")
     offer_professor_service(test_app, blue)
     offer_professor_service(test_app, other)
-    profile_id = approved_professor(test_app, accepts=False)
+    profile_id = approved_professor(test_app, accepts=False, linked=False)
     account_id = student(test_app, "maria.santos@example.edu", role=UserRole.PROFESSOR)
     with test_app.app_context():
         db.session.get(User, account_id).professor_id = profile_id
+        db.session.get(User, account_id).professor_verification_status = ProfessorVerificationStatus.VERIFIED
         db.session.commit()
     file_id = file(test_app, account_id)
     sign_in(client, account_id)
@@ -75,6 +76,7 @@ def test_professor_self_delivery_and_setting_do_not_expose_dropdown(client, test
         assert order.professor_name == "Maria Santos"
         assert db.session.get(Professor, profile_id).accepts_student_deliveries is False
         db.session.get(Professor, profile_id).name = "Changed Later"
+        db.session.get(User, account_id).professor_verification_status = ProfessorVerificationStatus.REJECTED
         db.session.commit()
     detail = client.get(placed.headers["Location"])
     assert b"Maria Santos" in detail.data and b"Changed Later" not in detail.data
@@ -88,10 +90,11 @@ def test_professor_self_delivery_and_setting_do_not_expose_dropdown(client, test
 
 
 def test_professor_can_toggle_student_delivery_consent(client, test_app):
-    profile_id = approved_professor(test_app, accepts=False)
+    profile_id = approved_professor(test_app, accepts=False, linked=False)
     account_id = student(test_app, "maria.santos@example.edu", role=UserRole.PROFESSOR)
     with test_app.app_context():
         db.session.get(User, account_id).professor_id = profile_id
+        db.session.get(User, account_id).professor_verification_status = ProfessorVerificationStatus.VERIFIED
         db.session.commit()
     sign_in(client, account_id)
     page = client.get("/professor/settings")
@@ -110,7 +113,7 @@ def test_professor_can_toggle_student_delivery_consent(client, test_app):
 
 
 def test_professor_provisioning_requires_linked_matching_profile(test_app):
-    profile_id = approved_professor(test_app, accepts=False)
+    profile_id = approved_professor(test_app, accepts=False, linked=False)
     runner = test_app.test_cli_runner()
     options = ["create-privileged-user", "--role", "PROFESSOR", "--professor-id", str(profile_id),
                "--name", "Maria Santos", "--email", "maria.santos@example.edu"]
@@ -123,9 +126,13 @@ def test_professor_provisioning_requires_linked_matching_profile(test_app):
     assert duplicate.exit_code != 0
 
 
-def test_admin_can_enable_and_disable_student_deliveries(client, test_app):
-    admin_id = student(test_app, "admin@example.edu", role=UserRole.ADMIN)
-    profile_id = approved_professor(test_app, accepts=False)
+def test_blue_staff_can_enable_and_disable_student_deliveries(client, test_app):
+    admin_id = student(test_app, "blue@example.edu", role=UserRole.SHOP_STAFF)
+    blue_id = shop(test_app, name="Blue and Silver Bookstore")
+    with test_app.app_context():
+        db.session.get(User, admin_id).shop_id = blue_id
+        db.session.commit()
+    profile_id = approved_professor(test_app, accepts=False, linked=False)
     sign_in(client, admin_id)
     path = f"/admin/professors/{profile_id}/edit"
     assert b"Off" in client.get("/admin/professors").data

@@ -5,7 +5,7 @@ import re
 from sqlalchemy import select
 
 from app.extensions import db
-from app.models import Faculty, Professor, User, UserRole
+from app.models import Faculty, Professor, ProfessorVerificationStatus, User, UserRole
 from app.services.admin_management import save_professor
 from app.services.professors import selectable_professors
 from test_auth import csrf_token, login, register
@@ -41,7 +41,7 @@ def test_registration_uses_exact_department_choices_and_rejects_arbitrary_values
 
 
 def test_professor_settings_show_only_information_and_delivery_control(client, test_app):
-    profile_id = approved_professor(test_app, accepts=False)
+    profile_id = approved_professor(test_app, accepts=False, linked=False)
     assert register(client, account_type="PROFESSOR", name="Maria Santos",
                     email="maria.santos@example.edu", professor_department="CCIS").status_code == 302
     assert login(client, email="maria.santos@example.edu").status_code == 302
@@ -63,6 +63,8 @@ def test_professor_settings_show_only_information_and_delivery_control(client, t
         assert db.session.get(Professor, profile_id).accepts_student_deliveries is False
         assert selectable_professors() == []
         profile = db.session.get(Professor, profile_id)
+        account.professor_verification_status = ProfessorVerificationStatus.VERIFIED
+        db.session.commit()
         save_professor(
             profile, name=profile.name, email=profile.email,
             department=profile.department, office=profile.office,
@@ -110,10 +112,11 @@ def test_existing_account_without_department_can_select_one_once(client, test_ap
 
 
 def test_existing_managed_department_is_displayed_when_account_has_none(client, test_app):
-    profile_id = approved_professor(test_app, accepts=False)
+    profile_id = approved_professor(test_app, accepts=False, linked=False)
     account_id = student(test_app, "maria.santos@example.edu", role=UserRole.PROFESSOR)
     with test_app.app_context():
         db.session.get(User, account_id).professor_id = profile_id
+        db.session.get(User, account_id).professor_verification_status = ProfessorVerificationStatus.VERIFIED
         db.session.commit()
     sign_in(client, account_id)
     page = client.get("/professor/settings")

@@ -16,7 +16,7 @@ from app.extensions import db
 from app.models import (
     ColorMode, FeeType, Order, OrderDestination, OrderItem, OrderStatus, PaperSize,
     PrintConfiguration, PrintPrice, PrintingShop, ServiceType, ShopFee,
-    ShopService, UploadedFile, User, UserRole, Professor,
+    ShopService, UploadedFile, User, UserRole, Professor, ProfessorVerificationStatus,
 )
 from app.services.pricing import PricingError, quote_order
 from app.services.orders import create_order
@@ -120,7 +120,7 @@ def place(client, file_id, shop_id, **extras):
     })
 
 
-def approved_professor(app, *, active=True, approved=True, accepts=True, faculty="MITL", name="Maria Santos"):
+def approved_professor(app, *, active=True, approved=True, accepts=True, faculty="MITL", name="Maria Santos", linked=True):
     with app.app_context():
         professor = Professor(
             name=name, email=f"{name.lower().replace(' ', '.')}@example.edu",
@@ -130,6 +130,14 @@ def approved_professor(app, *, active=True, approved=True, accepts=True, faculty
             faculty=faculty,
         )
         db.session.add(professor)
+        if linked:
+            account = User(
+                name=name, email=professor.email, role=UserRole.PROFESSOR,
+                professor=professor, professor_department=faculty,
+                professor_verification_status=ProfessorVerificationStatus.VERIFIED,
+            )
+            account.set_password(PASSWORD)
+            db.session.add(account)
         db.session.commit()
         return professor.id
 

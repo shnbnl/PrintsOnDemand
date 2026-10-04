@@ -3,7 +3,7 @@
 from sqlalchemy import select
 
 from app.extensions import db
-from app.models import Faculty, OrderDestination, PrintingShop, Professor, ServiceType, ShopService, User, UserRole
+from app.models import Faculty, OrderDestination, PrintingShop, Professor, ProfessorVerificationStatus, ServiceType, ShopService, User, UserRole
 
 PROFESSOR_DELIVERY_SHOP = "Blue and Silver Bookstore"
 
@@ -19,9 +19,21 @@ class ProfessorSelectionError(ValueError):
     pass
 
 
+def professor_can_self_deliver(account: User) -> bool:
+    profile = account.professor
+    return bool(
+        account.role == UserRole.PROFESSOR and account.is_active
+        and account.professor_verification_status == ProfessorVerificationStatus.VERIFIED
+        and profile is not None and profile.is_active and profile.direct_send_approved
+    )
+
+
 def selectable_professors() -> list[Professor]:
     return db.session.scalars(
-        select(Professor).where(
+        select(Professor).join(User, User.professor_id == Professor.id).where(
+            User.role == UserRole.PROFESSOR,
+            User.is_active.is_(True),
+            User.professor_verification_status == ProfessorVerificationStatus.VERIFIED,
             Professor.is_active.is_(True),
             Professor.direct_send_approved.is_(True),
             Professor.accepts_student_deliveries.is_(True),
@@ -32,8 +44,11 @@ def selectable_professors() -> list[Professor]:
 
 def selectable_professor(professor_id: int) -> Professor | None:
     return db.session.scalar(
-        select(Professor).where(
+        select(Professor).join(User, User.professor_id == Professor.id).where(
             Professor.id == professor_id,
+            User.role == UserRole.PROFESSOR,
+            User.is_active.is_(True),
+            User.professor_verification_status == ProfessorVerificationStatus.VERIFIED,
             Professor.is_active.is_(True),
             Professor.direct_send_approved.is_(True),
             Professor.accepts_student_deliveries.is_(True),
@@ -69,8 +84,8 @@ def validate_professor_selection(
         if professor_id not in (None, ""):
             raise ProfessorSelectionError("Your professor delivery recipient is set by your account.")
         professor = db.session.get(Professor, actor.professor_id) if actor.professor_id else None
-        if professor is None or not professor.is_active:
-            raise ProfessorSelectionError("Your professor account needs an active profile.")
+        if not professor_can_self_deliver(actor):
+            raise ProfessorSelectionError("Your professor account needs a verified, active profile.")
         return professor
     if actor is not None and actor.role != UserRole.STUDENT:
         raise ProfessorSelectionError("This account cannot request professor delivery.")

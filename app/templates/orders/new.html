@@ -76,6 +76,7 @@
           <h2>How would you like to receive your order?</h2>
           <p class="hint">Choose one method offered by the selected shop. Dates and time slots are requests in Philippine time.</p>
           {% if current_user.role.value == 'STUDENT' and not professors %}<p class="hint">No professors are currently accepting student print deliveries.</p>{% endif %}
+          {% if current_user.role.value == 'PROFESSOR' and not own_professor %}<p class="hint">Deliver to Me becomes available after Blue and Silver verifies your account and links an active, approved professor profile.</p>{% endif %}
           <fieldset class="choice-fieldset"><legend>Fulfillment method</legend>
             <div class="choice-grid fulfillment-choices">
               {% for value, label, description in [('PROFESSOR', 'Deliver to Me' if current_user.role.value == 'PROFESSOR' else 'Deliver to Professor', 'Blue and Silver physically delivers the printed papers.'), ('PICKUP', 'Scheduled Pickup', 'Request a date and time at the shop.'), ('DELIVERY', 'Delivery', 'Request delivery to your address.')] %}

@@ -25,7 +25,7 @@ def customer_graph(app, role):
     staff_id = student(app, "staff@example.edu", role=UserRole.SHOP_STAFF)
     admin_id = student(app, "admin@example.edu", role=UserRole.ADMIN)
     shop_id = shop(app, name="Blue and Silver Bookstore")
-    professor_id = approved_professor(app, faculty="CCIS")
+    professor_id = approved_professor(app, faculty="CCIS", linked=False)
     owner_file_id = file(app, owner_id, name="owner-private.pdf")
     extra_file_id = file(app, owner_id, name="owner-second.pdf")
     survivor_file_id = file(app, survivor_id, name="survivor-private.pdf")
@@ -306,4 +306,3 @@ def test_recovery_restores_bytes_when_metadata_transaction_rolled_back(test_app)
     assert recovered.exit_code == 0, recovered.output
     assert "Restored 1 referenced uploads" in recovered.output
     assert (storage / key).exists()
-

@@ -27,7 +27,7 @@ from app.services.payments import (
 from app.services.pricing import PricingError, PrintOptions, quote_cart
 from app.services.professors import (
     ProfessorSelectionError, assign_professor, professor_service_available,
-    selectable_professors, validate_professor_selection,
+    professor_can_self_deliver, selectable_professors, validate_professor_selection,
 )
 from app.services.tracking import build_tracking
 
@@ -162,9 +162,7 @@ def render_selection(*, file_ids=None, shop_id=None, destination=None, professor
     professors = selectable_professors() if current_user.role == UserRole.STUDENT else []
     shop_availability = {shop.id: availability(shop) for shop in shops}
     if (not professors and current_user.role == UserRole.STUDENT) or (
-        current_user.role == UserRole.PROFESSOR and (
-            current_user.professor is None or not current_user.professor.is_active
-        )
+        current_user.role == UserRole.PROFESSOR and not professor_can_self_deliver(current_user)
     ):
         for offered in shop_availability.values():
             offered[OrderDestination.PROFESSOR.value] = False
@@ -173,7 +171,7 @@ def render_selection(*, file_ids=None, shop_id=None, destination=None, professor
     return render_template(
         "orders/new.html", files=files, shops=shops,
         professors=professors, selected_file_ids=set(file_ids or []),
-        own_professor=current_user.professor if current_user.role == UserRole.PROFESSOR else None,
+        own_professor=current_user.professor if professor_can_self_deliver(current_user) else None,
         faculties=list(Faculty),
         selected_shop_id=shop_id, selected_destination=destination,
         selected_professor_id=professor_id, selected_options=options or {},

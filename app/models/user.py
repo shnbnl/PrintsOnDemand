@@ -20,6 +20,12 @@ class UserRole(StrEnum):
     ADMIN = "ADMIN"
 
 
+class ProfessorVerificationStatus(StrEnum):
+    PENDING = "PENDING"
+    VERIFIED = "VERIFIED"
+    REJECTED = "REJECTED"
+
+
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
@@ -55,6 +61,11 @@ class User(UserMixin, db.Model):
         nullable=True,
     )
     professor: Mapped[Professor | None] = relationship(back_populates="account")
+    professor_verification_status: Mapped[ProfessorVerificationStatus] = mapped_column(
+        db.Enum(ProfessorVerificationStatus, name="professor_verification_status", native_enum=False),
+        nullable=False, default=ProfessorVerificationStatus.PENDING,
+        server_default=ProfessorVerificationStatus.PENDING.value,
+    )
     professor_department: Mapped[str | None] = mapped_column(db.String(120), nullable=True)
     student_delivery_preference: Mapped[bool] = mapped_column(
         db.Boolean, nullable=False, default=False, server_default=db.false()

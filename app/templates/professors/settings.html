@@ -20,7 +20,13 @@
             {% endif %}
           </dd>
         </div>
+        <div class="detail-row"><dt>Verification</dt><dd>{{ current_user.professor_verification_status.value.title() }}</dd></div>
       </dl>
+      {% if current_user.professor_verification_status.value != 'VERIFIED' %}
+        <p class="hint">Blue and Silver must verify your account before Professor Delivery is available. You can still place other orders.</p>
+      {% elif not current_user.professor_id %}
+        <p class="hint">Blue and Silver has verified your account. A managed professor profile must be linked before Professor Delivery is available.</p>
+      {% endif %}
       {% for error in form.department.errors %}<p class="field-error" role="alert">{{ error }}</p>{% endfor %}
       <h2>Student print deliveries</h2>
       <div class="checkbox-field">

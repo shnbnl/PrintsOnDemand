@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
-from app.models import Professor
+from app.models import Professor, ProfessorVerificationStatus, User, UserRole
 from app.seed import seed_demo_professors
 from app.services.professors import selectable_professors
 
@@ -62,6 +62,12 @@ def test_selectable_filter_all_four_states(test_app):
                 accepts_student_deliveries=True,
                 faculty="MITL",
             ))
+        db.session.commit()
+        eligible = db.session.scalar(select(Professor).where(Professor.is_active.is_(True), Professor.direct_send_approved.is_(True)))
+        account = User(name=eligible.name, email=eligible.email, role=UserRole.PROFESSOR,
+                       professor=eligible, professor_verification_status=ProfessorVerificationStatus.VERIFIED)
+        account.set_password("A-strong-password-123")
+        db.session.add(account)
         db.session.commit()
         assert [p.email for p in selectable_professors()] == ["demo-True-True@example.edu".casefold()]
 

@@ -30,12 +30,11 @@
           <a href="{{ url_for('access.shop') }}" {% if request.endpoint == 'access.shop' %}aria-current="page"{% endif %}>Assigned Shop</a>
           <a href="{{ url_for('staff_orders.index') }}" {% if request.blueprint == 'staff_orders' %}aria-current="page"{% endif %}>Shop Orders</a>
           <a href="{{ url_for('payment_verification.index') }}" {% if request.blueprint == 'payment_verification' %}aria-current="page"{% endif %}>Payment verification</a>
-          {% if current_user.shop and current_user.shop.name == 'Blue and Silver Bookstore' %}<a href="{{ url_for('admin_management.professors') }}" {% if request.endpoint in ('admin_management.professors', 'admin_management.new_professor', 'admin_management.edit_professor') %}aria-current="page"{% endif %}>Professor Management</a>{% endif %}
+          {% if current_user.shop and current_user.shop.name == 'Blue and Silver Bookstore' %}<a href="{{ url_for('admin_management.professors') }}" {% if request.blueprint == 'admin_management' %}aria-current="page"{% endif %}>Professor Management</a>{% endif %}
         {% elif current_user.role.value == 'ADMIN' %}
           <a href="{{ url_for('access.admin') }}" {% if request.endpoint == 'access.admin' %}aria-current="page"{% endif %}>Admin management</a>
           <a href="{{ url_for('shop_admin.index') }}" {% if request.blueprint == 'shop_admin' %}aria-current="page"{% endif %}>Shops</a>
           <a href="{{ url_for('admin_management.staff_index') }}" {% if request.endpoint in ('admin_management.staff_index', 'admin_management.staff_assignment') %}aria-current="page"{% endif %}>Staff</a>
-          <a href="{{ url_for('admin_management.professors') }}" {% if request.endpoint in ('admin_management.professors', 'admin_management.new_professor', 'admin_management.edit_professor') %}aria-current="page"{% endif %}>Professors</a>
           <a href="{{ url_for('admin_management.payment') }}" {% if request.endpoint == 'admin_management.payment' %}aria-current="page"{% endif %}>Payment settings</a>
           <a href="{{ url_for('payment_verification.index') }}" {% if request.blueprint == 'payment_verification' %}aria-current="page"{% endif %}>Payment verification</a>
         {% endif %}

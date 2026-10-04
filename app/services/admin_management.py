@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
-from app.models import Faculty, PaymentSettings, PrintingShop, Professor, User, UserRole
+from app.models import Faculty, PaymentSettings, PrintingShop, Professor, ProfessorVerificationStatus, User, UserRole
 
 
 class ManagementError(ValueError):
@@ -30,8 +30,10 @@ def save_professor(record: Professor | None, *, name: str, email: str,
         raise ManagementError("Select a valid Faculty.") from error
     account = db.session.get(User, account_id) if account_id else None
     if account_id and (account is None or account.role != UserRole.PROFESSOR
+                       or account.professor_verification_status != ProfessorVerificationStatus.VERIFIED
                        or (account.email != normalized
                            and (record is None or account.professor_id != record.id))
+                       or (record is None and account.name.casefold() != name.strip().casefold())
                        or (account.professor_id is not None
                            and (record is None or account.professor_id != record.id))):
         raise ManagementError("Select an unlinked professor account with the same email.")
@@ -39,6 +41,8 @@ def save_professor(record: Professor | None, *, name: str, email: str,
         User.email == normalized, User.id != account.id,
     )) is not None:
         raise ManagementError("Another account already uses this email.")
+    previous_department = record.department if record is not None else None
+    editing_linked_department = record is not None and previous_department != (department or None)
     record = record or Professor()
     try:
         record.name = name
@@ -53,7 +57,10 @@ def save_professor(record: Professor | None, *, name: str, email: str,
     record.accepts_student_deliveries = accepts_student_deliveries
     record.account = account
     if account is not None:
+        account.name = record.name
         account.email = normalized
+        if editing_linked_department:
+            account.professor_department = record.department
     db.session.add(record)
     try:
         db.session.commit()

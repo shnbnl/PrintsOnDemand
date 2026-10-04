@@ -3,7 +3,7 @@
 from sqlalchemy import select
 
 from app.extensions import db
-from app.models import Order, OrderStatus, Payment, PaymentStatus, Professor, User, UserRole
+from app.models import Order, OrderStatus, Payment, PaymentStatus, Professor, ProfessorVerificationStatus, User, UserRole
 from app.services.payments import PaymentError, select_payment_method
 from app.services.orders import create_order
 from app.services.pricing import quote_order
@@ -72,6 +72,11 @@ def test_blue_staff_manage_faculty_and_link_professor_account(client, test_app):
         assert client.get("/admin/professors/new").status_code == 403
         assert client.post("/admin/professors/new", data={"csrf_token": token(client.get("/shop" if actor in other_staff else "/student" if actor != account_id else "/professor"))}).status_code == 403
     sign_in(client, blue_staff)
+    pending = client.get("/admin/professors")
+    assert b"Juan Dela Cruz" in pending.data
+    assert client.post(f"/admin/professors/accounts/{account_id}/verify", data={
+        "csrf_token": token(pending),
+    }).status_code == 302
     page = client.get("/admin/professors/new")
     assert page.status_code == 200 and b"Professor Management" in page.data
     posted = client.post("/admin/professors/new", data={
@@ -201,10 +206,11 @@ def test_legacy_onsite_order_cannot_be_converted_to_professor_delivery(client, t
 def test_professor_self_selects_controlled_faculty_even_with_acceptance_off(client, test_app):
     blue = shop(test_app, name="Blue and Silver Bookstore")
     offer_professor_service(test_app, blue)
-    profile_id = approved_professor(test_app, accepts=False, faculty="MITL")
+    profile_id = approved_professor(test_app, accepts=False, faculty="MITL", linked=False)
     account_id = student(test_app, "maria.santos@example.edu", role=UserRole.PROFESSOR)
     with test_app.app_context():
         db.session.get(User, account_id).professor_id = profile_id
+        db.session.get(User, account_id).professor_verification_status = ProfessorVerificationStatus.VERIFIED
         db.session.commit()
     file_id = file(test_app, account_id)
     sign_in(client, account_id)

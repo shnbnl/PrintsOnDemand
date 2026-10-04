@@ -3,15 +3,59 @@
 {% block title %}Professors | Prints On Demand{% endblock %}
 
 {% block content %}
-  <a class="back-link" href="{{ url_for('access.admin') if current_user.role.value == 'ADMIN' else url_for('access.shop') }}">← {{ 'Admin management' if current_user.role.value == 'ADMIN' else 'Assigned shop' }}</a>
+  <a class="back-link" href="{{ url_for('access.shop') }}">← Assigned shop</a>
   <header class="page-intro page-intro--with-action">
     <div>
       <p class="eyebrow">Administration / Recipients</p>
-      <h1>Professors</h1>
-      <p class="page-lead">Review who can be selected for Direct-to-Professor orders.</p>
+      <h1>Professor Management</h1>
+      <p class="page-lead">Verify Professor accounts, then link them to managed profiles for deliveries.</p>
     </div>
     <a class="button" href="{{ url_for('admin_management.new_professor') }}">Add professor <span aria-hidden="true">→</span></a>
   </header>
+
+  <section class="content-card">
+    <h2>Pending Verification <span class="status-badge status-badge--warning">{{ pending|length }}</span></h2>
+    {% if pending %}
+      <div class="table-scroll" role="region" aria-label="Pending professors" tabindex="0">
+        <table class="data-table responsive-table">
+          <thead><tr><th>Name</th><th>Department</th><th>Email</th><th>Decision</th></tr></thead>
+          <tbody>{% for account in pending %}<tr>
+            <th scope="row">{{ account.name }}</th>
+            <td data-label="Department">{{ account.professor_department or 'Not supplied' }}</td>
+            <td data-label="Email">{{ account.email }}</td>
+            <td data-label="Decision"><div class="form-actions">
+              <form class="inline-form" method="post" action="{{ url_for('admin_management.verify_professor_account', account_id=account.id) }}">{{ verification_form.csrf_token }}<button type="submit">Verify Professor</button></form>
+              <form class="inline-form" method="post" action="{{ url_for('admin_management.reject_professor_account', account_id=account.id) }}">{{ verification_form.csrf_token }}<button class="button-danger" type="submit">Reject</button></form>
+            </div></td>
+          </tr>{% endfor %}</tbody>
+        </table>
+      </div>
+    {% else %}<p>No pending Professor accounts.</p>{% endif %}
+  </section>
+
+  <section class="content-card">
+    <h2>Verified Professors</h2>
+    {% if verified %}
+      <div class="table-scroll" role="region" aria-label="Verified professors" tabindex="0">
+        <table class="data-table responsive-table">
+          <thead><tr><th>Name</th><th>Department</th><th>Email</th><th>Student deliveries</th><th>Account link</th></tr></thead>
+          <tbody>{% for account in verified %}<tr>
+            <th scope="row">{{ account.name }}</th>
+            <td data-label="Department">{{ account.professor_department or 'Not supplied' }}</td>
+            <td data-label="Email">{{ account.email }}</td>
+            <td data-label="Student deliveries">{{ 'Accepted' if account.professor and account.professor.accepts_student_deliveries else 'Off' }}</td>
+            <td data-label="Account link">{% if account.professor %}<a href="{{ url_for('admin_management.edit_professor', professor_id=account.professor_id) }}">Manage profile</a>{% else %}<a href="{{ url_for('admin_management.new_professor', account_id=account.id) }}">Create and link profile</a>{% endif %}</td>
+          </tr>{% endfor %}</tbody>
+        </table>
+      </div>
+    {% else %}<p>No verified Professor accounts yet.</p>{% endif %}
+  </section>
+
+  {% if rejected %}<section class="content-card"><h2>Rejected requests</h2>
+    <ul>{% for account in rejected %}<li>{{ account.name }} — {{ account.professor_department or 'Not supplied' }} — {{ account.email }}</li>{% endfor %}</ul>
+  </section>{% endif %}
+
+  <h2>Managed Professor profiles</h2>
 
   {% if professors %}
     <div class="section-card">

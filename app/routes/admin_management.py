@@ -4,12 +4,13 @@ from functools import wraps
 
 from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
 from flask_login import current_user
+from flask_wtf import FlaskForm
 from sqlalchemy import select
 
 from app.admin_forms import PaymentSettingsForm, ProfessorForm, StaffShopForm
 from app.authorization import roles_required
 from app.extensions import db
-from app.models import PaymentSettings, PrintingShop, Professor, User, UserRole
+from app.models import PaymentSettings, PrintingShop, Professor, ProfessorVerificationStatus, User, UserRole
 from app.services.admin_management import (
     ManagementError, assign_staff_to_shop, save_payment_settings, save_professor,
 )
@@ -22,11 +23,9 @@ admin_management_bp = Blueprint("admin_management", __name__, url_prefix="/admin
 
 def professor_management_required(view):
     @wraps(view)
-    @roles_required(UserRole.ADMIN, UserRole.SHOP_STAFF)
+    @roles_required(UserRole.SHOP_STAFF)
     def guarded(*args, **kwargs):
-        if current_user.role == UserRole.SHOP_STAFF and (
-            current_user.shop is None or current_user.shop.name != PROFESSOR_DELIVERY_SHOP
-        ):
+        if current_user.shop is None or current_user.shop.name != PROFESSOR_DELIVERY_SHOP:
             abort(403)
         return view(*args, **kwargs)
     return guarded
@@ -68,13 +67,51 @@ def staff_assignment(staff_id):
 @professor_management_required
 def professors():
     records = db.session.scalars(select(Professor).order_by(Professor.name, Professor.id)).all()
-    return render_template("admin/professors.html", professors=records)
+    accounts = db.session.scalars(select(User).where(
+        User.role == UserRole.PROFESSOR,
+    ).order_by(User.name, User.id)).all()
+    return render_template(
+        "admin/professors.html", professors=records,
+        pending=[user for user in accounts if user.professor_verification_status == ProfessorVerificationStatus.PENDING],
+        verified=[user for user in accounts if user.professor_verification_status == ProfessorVerificationStatus.VERIFIED],
+        rejected=[user for user in accounts if user.professor_verification_status == ProfessorVerificationStatus.REJECTED],
+        verification_form=FlaskForm(),
+    )
+
+
+@admin_management_bp.post("/professors/accounts/<int:account_id>/verify")
+@professor_management_required
+def verify_professor_account(account_id):
+    if not FlaskForm().validate_on_submit():
+        abort(400)
+    account = db.get_or_404(User, account_id)
+    if account.role != UserRole.PROFESSOR or account.professor_verification_status != ProfessorVerificationStatus.PENDING:
+        abort(400)
+    account.professor_verification_status = ProfessorVerificationStatus.VERIFIED
+    db.session.commit()
+    flash("Professor account verified. Link it to a managed profile to enable delivery.", "success")
+    return redirect(url_for("admin_management.professors"))
+
+
+@admin_management_bp.post("/professors/accounts/<int:account_id>/reject")
+@professor_management_required
+def reject_professor_account(account_id):
+    if not FlaskForm().validate_on_submit():
+        abort(400)
+    account = db.get_or_404(User, account_id)
+    if account.role != UserRole.PROFESSOR or account.professor_verification_status != ProfessorVerificationStatus.PENDING:
+        abort(400)
+    account.professor_verification_status = ProfessorVerificationStatus.REJECTED
+    db.session.commit()
+    flash("Professor request rejected.", "success")
+    return redirect(url_for("admin_management.professors"))
 
 
 def professor_editor(record=None):
     form = ProfessorForm(obj=record)
     accounts = db.session.scalars(select(User).where(
         User.role == UserRole.PROFESSOR,
+        User.professor_verification_status == ProfessorVerificationStatus.VERIFIED,
     ).order_by(User.name, User.id)).all()
     form.account_id.choices = [(0, "Unlinked")] + [
         (user.id, f"{user.name} ({user.email}) — {user.professor_department or 'Department not supplied'}")
@@ -97,7 +134,17 @@ def professor_editor(record=None):
             flash("Professor saved.", "success")
             return redirect(url_for("admin_management.edit_professor", professor_id=saved.id))
     elif request.method == "GET":
-        form.account_id.data = record.account.id if record is not None and record.account else 0
+        form.account_id.data = (
+            record.account.id if record is not None and record.account
+            else request.args.get("account_id", default=0, type=int)
+        )
+        if record is None and form.account_id.data:
+            account = next((item for item in accounts if item.id == form.account_id.data), None)
+            if account is not None:
+                form.name.data = account.name
+                form.email.data = account.email
+                form.department.data = account.professor_department
+                form.faculty.data = account.professor_department
     return render_template("admin/professor_form.html", professor=record, form=form)
 
 
