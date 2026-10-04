@@ -10,10 +10,10 @@
     <p class="page-lead">Add the shop details first, then configure its services and prices.</p>
   </header>
 
-  <form class="account-form form-card" method="post" novalidate>
+  <form class="account-form form-card form-grid" method="post" novalidate>
     {{ form.hidden_tag() }}
     {% for field in [form.name, form.description, form.address] %}
-      <div class="field">
+      <div class="field field-wide">
         {{ field.label }} {{ field() }}
         {% for error in field.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
       </div>

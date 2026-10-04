@@ -3,7 +3,7 @@
 {% block title %}Register | Prints On Demand{% endblock %}
 
 {% block content %}
-  <div class="auth-shell">
+  <div class="auth-shell auth-shell--register">
     <img class="auth-brand" src="{{ url_for('static', filename='img/prints-on-demand-logo.png') }}" alt="" width="88" height="88">
     <header class="auth-heading">
       <p class="page-eyebrow">Prints On Demand</p>
@@ -11,7 +11,7 @@
       <p class="page-lead">Save your print settings and keep every order in one place.</p>
     </header>
     <section class="content-card auth-card" aria-label="Registration form">
-      <form class="account-form form-stack" method="post" novalidate>
+      <form class="account-form form-stack form-grid" method="post" novalidate>
         {{ form.hidden_tag() }}
         <fieldset class="choice-fieldset"><legend>{{ form.account_type.label.text }}</legend>
           <div class="choice-grid choice-grid-short">{% for option in form.account_type %}<label class="choice-card">{{ option() }}<span><strong>{{ option.label.text }}</strong></span></label>{% endfor %}</div>

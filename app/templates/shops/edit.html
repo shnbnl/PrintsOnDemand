@@ -16,12 +16,13 @@
   </header>
   {% if shop.is_demo %}<p class="notice demo-label">Seeded demo shop. Save final details and prices before real use.</p>{% endif %}
 
+  <div class="management-grid">
   <section class="section-card" id="shop-information">
     <h2>Shop information</h2>
-    <form class="account-form" method="post" action="{{ url_for('shop_admin.edit', shop_id=shop.id) }}" novalidate>
+    <form class="account-form form-grid" method="post" action="{{ url_for('shop_admin.edit', shop_id=shop.id) }}" novalidate>
       {{ shop_form.hidden_tag() }}
       {% for field in [shop_form.name, shop_form.description, shop_form.address] %}
-        <div class="field">{{ field.label }} {{ field() }}{{ errors(field) }}</div>
+        <div class="field field-wide">{{ field.label }} {{ field() }}{{ errors(field) }}</div>
       {% endfor %}
       <p class="hint">Map location is optional. Enter both confirmed coordinates, or leave both blank to keep this shop in list view only.</p>
       {% for field in [shop_form.latitude, shop_form.longitude] %}
@@ -42,7 +43,7 @@
       <ul>{% for user in assigned_staff %}<li>{{ user.name }} <span class="hint">({{ user.email }})</span></li>{% endfor %}</ul>
     {% else %}<p class="hint">No Shop Staff account is assigned yet.</p>{% endif %}
     {% if staff_form.staff_id.choices %}
-      <form class="account-form" method="post" action="{{ url_for('shop_admin.assign_staff', shop_id=shop.id) }}">
+      <form class="account-form form-grid" method="post" action="{{ url_for('shop_admin.assign_staff', shop_id=shop.id) }}">
         {{ staff_form.hidden_tag() }}
         <div class="field">{{ staff_form.staff_id.label }} {{ staff_form.staff_id() }}{{ errors(staff_form.staff_id) }}</div>
         <div class="form-actions">{{ staff_form.submit(class_='button') }}</div>
@@ -55,7 +56,7 @@
     {% if services %}
       <ul>{% for service in services %}<li>{{ service.service_type.label }} <span class="status-badge status-badge--{{ 'success' if service.enabled else 'muted' }}">{{ 'Enabled' if service.enabled else 'Disabled' }}</span></li>{% endfor %}</ul>
     {% else %}<p class="hint">No services configured.</p>{% endif %}
-    <form class="account-form" method="post" action="{{ url_for('shop_admin.save_service', shop_id=shop.id) }}" novalidate>
+    <form class="account-form form-grid" method="post" action="{{ url_for('shop_admin.save_service', shop_id=shop.id) }}" novalidate>
       {{ service_form.hidden_tag() }}
       <div class="field">{{ service_form.service_type.label }} {{ service_form.service_type() }}{{ errors(service_form.service_type) }}</div>
       <div class="checkbox-field">{{ service_form.enabled() }} {{ service_form.enabled.label }}</div>
@@ -71,7 +72,7 @@
         <tbody>{% for price in prices %}<tr><td>{{ price.paper_size.label }}</td><td>{{ price.color_mode.label }}</td><td>₱{{ '%.2f'|format(price.price) }}{% if price.is_demo %} (demo){% endif %}</td></tr>{% endfor %}</tbody>
       </table></div>
     {% else %}<p class="hint">No print prices configured.</p>{% endif %}
-    <form class="account-form" method="post" action="{{ url_for('shop_admin.save_price', shop_id=shop.id) }}" novalidate>
+    <form class="account-form form-grid" method="post" action="{{ url_for('shop_admin.save_price', shop_id=shop.id) }}" novalidate>
       {{ price_form.hidden_tag() }}
       <div class="field">{{ price_form.paper_size.label }} {{ price_form.paper_size() }}{{ errors(price_form.paper_size) }}</div>
       <div class="field">{{ price_form.color_mode.label }} {{ price_form.color_mode() }}{{ errors(price_form.color_mode) }}</div>
@@ -84,11 +85,12 @@
     <h2>Additional fees</h2>
     {% if fees %}<ul>{% for fee in fees %}<li>{{ fee.fee_type.label }} <strong>₱{{ '%.2f'|format(fee.amount) }}</strong>{% if fee.is_demo %} <span class="status-badge status-badge--warning">Demo</span>{% endif %}</li>{% endfor %}</ul>
     {% else %}<p class="hint">No additional fees configured.</p>{% endif %}
-    <form class="account-form" method="post" action="{{ url_for('shop_admin.save_fee', shop_id=shop.id) }}" novalidate>
+    <form class="account-form form-grid" method="post" action="{{ url_for('shop_admin.save_fee', shop_id=shop.id) }}" novalidate>
       {{ fee_form.hidden_tag() }}
       <div class="field">{{ fee_form.fee_type.label }} {{ fee_form.fee_type() }}{{ errors(fee_form.fee_type) }}</div>
       <div class="field">{{ fee_form.amount.label }} {{ fee_form.amount(min='0', step='0.01') }}{{ errors(fee_form.amount) }}</div>
       <div class="form-actions">{{ fee_form.submit(class_='button') }}</div>
     </form>
   </section>
+  </div>
 {% endblock %}

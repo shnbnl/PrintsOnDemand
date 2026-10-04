@@ -15,6 +15,7 @@
     </p>
   </header>
 
+  <div class="operations-grid">
   <section class="section-card">
     <h2>Order and customer</h2>
     <dl class="summary-list">
@@ -25,7 +26,7 @@
     </dl>
   </section>
 
-  <section class="section-card">
+  <section class="section-card print-job">
     <h2>Print job</h2>
     <ul class="file-list">
       {% for item in order.items %}
@@ -112,4 +113,5 @@
       <p class="notice notice-warning">Processing is unavailable until payment is recorded as paid by an authorized process.</p>
     {% endif %}
   </section>
+  </div>
 {% endblock %}

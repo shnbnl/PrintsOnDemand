@@ -2,15 +2,13 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#052448">
     <title>{% block title %}Prints On Demand{% endblock %}</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/prints-on-demand-logo.png') }}">
+    <style>@view-transition { navigation: auto; } @media (prefers-reduced-motion: reduce) { @view-transition { navigation: none; } }</style>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
-    {% if not current_user.is_authenticated and request.method == 'GET' and request.endpoint in ('main.index', 'auth.login', 'auth.register') %}
-      <style>@view-transition { navigation: auto; } @media (prefers-reduced-motion: reduce) { @view-transition { navigation: none; } }</style>
-      <link rel="stylesheet" href="{{ url_for('static', filename='css/entry-transitions.css') }}">
-    {% endif %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/entry-transitions.css') }}">
     <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
   </head>
   <body>
@@ -18,26 +16,26 @@
     {% macro navigation() %}
       {% if current_user.is_authenticated %}
         {% if current_user.role.value == 'STUDENT' %}
-          <a href="{{ url_for('shops.index') }}">Printing Shops</a>
-          <a href="{{ url_for('files.index') }}">My Files</a>
-          <a href="{{ url_for('orders.index') }}">Order History</a>
+          <a href="{{ url_for('shops.index') }}" {% if request.blueprint == 'shops' %}aria-current="page"{% endif %}>Printing Shops</a>
+          <a href="{{ url_for('files.index') }}" {% if request.blueprint == 'files' %}aria-current="page"{% endif %}>My Files</a>
+          <a href="{{ url_for('orders.index') }}" {% if request.blueprint == 'orders' %}aria-current="page"{% endif %}>Order History</a>
         {% elif current_user.role.value == 'PROFESSOR' %}
-          <a href="{{ url_for('shops.index') }}">Printing Shops</a>
-          <a href="{{ url_for('files.index') }}">My Files</a>
-          <a href="{{ url_for('orders.index') }}">Order History</a>
-          <a href="{{ url_for('professor_settings.settings') }}">Delivery setting</a>
+          <a href="{{ url_for('shops.index') }}" {% if request.blueprint == 'shops' %}aria-current="page"{% endif %}>Printing Shops</a>
+          <a href="{{ url_for('files.index') }}" {% if request.blueprint == 'files' %}aria-current="page"{% endif %}>My Files</a>
+          <a href="{{ url_for('orders.index') }}" {% if request.blueprint == 'orders' %}aria-current="page"{% endif %}>Order History</a>
+          <a href="{{ url_for('professor_settings.settings') }}" {% if request.blueprint == 'professor_settings' %}aria-current="page"{% endif %}>Delivery setting</a>
         {% elif current_user.role.value == 'SHOP_STAFF' %}
-          <a href="{{ url_for('access.shop') }}">Assigned Shop</a>
-          <a href="{{ url_for('staff_orders.index') }}">Shop Orders</a>
-          <a href="{{ url_for('payment_verification.index') }}">Payment verification</a>
-          {% if current_user.shop and current_user.shop.name == 'Blue and Silver Bookstore' %}<a href="{{ url_for('admin_management.professors') }}">Professor Management</a>{% endif %}
+          <a href="{{ url_for('access.shop') }}" {% if request.endpoint == 'access.shop' %}aria-current="page"{% endif %}>Assigned Shop</a>
+          <a href="{{ url_for('staff_orders.index') }}" {% if request.blueprint == 'staff_orders' %}aria-current="page"{% endif %}>Shop Orders</a>
+          <a href="{{ url_for('payment_verification.index') }}" {% if request.blueprint == 'payment_verification' %}aria-current="page"{% endif %}>Payment verification</a>
+          {% if current_user.shop and current_user.shop.name == 'Blue and Silver Bookstore' %}<a href="{{ url_for('admin_management.professors') }}" {% if request.endpoint in ('admin_management.professors', 'admin_management.new_professor', 'admin_management.edit_professor') %}aria-current="page"{% endif %}>Professor Management</a>{% endif %}
         {% elif current_user.role.value == 'ADMIN' %}
-          <a href="{{ url_for('access.admin') }}">Admin management</a>
-          <a href="{{ url_for('shop_admin.index') }}">Shops</a>
-          <a href="{{ url_for('admin_management.staff_index') }}">Staff</a>
-          <a href="{{ url_for('admin_management.professors') }}">Professors</a>
-          <a href="{{ url_for('admin_management.payment') }}">Payment settings</a>
-          <a href="{{ url_for('payment_verification.index') }}">Payment verification</a>
+          <a href="{{ url_for('access.admin') }}" {% if request.endpoint == 'access.admin' %}aria-current="page"{% endif %}>Admin management</a>
+          <a href="{{ url_for('shop_admin.index') }}" {% if request.blueprint == 'shop_admin' %}aria-current="page"{% endif %}>Shops</a>
+          <a href="{{ url_for('admin_management.staff_index') }}" {% if request.endpoint in ('admin_management.staff_index', 'admin_management.staff_assignment') %}aria-current="page"{% endif %}>Staff</a>
+          <a href="{{ url_for('admin_management.professors') }}" {% if request.endpoint in ('admin_management.professors', 'admin_management.new_professor', 'admin_management.edit_professor') %}aria-current="page"{% endif %}>Professors</a>
+          <a href="{{ url_for('admin_management.payment') }}" {% if request.endpoint == 'admin_management.payment' %}aria-current="page"{% endif %}>Payment settings</a>
+          <a href="{{ url_for('payment_verification.index') }}" {% if request.blueprint == 'payment_verification' %}aria-current="page"{% endif %}>Payment verification</a>
         {% endif %}
         <span class="nav-account" title="{{ current_user.name }}">{{ current_user.name }}</span>
         <form class="inline-form" method="post" action="{{ url_for('auth.logout') }}">

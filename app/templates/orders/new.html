@@ -15,7 +15,7 @@
     <form class="form-stack order-selection-form" method="post" action="{{ url_for('orders.new') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="review" value="1">
-      <section class="content-card flow-card">
+      <section class="content-card flow-card order-shop-section">
         <span class="flow-number" aria-hidden="true">1</span>
         <div class="field">
           <label for="shop_id">Printing shop</label>
@@ -46,22 +46,22 @@
                 <summary>Edit print settings for {{ file.original_filename }}</summary>
                 <div class="order-file-fields">
                   <div class="field">
-                    <label for="paper-size-{{ file.id }}">Paper size for {{ file.original_filename }}</label>
+                    <label for="paper-size-{{ file.id }}">Paper size<span class="sr-only"> for {{ file.original_filename }}</span></label>
                     <select id="paper-size-{{ file.id }}" name="paper_size_{{ file.id }}">
                       {% for size in paper_sizes %}<option value="{{ size.value }}" {% if size.value == (selected.paper_size if selected else saved.paper_size.value) %}selected{% endif %}>{{ size.label }}</option>{% endfor %}
                     </select>
                   </div>
                   <div class="field">
-                    <label for="color-mode-{{ file.id }}">Output for {{ file.original_filename }}</label>
+                    <label for="color-mode-{{ file.id }}">Output<span class="sr-only"> for {{ file.original_filename }}</span></label>
                     <select id="color-mode-{{ file.id }}" name="color_mode_{{ file.id }}">
                       {% for mode in color_modes %}<option value="{{ mode.value }}" {% if mode.value == (selected.color_mode if selected else saved.color_mode.value) %}selected{% endif %}>{{ mode.label }}</option>{% endfor %}
                     </select>
                   </div>
                   <div class="field">
-                    <label for="quantity-{{ file.id }}">Print count for {{ file.original_filename }}</label>
+                    <label for="quantity-{{ file.id }}">Print count<span class="sr-only"> for {{ file.original_filename }}</span></label>
                     <input id="quantity-{{ file.id }}" name="quantity_{{ file.id }}" type="number" min="1" max="{{ max_quantity }}" step="1" value="{{ selected.quantity if selected else saved.quantity }}">
                   </div>
-                  <label class="checkbox-field"><input type="checkbox" name="is_rush_{{ file.id }}" value="1" {% if (selected.is_rush if selected else saved.is_rush) %}checked{% endif %}> Rush printing for {{ file.original_filename }}</label>
+                  <label class="checkbox-field"><input type="checkbox" name="is_rush_{{ file.id }}" value="1" {% if (selected.is_rush if selected else saved.is_rush) %}checked{% endif %}> Rush printing<span class="sr-only"> for {{ file.original_filename }}</span></label>
                 </div>
               </details>
               <button class="button button-secondary order-file-remove" type="button" data-remove-file {% if file.id not in selected_file_ids %}hidden{% endif %}>Remove from order</button>

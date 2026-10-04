@@ -10,7 +10,7 @@
     <p class="page-lead">Changes affect future selections. Existing orders keep their stored recipient details.</p>
   </header>
 
-  <form class="account-form form-card" method="post" novalidate>
+  <form class="account-form form-card form-grid" method="post" novalidate>
     {{ form.hidden_tag() }}
     {% for field in [form.name, form.email, form.department, form.faculty, form.office, form.account_id] %}
       <div class="field">{{ field.label }} {{ field() }}

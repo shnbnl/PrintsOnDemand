@@ -1,22 +1,28 @@
-/* Native, same-origin page transitions for the public entry screens. */
+/* Native same-origin transitions. Links, forms and browser history stay native. */
 .site-header .brand {
   view-transition-name: entry-brand;
 }
 
 ::view-transition-old(root) {
-  animation: 150ms ease-in both entry-leave;
+  animation: var(--motion-fast, 120ms) ease-in both entry-leave;
 }
 
 ::view-transition-new(root) {
-  animation: 240ms cubic-bezier(0.2, 0.8, 0.2, 1) both entry-arrive;
+  animation: var(--motion-page, 220ms) var(--ease-out, ease-out) both entry-arrive;
 }
 
+::view-transition-group(entry-brand) { animation-duration: var(--motion-page, 220ms); }
+
 @keyframes entry-leave {
-  to { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 0; }
 }
 
 @keyframes entry-arrive {
-  from { opacity: 0; transform: translateY(10px); }
+  from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none; }
 }
 
