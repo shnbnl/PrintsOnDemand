@@ -54,7 +54,10 @@ def register():
         if existing:
             form.email.errors.append("Unable to create account with these details.")
         else:
-            user = User(name=form.name.data.strip(), email=email, role=UserRole(form.account_type.data))
+            user = User(
+                name=form.name.data.strip(), email=email, role=UserRole(form.account_type.data),
+                professor_department=(form.professor_department.data if form.account_type.data == "PROFESSOR" else None),
+            )
             user.set_password(form.password.data)
             db.session.add(user)
             try:
@@ -63,7 +66,10 @@ def register():
                 db.session.rollback()
                 form.email.errors.append("Unable to create account with these details.")
             else:
-                flash("Account created. Please log in. Professor delivery to yourself requires Blue and Silver to link your professor profile.", "success")
+                if user.role == UserRole.PROFESSOR:
+                    flash("Account created. Please log in. An active linked profile enables Deliver to Me; Blue and Silver approval is also needed before students can select you.", "success")
+                else:
+                    flash("Account created. Please log in.", "success")
                 return redirect(url_for("auth.login"))
 
     return render_template("auth/register.html", form=form)

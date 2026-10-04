@@ -16,7 +16,7 @@
         <fieldset class="choice-fieldset"><legend>{{ form.account_type.label.text }}</legend>
           <div class="choice-grid choice-grid-short">{% for option in form.account_type %}<label class="choice-card">{{ option() }}<span><strong>{{ option.label.text }}</strong></span></label>{% endfor %}</div>
           {% for error in form.account_type.errors %}<p class="field-error" role="alert">{{ error }}</p>{% endfor %}
-          <p class="hint">Professor accounts need their profile linked by Blue and Silver staff before Deliver to Me is available. Shop accounts are provisioned separately.</p>
+          <p class="hint">Professor accounts can save a student-delivery preference immediately. Blue and Silver must link an active managed profile for Deliver to Me and approve it before students can select you. Shop accounts are provisioned separately.</p>
         </fieldset>
         <div class="field">
           {{ form.name.label }}
@@ -27,6 +27,12 @@
           {{ form.email.label }}
           {{ form.email(autocomplete="email", placeholder="you@example.edu") }}
           {% for error in form.email.errors %}<p class="field-error" role="alert">{{ error }}</p>{% endfor %}
+        </div>
+        <div class="field professor-department-field" data-professor-department>
+          {{ form.professor_department.label }}
+          {{ form.professor_department(placeholder="e.g. Information Technology") }}
+          <p class="hint">Required for Professor accounts. Blue and Silver confirms your managed Faculty separately.</p>
+          {% for error in form.professor_department.errors %}<p class="field-error" role="alert">{{ error }}</p>{% endfor %}
         </div>
         <div class="field">
           {{ form.password.label }}

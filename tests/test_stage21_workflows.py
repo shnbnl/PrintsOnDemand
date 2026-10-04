@@ -19,7 +19,7 @@ def test_public_role_selection_and_invalid_role_rejection(client, test_app):
     assert b"Account Type" in page.data and b"Student" in page.data and b"Professor" in page.data
     assert register(client, account_type="STUDENT").status_code == 302
     assert register(client, account_type="PROFESSOR", name="Professor Name",
-                    email="professor@example.edu").status_code == 302
+                    email="professor@example.edu", professor_department="Computer Science").status_code == 302
     invalid = register(client, account_type="SHOP_STAFF", email="forged@example.edu")
     assert invalid.status_code == 200
     with test_app.app_context():
@@ -29,7 +29,8 @@ def test_public_role_selection_and_invalid_role_rejection(client, test_app):
     assert login(client, email="professor@example.edu").headers["Location"].endswith("/professor")
     assert client.get("/professor").status_code == 200
     assert client.get("/admin/professors").status_code == 403
-    assert client.get("/professor/settings").status_code == 403
+    pending = client.get("/professor/settings")
+    assert pending.status_code == 200 and b"has not linked" in pending.data
 
 
 def test_four_staff_accounts_are_provisioned_outside_public_registration(test_app):
@@ -61,7 +62,7 @@ def test_blue_staff_manage_faculty_and_link_professor_account(client, test_app):
             db.session.get(User, user_id).shop_id = shop_id
         db.session.commit()
     assert register(client, account_type="PROFESSOR", name="Juan Dela Cruz",
-                    email="juan@example.edu").status_code == 302
+                    email="juan@example.edu", professor_department="Information Technology").status_code == 302
     with test_app.app_context():
         professor_account = db.session.scalar(select(User).where(User.email == "juan@example.edu"))
         account_id = professor_account.id

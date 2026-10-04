@@ -4,12 +4,23 @@
   <header class="page-intro"><h1>Professor delivery setting</h1>
     <p class="page-lead">Choose whether students can select you for physical delivery of printed papers from Blue and Silver Bookstore.</p></header>
   <section class="content-card">
-    <h2>{{ profile.name }}</h2>
-    <p>{{ profile.department or 'Department not listed' }} · {{ profile.office or 'Office not listed' }}</p>
+    <h2>{{ current_user.name }}</h2>
+    {% if profile %}
+      <p>{{ profile.department or 'Department not listed' }} · {{ profile.office or 'Office not listed' }}</p>
+      {% if not profile.is_active or not profile.direct_send_approved or not profile.faculty %}
+        <p class="notice notice-info">Your profile is linked, but Blue and Silver must make it active and approved with a Faculty before students can select you.</p>
+      {% endif %}
+    {% else %}
+      <p class="notice notice-info">Your account is ready, but Blue and Silver has not linked your managed professor profile yet. You can save your department and delivery preference now. Students cannot select you, and Deliver to Me is unavailable until an active profile is linked.</p>
+    {% endif %}
     <form method="post">
       {{ form.hidden_tag() }}
+      <div class="field">{{ form.department.label }} {{ form.department(autocomplete="organization-title") }}
+        <p class="hint">Blue and Silver manages the department and Faculty in the professor directory shown to students.</p>
+        {% for error in form.department.errors %}<p class="field-error" role="alert">{{ error }}</p>{% endfor %}
+      </div>
       <div class="checkbox-field">{{ form.accepts_student_deliveries() }} {{ form.accepts_student_deliveries.label }}</div>
-      <p class="hint">Students can select you only when this is on and your profile is active and approved. Your own deliveries remain available when this is off.</p>
+      <p class="hint">This is your preference. Students can select you only when this is on and your managed profile is active, approved, and assigned a Faculty. Your own deliveries remain available when this is off.</p>
       {{ form.submit(class_="button button-primary") }}
     </form>
   </section>

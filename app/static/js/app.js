@@ -74,6 +74,21 @@ document.querySelectorAll('form[method="post"]:not(.inline-form)').forEach((form
   });
 });
 
+const professorDepartment = document.querySelector("[data-professor-department]");
+if (professorDepartment) {
+  const registrationForm = professorDepartment.closest("form");
+  const departmentInput = professorDepartment.querySelector("input");
+  const updateProfessorDepartment = () => {
+    const professorSelected = registrationForm.querySelector('input[name="account_type"][value="PROFESSOR"]:checked') !== null;
+    professorDepartment.hidden = !professorSelected;
+    departmentInput.required = professorSelected;
+  };
+  registrationForm.querySelectorAll('input[name="account_type"]').forEach((input) => {
+    input.addEventListener("change", updateProfessorDepartment);
+  });
+  updateProfessorDepartment();
+}
+
 window.addEventListener("pageshow", () => {
   document.querySelectorAll('form[aria-busy="true"]').forEach((form) => form.removeAttribute("aria-busy"));
   document.querySelectorAll(".submission-feedback").forEach((feedback) => feedback.remove());

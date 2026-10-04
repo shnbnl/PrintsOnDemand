@@ -77,7 +77,8 @@ def professor_editor(record=None):
         User.role == UserRole.PROFESSOR,
     ).order_by(User.name, User.id)).all()
     form.account_id.choices = [(0, "Unlinked")] + [
-        (user.id, f"{user.name} ({user.email})") for user in accounts
+        (user.id, f"{user.name} ({user.email}) — {user.professor_department or 'Department not supplied'}")
+        for user in accounts
         if user.professor_id is None or (record is not None and user.professor_id == record.id)
     ]
     if form.validate_on_submit():

@@ -55,6 +55,10 @@ class User(UserMixin, db.Model):
         nullable=True,
     )
     professor: Mapped[Professor | None] = relationship(back_populates="account")
+    professor_department: Mapped[str | None] = mapped_column(db.String(120), nullable=True)
+    student_delivery_preference: Mapped[bool] = mapped_column(
+        db.Boolean, nullable=False, default=False, server_default=db.false()
+    )
     uploaded_files: Mapped[list[UploadedFile]] = relationship(back_populates="user")
     orders: Mapped[list[Order]] = relationship(back_populates="user")
 
