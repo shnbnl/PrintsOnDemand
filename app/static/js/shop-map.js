@@ -16,10 +16,72 @@
   const workspace = canvas.closest("[data-shop-workspace]");
   const picker = document.querySelector("[data-workspace-picker]");
   const preview = document.querySelector("[data-pin-preview]");
+  const workspacePanel = workspace?.querySelector('.workspace-panel');
   const markers = new Map();
   let map;
   let userMarker;
   let loadTimer;
+  let previewLeaveTimer;
+  let previewFadeTimer;
+
+  function hidePreview(immediate = false) {
+    if (!preview) return;
+    clearTimeout(previewLeaveTimer);
+    clearTimeout(previewFadeTimer);
+    const finish = () => {
+      preview.hidden = true;
+      preview.classList.remove('is-leaving');
+      workspacePanel.classList.remove('is-previewing');
+    };
+    if (immediate || window.matchMedia('(prefers-reduced-motion: reduce)').matches) finish();
+    else {
+      preview.classList.add('is-leaving');
+      previewFadeTimer = window.setTimeout(finish, 180);
+    }
+  }
+
+  function showPreview(shop) {
+    if (!preview || !window.matchMedia('(hover: hover)').matches) return;
+    clearTimeout(previewLeaveTimer);
+    clearTimeout(previewFadeTimer);
+    preview.classList.remove('is-leaving');
+    const current = workspace.querySelector('[data-current-shop]')?.dataset.currentShop;
+    if (String(current) === String(shop.id)) {
+      hidePreview(true);
+      return;
+    }
+    const avatar = document.createElement('span');
+    avatar.className = 'shop-avatar';
+    avatar.setAttribute('aria-hidden', 'true');
+    if (shop.photo_url) {
+      const photo = document.createElement('img');
+      photo.src = shop.photo_url;
+      photo.alt = '';
+      photo.addEventListener('error', () => { avatar.textContent = 'P'; });
+      avatar.append(photo);
+    } else avatar.textContent = 'P';
+    const title = document.createElement('h2');
+    title.textContent = shop.name;
+    const hours = document.createElement('p');
+    hours.className = 'hint';
+    hours.textContent = shop.hours;
+    const heading = document.createElement('div');
+    heading.className = 'map-panel-heading';
+    const details = document.createElement('div');
+    details.append(title, hours);
+    heading.append(avatar, details);
+    const services = document.createElement('ul');
+    services.className = 'chip-list';
+    services.setAttribute('aria-label', 'Available services');
+    for (const service of shop.services) {
+      const badge = document.createElement('li');
+      badge.textContent = service;
+      services.append(badge);
+    }
+    preview.replaceChildren(heading, services);
+    preview.hidden = false;
+    workspacePanel.classList.add('is-previewing');
+  }
 
   function selectShop(id, moveMap = false, revealPanel = false) {
     const shop = shops.find((item) => String(item.id) === String(id));
@@ -119,19 +181,20 @@
         });
         marker.append(pin);
         marker.addEventListener("gmp-click", () => {
+          hidePreview(true);
+          if (workspace && workspace.querySelector('[data-workspace-content]')?.getAttribute('aria-busy') !== 'true'
+              && String(workspace.querySelector('[data-current-shop]')?.dataset.currentShop) === String(shop.id)) return;
           selectShop(shop.id, false, true);
           if (workspace) {
-            preview.hidden = true;
             document.dispatchEvent(new CustomEvent("pod:shop-selected", { detail: { id: shop.id } }));
           }
         });
         if (workspace) {
-          pin.addEventListener("pointerenter", () => {
-            if (!window.matchMedia("(hover: hover)").matches) return;
-            preview.textContent = `${shop.name} · ${shop.hours}`;
-            preview.hidden = false;
+          pin.addEventListener('pointerenter', () => showPreview(shop));
+          pin.addEventListener('pointerleave', () => {
+            clearTimeout(previewLeaveTimer);
+            previewLeaveTimer = window.setTimeout(hidePreview, 90);
           });
-          pin.addEventListener("pointerleave", () => { preview.hidden = true; });
         }
         markers.set(shop.id, { pin, marker });
       });

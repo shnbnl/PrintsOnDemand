@@ -415,8 +415,12 @@ tbody th { font-weight: 800; }
 .map-shop-choice small { color: var(--warning); }
 .map-empty { background: white; }
 .map-pin, .map-user-pin { display: grid; place-items: center; width: 2.5rem; height: 2.5rem; border: 3px solid white; border-radius: 50%; color: white; background: var(--navy); box-shadow: 0 2px 8px rgb(0 0 0 / 35%); font-size: 0.85rem; font-weight: 900; }
+.map-pin { width: 2.75rem; height: 2.75rem; border-width: 2px; transform-origin: center bottom; transition: transform 180ms ease, box-shadow 180ms ease; }
+.map-pin:hover { transform: scale(1.08); box-shadow: 0 4px 12px rgb(0 0 0 / 34%); }
 .map-pin img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
-.map-pin.is-selected { outline: 3px solid var(--cobalt); outline-offset: 2px; background: var(--cobalt); }
+.map-pin.is-selected { outline: 3px solid var(--cobalt); outline-offset: 2px; background: var(--cobalt); transform: scale(1.03); }
+.map-pin.is-selected:hover { transform: scale(1.10); }
+.map-pin:focus-visible, .map-canvas :focus-visible .map-pin { outline: 3px solid var(--cobalt); outline-offset: 3px; }
 .map-user-pin { width: 2.8rem; height: 2.8rem; background: var(--success); font-size: 0.72rem; }
 
 /* Multi-file checkout uses the existing card and form language. */
@@ -704,7 +708,8 @@ form[aria-busy="true"] :is(button[type="submit"], input[type="submit"]) { box-sh
 .workspace-map-viewport .map-canvas { height: 100%; min-height: 0; }
 .workspace-panel { position: absolute; z-index: 3; top: 1rem; right: 1rem; bottom: 1rem; width: min(26rem, 42%); display: flex; flex-direction: column; min-width: 0; border: 1px solid var(--border); border-radius: 1.25rem; background: var(--surface); box-shadow: var(--shadow-raised); overflow: hidden; }
 .workspace-toggle { flex: none; align-self: end; min-height: 44px; padding: .4rem .9rem; border: 0; background: transparent; color: var(--navy); font-weight: 700; cursor: pointer; }
-.workspace-panel [data-workspace-content] { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.workspace-panel [data-workspace-content] { display: flex; flex-direction: column; flex: 1; min-height: 0; transition: opacity 210ms ease, transform 210ms ease; }
+.workspace-panel [data-workspace-content].is-switching { opacity: 0; transform: translateY(-6px); }
 .workspace-scroll { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
 .workspace-panel.is-minimized { top: auto; bottom: 1rem; }
 .workspace-panel.is-minimized [data-workspace-content], .workspace-panel.is-minimized [data-workspace-error] { display: none; }
@@ -748,7 +753,17 @@ form[aria-busy="true"] :is(button[type="submit"], input[type="submit"]) { box-sh
 .workspace-panel .notice { margin: .25rem; padding: .5rem; font-size: .8rem; }
 .workspace-shop-picker { padding: .5rem 1rem; }
 .workspace-shop-picker select { width: 100%; }
-.workspace-pin-preview { position: absolute; top: 1rem; left: 1rem; max-width: 42%; z-index: 2; padding: .6rem; background: var(--surface); border: 1px solid var(--border); border-radius: .7rem; pointer-events: none; }
+.workspace-pin-preview { position: absolute; z-index: 4; top: 2.75rem; left: 0; right: 0; min-height: 6rem; padding: .8rem 1rem; background: var(--surface); border-bottom: 1px solid var(--border); pointer-events: none; opacity: 1; transform: translateY(0); transition: opacity 180ms ease, transform 180ms ease; }
+.workspace-pin-preview.is-leaving { opacity: 0; transform: translateY(6px); }
+.workspace-pin-preview[hidden] { display: none; }
+.workspace-pin-preview .map-panel-heading { margin: 0; }
+.workspace-pin-preview h2 { margin: 0; font-size: 1.05rem; }
+.workspace-pin-preview .shop-avatar { width: 2.5rem; height: 2.5rem; flex: none; }
+.workspace-pin-preview .hint { margin: .2rem 0; }
+.workspace-pin-preview .chip-list { gap: .25rem; margin: .3rem 0 0; }
+.workspace-pin-preview .chip-list li { font-size: .7rem; padding: .2rem .4rem; }
+.workspace-panel.is-previewing .workspace-shop-summary { visibility: hidden; }
+.workspace-panel.is-minimized.is-previewing .workspace-pin-preview { position: static; }
 .workspace-map-viewport .map-message { right: auto; left: 1rem; width: min(24rem, 42%); }
 @media (max-width: 900px) {
   .workspace-map-viewport { height: max(56rem, 95svh); }
@@ -756,6 +771,9 @@ form[aria-busy="true"] :is(button[type="submit"], input[type="submit"]) { box-sh
   .workspace-panel.is-minimized { height: auto; bottom: 1.5rem; }
   .workspace-shop-summary, .workspace-panel .checkout-customize { padding: .6rem .75rem; }
   .workspace-total { padding: .6rem .75rem; }
-  .workspace-pin-preview { max-width: calc(100% - 2rem); }
+  .workspace-pin-preview { padding: .6rem .75rem; }
   .workspace-map-viewport .map-message { width: calc(100% - 2rem); top: 1rem; bottom: auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .map-pin, .workspace-pin-preview, .workspace-panel [data-workspace-content] { transition: none !important; }
 }

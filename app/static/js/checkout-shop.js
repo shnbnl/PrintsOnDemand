@@ -56,6 +56,7 @@
   }
   function selectShop(id) {
     if (![...select.options].some((option) => option.value === String(id))) return;
+    if (!pendingSelections && content.querySelector('[data-current-shop]')?.dataset.currentShop === String(id)) return;
     expandPanel();
     clearTimeout(timer);
     const version = ++revision;
@@ -70,9 +71,15 @@
       try {
         const result = await send(data);
         if (version !== revision) return;
+        if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          content.classList.add('is-switching');
+          await new Promise(resolve => setTimeout(resolve, 180));
+          if (version !== revision) return;
+        }
         content.innerHTML = result.html;
         activateFile(activeFile);
         expandPanel();
+        requestAnimationFrame(() => content.classList.remove('is-switching'));
         document.dispatchEvent(new CustomEvent("pod:shop-highlight", { detail: { id: result.shop_id } }));
         report("");
       } catch (issue) {
@@ -84,6 +91,7 @@
       } finally {
         pendingSelections -= 1;
         if (!pendingSelections) {
+          if (version !== revision) content.classList.remove('is-switching');
           content.removeAttribute("aria-busy");
           content.inert = false;
           form.querySelector("[data-workspace-proceed]").disabled = !select.value;
