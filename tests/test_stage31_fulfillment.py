@@ -50,7 +50,8 @@ def test_student_professor_option_only_at_blue_and_managed_faculty_is_immutable(
         file_id, destination="PROFESSOR", professor_id=str(eligible),
     )).status_code == 302
     assert post(client, "/checkout/payment", {"payment_method": "ONSITE"}).status_code == 400
-    assert post(client, "/checkout/payment", {"payment_method": "ONLINE"}).status_code == 302
+    assert post(client, "/checkout/payment", {"payment_method": "ONLINE"}).status_code == 400
+    assert post(client, "/checkout/payment", {"payment_method": "ONLINE", "payment_reference": "STUDENT-1234"}).status_code == 302
     assert post(client, "/checkout/place").status_code == 302
     with test_app.app_context():
         order = db.session.scalar(select(Order))
@@ -102,7 +103,8 @@ def test_professor_pickup_and_faculty_destination_use_managed_profile(client, te
     )).status_code == 400
     assert post(client, "/checkout/configure", configure(file_id, destination="PROFESSOR")).status_code == 302
     assert post(client, "/checkout/payment", {"payment_method": "ONSITE"}).status_code == 400
-    assert post(client, "/checkout/payment", {"payment_method": "ONLINE"}).status_code == 302
+    assert post(client, "/checkout/payment", {"payment_method": "ONLINE"}).status_code == 400
+    assert post(client, "/checkout/payment", {"payment_method": "ONLINE", "payment_reference": "FACULTY-1234"}).status_code == 302
     assert post(client, "/checkout/place").status_code == 302
     with test_app.app_context():
         order = db.session.scalar(select(Order))

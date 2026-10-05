@@ -351,10 +351,11 @@ def configure():
 def render_payment(quote, fulfillment, *, error=None, status=200):
     online_details = online_payment_details(quote.shop)
     cash_available = quote.shop.cash_enabled and fulfillment.destination != OrderDestination.PROFESSOR
+    chosen = request.form.get("payment_method") if request.method == "POST" else draft().get("payment_method")
+    reference = request.form.get("payment_reference", "") if request.method == "POST" else draft().get("payment_reference", "")
     return render_template(
         "checkout/payment.html", quote=quote, fulfillment=fulfillment,
-        error=error, chosen=draft().get("payment_method"),
-        reference=draft().get("payment_reference", ""),
+        error=error, chosen=chosen, reference=reference,
         online_details=online_details, cash_available=cash_available,
         no_method_available=not cash_available and online_details is None,
         step=4,

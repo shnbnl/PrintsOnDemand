@@ -45,14 +45,14 @@ def test_professor_settings_show_only_information_and_delivery_control(client, t
     assert register(client, account_type="PROFESSOR", name="Maria Santos",
                     email="maria.santos@example.edu", professor_department="CCIS").status_code == 302
     assert login(client, email="maria.santos@example.edu").status_code == 302
-    page = client.get("/professor/settings")
+    page = client.get("/account")
     assert page.status_code == 200
     assert b"Maria Santos" in page.data and b"CCIS" in page.data
     assert b"Your account is ready" not in page.data
     assert b"has not linked" not in page.data
     assert b'id="department"' not in page.data
     assert b'role="switch"' in page.data
-    assert client.post("/professor/settings", data={
+    assert client.post("/account/professor-preference", data={
         "csrf_token": csrf_token(page), "accepts_student_deliveries": "y",
     }).status_code == 302
     with test_app.app_context():
@@ -71,10 +71,10 @@ def test_professor_settings_show_only_information_and_delivery_control(client, t
             faculty=profile.faculty, account_id=account.id,
             is_active=True, direct_send_approved=True, accepts_student_deliveries=False,
         )
-    linked = client.get("/professor/settings")
+    linked = client.get("/account")
     assert linked.status_code == 200 and b"Your profile is linked" not in linked.data
     assert b'id="department"' not in linked.data
-    assert client.post("/professor/settings", data={
+    assert client.post("/account/professor-preference", data={
         "csrf_token": csrf_token(linked), "accepts_student_deliveries": "y",
         "department": "GE",  # The account's saved department cannot be changed here.
     }).status_code == 302
@@ -88,24 +88,24 @@ def test_professor_settings_show_only_information_and_delivery_control(client, t
 def test_existing_account_without_department_can_select_one_once(client, test_app):
     account_id = student(test_app, "legacy@example.edu", role=UserRole.PROFESSOR)
     sign_in(client, account_id)
-    page = client.get("/professor/settings")
+    page = client.get("/account")
     assert page.status_code == 200 and b'id="department"' in page.data
-    assert client.post("/professor/settings", data={
+    assert client.post("/account/professor-preference", data={
         "csrf_token": csrf_token(page), "accepts_student_deliveries": "y",
-    }).status_code == 200
-    invalid = client.post("/professor/settings", data={
-        "csrf_token": csrf_token(client.get("/professor/settings")),
+    }).status_code == 400
+    invalid = client.post("/account/professor-preference", data={
+        "csrf_token": csrf_token(client.get("/account")),
         "department": "Computer Science", "accepts_student_deliveries": "y",
     })
-    assert invalid.status_code == 200
+    assert invalid.status_code == 400
     with test_app.app_context():
         assert db.session.get(User, account_id).professor_department is None
         assert db.session.get(User, account_id).student_delivery_preference is False
-    assert client.post("/professor/settings", data={
-        "csrf_token": csrf_token(client.get("/professor/settings")),
+    assert client.post("/account/professor-preference", data={
+        "csrf_token": csrf_token(client.get("/account")),
         "department": "MITL", "accepts_student_deliveries": "y",
     }).status_code == 302
-    saved = client.get("/professor/settings")
+    saved = client.get("/account")
     assert b"MITL" in saved.data and b'id="department"' not in saved.data
     with test_app.app_context():
         assert db.session.get(User, account_id).student_delivery_preference is True
@@ -119,10 +119,10 @@ def test_existing_managed_department_is_displayed_when_account_has_none(client, 
         db.session.get(User, account_id).professor_verification_status = ProfessorVerificationStatus.VERIFIED
         db.session.commit()
     sign_in(client, account_id)
-    page = client.get("/professor/settings")
+    page = client.get("/account")
     assert b"Computer Engineering" in page.data
     assert b'id="department"' not in page.data
-    assert client.post("/professor/settings", data={
+    assert client.post("/account/professor-preference", data={
         "csrf_token": csrf_token(page), "accepts_student_deliveries": "y",
     }).status_code == 302
     with test_app.app_context():
@@ -133,3 +133,6 @@ def test_student_cannot_open_professor_setting(client, test_app):
     student_id = student(test_app)
     sign_in(client, student_id)
     assert client.get("/professor/settings").status_code == 403
+    assert client.post("/account/professor-preference", data={
+        "csrf_token": csrf_token(client.get("/account")),
+    }).status_code == 403

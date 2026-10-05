@@ -52,7 +52,7 @@ def test_professor_self_delivery_and_setting_do_not_expose_dropdown(client, test
     assert b"Deliver to Faculty" in selection.data
     assert b'id="professor_id"' not in selection.data
     assert b"Engineering Building 204" in selection.data
-    assert client.get("/professor/settings").status_code == 200
+    assert client.get("/professor/settings").headers["Location"].endswith("/account")
     assert client.get("/orders/new", query_string={
         "file_id": file_id, "shop_id": other, "destination": "PROFESSOR"
     }).status_code == 400
@@ -97,16 +97,16 @@ def test_professor_can_toggle_student_delivery_consent(client, test_app):
         db.session.get(User, account_id).professor_verification_status = ProfessorVerificationStatus.VERIFIED
         db.session.commit()
     sign_in(client, account_id)
-    page = client.get("/professor/settings")
+    page = client.get("/account")
     assert page.status_code == 200
-    assert client.post("/professor/settings", data={"accepts_student_deliveries": "y"}).status_code == 400
-    assert client.post("/professor/settings", data={
+    assert client.post("/account/professor-preference", data={"accepts_student_deliveries": "y"}).status_code == 400
+    assert client.post("/account/professor-preference", data={
         "csrf_token": token(page), "accepts_student_deliveries": "y"
     }).status_code == 302
     with test_app.app_context():
         assert db.session.get(Professor, profile_id).accepts_student_deliveries is True
-    assert client.post("/professor/settings", data={
-        "csrf_token": token(client.get("/professor/settings"))
+    assert client.post("/account/professor-preference", data={
+        "csrf_token": token(client.get("/account"))
     }).status_code == 302
     with test_app.app_context():
         assert db.session.get(Professor, profile_id).accepts_student_deliveries is False

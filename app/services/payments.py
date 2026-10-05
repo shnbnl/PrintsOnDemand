@@ -54,10 +54,12 @@ def owned_order(order_reference: str, user_id: int) -> Order:
 
 def normalize_payment_reference(reference: str) -> str:
     if isinstance(reference, str) and len(reference) > 120:
-        raise PaymentError("Enter a payment reference of 4–120 permitted characters.")
+        raise PaymentError("Payment reference number is too long.")
     cleaned = " ".join(reference.split()) if isinstance(reference, str) else ""
+    if not cleaned:
+        raise PaymentError("Enter your payment reference number.")
     if not REFERENCE_PATTERN.fullmatch(cleaned):
-        raise PaymentError("Enter a payment reference of 4–120 permitted characters.")
+        raise PaymentError("Please enter a valid payment reference number.")
     return cleaned
 
 
@@ -76,7 +78,11 @@ def validate_checkout_payment(*, shop: PrintingShop, destination: OrderDestinati
         raise PaymentError("Onsite cash payment is unavailable for this shop.")
     if selected == PaymentMethod.ONSITE and reference.strip():
         raise PaymentError("A payment reference is only accepted for online payment.")
-    return selected, normalize_payment_reference(reference) if reference.strip() else None
+    if selected == PaymentMethod.ONLINE:
+        if not reference:
+            raise PaymentError("Payment reference number is required for online payment.")
+        return selected, normalize_payment_reference(reference)
+    return selected, None
 
 
 def select_payment_method(*, order_reference: str, user_id: int, method: str) -> Payment:

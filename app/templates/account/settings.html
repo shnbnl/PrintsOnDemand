@@ -6,11 +6,31 @@
     <h1>Account settings</h1>
     <p class="page-lead">Manage your Prints On Demand account.</p>
   </header>
-  <section class="content-card account-settings-card">
+  <section class="content-card account-settings-card" id="account-identity">
+    <p class="page-eyebrow">Account</p>
     <h2>{{ current_user.name }}</h2>
     <p>{{ current_user.email }}</p>
-    <p class="hint">{{ 'Professor' if current_user.role.value == 'PROFESSOR' else 'Student' }} account</p>
+    <p class="hint">{{ 'Professor' if current_user.role.value == 'PROFESSOR' else 'Student' }}</p>
+    {% if current_user.role.value == 'PROFESSOR' %}
+      <dl class="detail-list account-professor-details">
+        <div class="detail-row"><dt>Department</dt><dd>{{ department or 'Not provided' }}</dd></div>
+        <div class="detail-row"><dt>Verification</dt><dd>{{ current_user.professor_verification_status.value.title() }}</dd></div>
+        {% if current_user.professor and current_user.professor.faculty %}<div class="detail-row"><dt>Managed Faculty</dt><dd>{{ current_user.professor.faculty }}</dd></div>{% endif %}
+      </dl>
+    {% endif %}
   </section>
+  {% if current_user.role.value == 'PROFESSOR' %}
+    <section class="content-card account-settings-card" aria-labelledby="student-delivery-heading">
+      <h2 id="student-delivery-heading">Student print deliveries</h2>
+      <p class="hint">Choose whether Blue and Silver can list you as a recipient for student print deliveries. Availability also depends on verification and your managed profile.</p>
+      <form class="form-stack" method="post" action="{{ url_for('account.professor_preference') }}" novalidate>
+        {{ preference_form.hidden_tag() }}
+        {% if needs_department %}<div class="field">{{ preference_form.department.label }} {{ preference_form.department() }}{% for error in preference_form.department.errors %}<p class="field-error" role="alert">{{ error }}</p>{% endfor %}</div>{% endif %}
+        <div class="checkbox-field">{{ preference_form.accepts_student_deliveries(role='switch') }} {{ preference_form.accepts_student_deliveries.label }}</div>
+        {{ preference_form.submit(class_='button button-secondary') }}
+      </form>
+    </section>
+  {% endif %}
   <section class="content-card danger-zone" aria-labelledby="delete-account-heading">
     <p class="page-eyebrow">Permanent action</p>
     <h2 id="delete-account-heading">Delete Account</h2>

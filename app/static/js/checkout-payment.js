@@ -8,6 +8,8 @@
     const online = methods.find((method) => method.checked)?.value === 'ONLINE';
     onlinePanel.hidden = !online;
     reference.disabled = !online;
+    reference.required = online;
+    reference.setAttribute('aria-required', String(online));
   }
   methods.forEach((method) => method.addEventListener('change', update));
   update();

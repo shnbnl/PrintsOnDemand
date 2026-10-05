@@ -70,6 +70,12 @@ small, .hint, .muted { color: var(--muted); }
 .desktop-nav > a, .desktop-nav .nav-account { display: inline-flex; align-items: center; min-height: 2.6rem; padding: 0.4rem 0.55rem; color: white; text-decoration: none; border-radius: 0.55rem; font-size: 0.91rem; font-weight: 650; }
 .desktop-nav > a:hover, .desktop-nav > a:focus-visible { background: rgb(255 255 255 / 13%); }
 .nav-account { max-width: 11rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: 0.78; }
+.nav-identity { display: flex; align-items: center; gap: .55rem; min-width: 0; padding: .3rem .45rem; border: 1px solid rgb(255 255 255 / 30%); border-radius: .85rem; }
+.nav-identity-name { display: grid; min-width: 0; max-width: 10rem; overflow-wrap: anywhere; font-size: .84rem; font-weight: 750; line-height: 1.2; }
+.nav-identity-name small { color: #cfdef1; font-size: .71rem; font-weight: 550; }
+.nav-identity-action { display: inline-flex; align-items: center; justify-content: center; min-height: 2rem; padding: .28rem .7rem; border-radius: 99px; color: var(--navy); background: white; text-decoration: none; font-size: .8rem; font-weight: 800; }
+.nav-identity-action:hover, .nav-identity-action:focus-visible { color: var(--navy) !important; background: #f7e6a8; }
+.nav-identity-action[aria-current="page"] { background: #f7e6a8; }
 .inline-form { margin: 0; }
 .nav-logout, .auth-back { min-height: 2.6rem; padding: 0.42rem 0.85rem; border: 1px solid rgb(255 255 255 / 50%); border-radius: 99px; color: white; background: transparent; box-shadow: none; font-size: 0.9rem; font-weight: 700; }
 .auth-back { display: inline-flex; align-items: center; justify-content: center; width: 2.75rem; height: 2.75rem; padding: 0; text-decoration: none; }
@@ -84,6 +90,11 @@ small, .hint, .muted { color: var(--muted); }
 .mobile-nav nav a, .mobile-nav nav .nav-account { display: block; padding: 0.65rem 0.8rem; border-radius: 0.6rem; color: var(--navy); text-decoration: none; font-weight: 700; }
 .mobile-nav nav a:hover { background: var(--cream); }
 .mobile-nav nav .nav-account { max-width: none; padding-top: 0.8rem; border-top: 1px solid var(--border); color: var(--muted); font-size: 0.9rem; white-space: normal; overflow-wrap: anywhere; }
+.mobile-nav .nav-identity { justify-content: space-between; padding: .65rem .8rem; border-color: var(--border); }
+.mobile-nav .nav-identity-name { max-width: 11rem; color: var(--navy); }
+.mobile-nav .nav-identity-name small { color: var(--muted); }
+.mobile-nav .nav-identity-action { border: 1px solid var(--navy); color: var(--navy); }
+.mobile-nav nav .nav-identity-action { display: inline-flex; flex: none; padding: .35rem .75rem; color: var(--navy); }
 .mobile-nav .nav-logout { width: 100%; border-color: var(--border); color: var(--navy); text-align: left; }
 
 /* Page framing and shared cards. */

@@ -29,8 +29,8 @@ def test_public_role_selection_and_invalid_role_rejection(client, test_app):
     assert login(client, email="professor@example.edu").headers["Location"].endswith("/professor")
     assert client.get("/professor").status_code == 200
     assert client.get("/admin/professors").status_code == 403
-    pending = client.get("/professor/settings")
-    assert pending.status_code == 200 and b"Professor information" in pending.data
+    pending = client.get("/account")
+    assert pending.status_code == 200 and b"Verification" in pending.data
 
 
 def test_four_staff_accounts_are_provisioned_outside_public_registration(test_app):

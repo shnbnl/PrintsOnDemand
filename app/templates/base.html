@@ -19,13 +19,10 @@
           <a href="{{ url_for('shops.index') }}" {% if request.blueprint == 'shops' %}aria-current="page"{% endif %}>Printing Shops</a>
           <a href="{{ url_for('checkout.upload') }}" {% if request.blueprint == 'checkout' %}aria-current="page"{% endif %}>Start Order</a>
           <a href="{{ url_for('orders.index') }}" {% if request.blueprint == 'orders' %}aria-current="page"{% endif %}>Order History</a>
-          <a href="{{ url_for('account.settings') }}" {% if request.blueprint == 'account' %}aria-current="page"{% endif %}>Account</a>
         {% elif current_user.role.value == 'PROFESSOR' %}
           <a href="{{ url_for('shops.index') }}" {% if request.blueprint == 'shops' %}aria-current="page"{% endif %}>Printing Shops</a>
           <a href="{{ url_for('checkout.upload') }}" {% if request.blueprint == 'checkout' %}aria-current="page"{% endif %}>Start Order</a>
           <a href="{{ url_for('orders.index') }}" {% if request.blueprint == 'orders' %}aria-current="page"{% endif %}>Order History</a>
-          <a href="{{ url_for('professor_settings.settings') }}" {% if request.blueprint == 'professor_settings' %}aria-current="page"{% endif %}>Delivery setting</a>
-          <a href="{{ url_for('account.settings') }}" {% if request.blueprint == 'account' %}aria-current="page"{% endif %}>Account</a>
         {% elif current_user.role.value == 'SHOP_STAFF' %}
           <a href="{{ url_for('access.shop') }}" {% if request.endpoint == 'access.shop' %}aria-current="page"{% endif %}>Assigned Shop</a>
           {% if current_user.shop %}<a href="{{ url_for('shop_staff.index') }}" {% if request.blueprint == 'shop_staff' %}aria-current="page"{% endif %}>Edit Shop</a>{% endif %}
@@ -39,7 +36,12 @@
           <a href="{{ url_for('admin_management.payment') }}" {% if request.endpoint == 'admin_management.payment' %}aria-current="page"{% endif %}>Payment settings</a>
           <a href="{{ url_for('payment_verification.index') }}" {% if request.blueprint == 'payment_verification' %}aria-current="page"{% endif %}>Payment verification</a>
         {% endif %}
-        <span class="nav-account" title="{{ current_user.name }}">{{ current_user.name }}</span>
+        {% if current_user.role.value in ('STUDENT', 'PROFESSOR') %}
+          <div class="nav-identity" aria-label="{{ current_user.role.value.title() }} account">
+            <span class="nav-identity-name" title="{{ current_user.name }}">{{ current_user.name }}<small>{{ current_user.role.value.title() }}</small></span>
+            <a class="nav-identity-action" href="{{ url_for('account.settings') }}" {% if request.blueprint == 'account' %}aria-current="page"{% endif %}>Account</a>
+          </div>
+        {% else %}<span class="nav-account" title="{{ current_user.name }}">{{ current_user.name }}</span>{% endif %}
         <form class="inline-form" method="post" action="{{ url_for('auth.logout') }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button class="nav-logout" type="submit">Log out</button>

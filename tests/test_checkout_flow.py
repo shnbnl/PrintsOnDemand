@@ -3,6 +3,8 @@
 from decimal import Decimal
 from io import BytesIO
 
+import pytest
+
 from sqlalchemy import select
 
 from app.extensions import db
@@ -95,6 +97,74 @@ def test_student_online_reference_waits_for_verification(client, test_app):
         assert payment.payment_reference == "ABC-1234"
 
 
+@pytest.mark.parametrize("professor", [False, True])
+def test_online_checkout_requires_reference_and_keeps_payment_unverified(client, test_app, professor):
+    owner, shop_id, file_id = setup(client, test_app, professor=professor, online=True)
+    assert start(client, shop_id, file_id).status_code == 302
+    page = client.get("/checkout/payment")
+    assert b"Payment Reference Number" in page.data
+    assert b"optional before placing" not in page.data
+    for reference, message in (
+        (None, b"Payment reference number is required for online payment."),
+        ("   ", b"Enter your payment reference number."),
+        ("A" * 121, b"Payment reference number is too long."),
+        ("bad<script>", b"Please enter a valid payment reference number."),
+    ):
+        payload = {"payment_method": "ONLINE"}
+        if reference is not None:
+            payload["payment_reference"] = reference
+        rejected = post(client, "/checkout/payment", payload)
+        assert rejected.status_code == 400
+        assert message in rejected.data
+        assert b'data-online-payment' in rejected.data
+        assert client.get("/checkout/review").headers["Location"].endswith("/checkout/payment")
+    accepted = post(client, "/checkout/payment", {
+        "payment_method": "ONLINE", "payment_reference": "  ABC  1234  ",
+        "amount": "0.01", "payment_status": "PAID", "shop_id": "99999",
+    })
+    assert accepted.status_code == 302
+    assert b"ABC 1234" in client.get("/checkout/review").data
+    assert post(client, "/checkout/place", {"amount": "0.01", "payment_status": "PAID"}).status_code == 302
+    with test_app.app_context():
+        order = db.session.scalar(select(Order))
+        assert order.user_id == owner and order.shop_id == shop_id
+        assert order.payment.payment_method == PaymentMethod.ONLINE
+        assert order.payment.payment_reference == "ABC 1234"
+        assert order.payment.payment_status == PaymentStatus.SUBMITTED
+        assert order.payment.amount == order.total
+
+
+def test_switching_online_to_cash_discards_checkout_reference(client, test_app):
+    _, shop_id, file_id = setup(client, test_app, online=True)
+    assert start(client, shop_id, file_id).status_code == 302
+    assert post(client, "/checkout/payment", {
+        "payment_method": "ONLINE", "payment_reference": "ONLINE-1234",
+    }).status_code == 302
+    assert post(client, "/checkout/payment", {"payment_method": "ONSITE"}).status_code == 302
+    assert b"ONLINE-1234" not in client.get("/checkout/review").data
+    assert post(client, "/checkout/place").status_code == 302
+    with test_app.app_context():
+        payment = db.session.scalar(select(Order)).payment
+        assert payment.payment_method == PaymentMethod.ONSITE
+        assert payment.payment_reference is None
+        assert payment.payment_status == PaymentStatus.PENDING
+
+
+def test_place_rechecks_reference_in_session(client, test_app):
+    _, shop_id, file_id = setup(client, test_app, online=True)
+    assert start(client, shop_id, file_id).status_code == 302
+    assert post(client, "/checkout/payment", {
+        "payment_method": "ONLINE", "payment_reference": "VALID-1234",
+    }).status_code == 302
+    with client.session_transaction() as state:
+        saved = state["checkout_draft"].copy()
+        saved["payment_reference"] = "   "
+        state["checkout_draft"] = saved
+    assert post(client, "/checkout/place").status_code == 302
+    with test_app.app_context():
+        assert db.session.scalar(select(Order)) is None
+
+
 def test_invalid_shop_file_configuration_payment_and_csrf(client, test_app):
     owner, shop_id, file_id = setup(client, test_app)
     foreign_id = file(test_app, student(test_app, "foreign@school.edu"), configured=False)
@@ -156,7 +226,8 @@ def test_professor_self_delivery_requires_online(client, test_app):
     offer_professor_service(test_app, shop_id)
     assert start(client, shop_id, file_id, destination={"destination": "PROFESSOR"}).status_code == 302
     assert post(client, "/checkout/payment", {"payment_method": "ONSITE"}).status_code == 400
-    assert post(client, "/checkout/payment", {"payment_method": "ONLINE"}).status_code == 302
+    assert post(client, "/checkout/payment", {"payment_method": "ONLINE"}).status_code == 400
+    assert post(client, "/checkout/payment", {"payment_method": "ONLINE", "payment_reference": "FACULTY-1234"}).status_code == 302
     assert post(client, "/checkout/place").status_code == 302
     with test_app.app_context():
         order = db.session.scalar(select(Order))
@@ -172,7 +243,8 @@ def test_student_professor_delivery_and_professor_normal_order(client, test_app)
         "destination": "PROFESSOR", "professor_id": str(professor_id),
     }).status_code == 302
     assert post(client, "/checkout/payment", {"payment_method": "ONSITE"}).status_code == 400
-    assert post(client, "/checkout/payment", {"payment_method": "ONLINE"}).status_code == 302
+    assert post(client, "/checkout/payment", {"payment_method": "ONLINE"}).status_code == 400
+    assert post(client, "/checkout/payment", {"payment_method": "ONLINE", "payment_reference": "STUDENT-1234"}).status_code == 302
     assert post(client, "/checkout/place").status_code == 302
     with test_app.app_context():
         order = db.session.scalar(select(Order))
