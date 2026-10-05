@@ -232,6 +232,8 @@ button:disabled, input[type="submit"]:disabled { opacity: 0.52; cursor: not-allo
 .button-danger:hover, input[type="submit"].button-danger:hover { border-color: #791a2e; background: #791a2e; }
 .danger-zone { max-width: 45rem; border-color: #edb6c1; border-top: 4px solid var(--danger); }
 .danger-zone .page-eyebrow, .danger-zone h2 { color: var(--danger); }
+.text-danger { color: var(--danger); font-weight: 750; }
+.text-danger:hover { color: #752036; }
 .account-settings-card { max-width: 45rem; }
 .account-delete-card .form-stack { width: 100%; margin-top: var(--space-xl); }
 .account-delete-card .checkbox-field { align-items: flex-start; }

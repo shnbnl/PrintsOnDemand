@@ -38,13 +38,14 @@
     {% if verified %}
       <div class="table-scroll" role="region" aria-label="Verified professors" tabindex="0">
         <table class="data-table responsive-table">
-          <thead><tr><th>Name</th><th>Department</th><th>Email</th><th>Student deliveries</th><th>Account link</th></tr></thead>
+          <thead><tr><th>Name</th><th>Department</th><th>Email</th><th>Student deliveries</th><th>Account link</th><th>Action</th></tr></thead>
           <tbody>{% for account in verified %}<tr>
             <th scope="row">{{ account.name }}</th>
             <td data-label="Department">{{ account.professor_department or 'Not supplied' }}</td>
             <td data-label="Email">{{ account.email }}</td>
             <td data-label="Student deliveries">{{ 'Accepted' if account.professor and account.professor.accepts_student_deliveries else 'Off' }}</td>
             <td data-label="Account link">{% if account.professor %}<a href="{{ url_for('admin_management.edit_professor', professor_id=account.professor_id) }}">Manage profile</a>{% else %}<a href="{{ url_for('admin_management.new_professor', account_id=account.id) }}">Create and link profile</a>{% endif %}</td>
+            <td data-label="Action"><a class="text-danger" href="{{ url_for('admin_management.delete_professor_account', account_id=account.id) }}">Delete account</a></td>
           </tr>{% endfor %}</tbody>
         </table>
       </div>
@@ -74,7 +75,7 @@
                 <td data-label="Active"><span class="status-badge status-badge--{{ 'success' if professor.is_active else 'muted' }}">{{ 'Yes' if professor.is_active else 'No' }}</span></td>
                 <td data-label="Direct-to-Professor approval"><span class="status-badge status-badge--{{ 'success' if professor.direct_send_approved else 'muted' }}">{{ 'Approved' if professor.direct_send_approved else 'Not approved' }}</span></td>
                 <td data-label="Accept student deliveries"><span class="status-badge status-badge--{{ 'success' if professor.accepts_student_deliveries else 'muted' }}">{{ 'On' if professor.accepts_student_deliveries else 'Off' }}</span></td>
-                <td data-label="Action"><a href="{{ url_for('admin_management.edit_professor', professor_id=professor.id) }}">Edit</a></td>
+                <td data-label="Action"><div class="form-actions"><a href="{{ url_for('admin_management.edit_professor', professor_id=professor.id) }}">Edit</a><a class="text-danger" href="{{ url_for('admin_management.delete_professor', professor_id=professor.id) }}">Delete profile</a></div></td>
               </tr>
             {% endfor %}
           </tbody>

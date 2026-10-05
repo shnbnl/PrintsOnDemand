@@ -1,11 +1,11 @@
 """Validated admin mutations that preserve role and order boundaries."""
 
 from email_validator import EmailNotValidError, validate_email
-from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import select, update
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from app.extensions import db
-from app.models import Faculty, PaymentSettings, PrintingShop, Professor, ProfessorVerificationStatus, User, UserRole
+from app.models import Faculty, Order, PaymentSettings, PrintingShop, Professor, ProfessorVerificationStatus, User, UserRole
 from app.services.professors import PROFESSOR_DELIVERY_SHOP
 
 
@@ -69,6 +69,21 @@ def save_professor(record: Professor | None, *, name: str, email: str,
         db.session.rollback()
         raise ManagementError("A professor with this email already exists.") from error
     return record
+
+
+def delete_managed_professor(professor_id: int) -> None:
+    """Remove a directory entry while preserving historical order snapshots."""
+    record = db.session.get(Professor, professor_id)
+    if record is None:
+        raise ManagementError("Professor profile not found.")
+    try:
+        db.session.execute(update(User).where(User.professor_id == professor_id).values(professor_id=None))
+        db.session.execute(update(Order).where(Order.professor_id == professor_id).values(professor_id=None))
+        db.session.delete(record)
+        db.session.commit()
+    except SQLAlchemyError as error:
+        db.session.rollback()
+        raise ManagementError("Professor profile could not be deleted.") from error
 
 
 def assign_staff_to_shop(staff_id: int, shop_id: int | None) -> User:

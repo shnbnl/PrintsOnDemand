@@ -2,7 +2,7 @@
 
 from functools import wraps
 
-from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
+from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, url_for
 from flask_login import current_user
 from flask_wtf import FlaskForm
 from sqlalchemy import select
@@ -12,7 +12,10 @@ from app.authorization import roles_required
 from app.extensions import db
 from app.models import PaymentSettings, PrintingShop, Professor, ProfessorVerificationStatus, User, UserRole
 from app.services.admin_management import (
-    ManagementError, assign_staff_to_shop, save_payment_settings, save_professor,
+    ManagementError, assign_staff_to_shop, delete_managed_professor, save_payment_settings, save_professor,
+)
+from app.services.account_deletion import (
+    AccountDeletionCleanupError, AccountDeletionError, delete_customer_account,
 )
 from app.services.payments import payment_configuration
 from app.services.professors import PROFESSOR_DELIVERY_SHOP
@@ -120,7 +123,7 @@ def professor_editor(record=None):
     ]
     if form.validate_on_submit():
         try:
-            saved = save_professor(
+            save_professor(
                 record, name=form.name.data, email=form.email.data,
                 department=form.department.data, office=form.office.data,
                 faculty=form.faculty.data, account_id=form.account_id.data or None,
@@ -132,7 +135,7 @@ def professor_editor(record=None):
             form.email.errors.append(str(error))
         else:
             flash("Professor saved.", "success")
-            return redirect(url_for("admin_management.edit_professor", professor_id=saved.id))
+            return redirect(url_for("admin_management.professors"))
     elif request.method == "GET":
         form.account_id.data = (
             record.account.id if record is not None and record.account
@@ -158,6 +161,63 @@ def new_professor():
 @professor_management_required
 def edit_professor(professor_id):
     return professor_editor(db.get_or_404(Professor, professor_id))
+
+
+def confirm_deletion(*, title: str, name: str, impact: str, action: str, error=None, status=200):
+    return render_template(
+        "admin/professor_delete.html", title=title, name=name, impact=impact,
+        action=action, form=FlaskForm(), error=error,
+    ), status
+
+
+@admin_management_bp.route("/professors/<int:professor_id>/delete", methods=["GET", "POST"])
+@professor_management_required
+def delete_professor(professor_id):
+    profile = db.get_or_404(Professor, professor_id)
+    page = dict(title="Delete managed professor profile", name=profile.name,
+                impact="The linked Professor account will remain verified but become unlinked. Existing orders keep their saved recipient and Faculty details.",
+                action=url_for("admin_management.delete_professor", professor_id=professor_id))
+    if request.method == "POST":
+        if not FlaskForm().validate_on_submit():
+            abort(400)
+        if request.form.get("confirm_delete") != "yes":
+            return confirm_deletion(**page, error="Confirm the profile deletion to continue.", status=400)
+        try:
+            delete_managed_professor(professor_id)
+        except ManagementError:
+            current_app.logger.exception("Managed professor deletion failed")
+            return confirm_deletion(**page, error="The profile could not be deleted. Try again.", status=503)
+        flash("Managed professor profile deleted. Existing order details were preserved.", "success")
+        return redirect(url_for("admin_management.professors"))
+    return confirm_deletion(**page)
+
+
+@admin_management_bp.route("/professors/accounts/<int:account_id>/delete", methods=["GET", "POST"])
+@professor_management_required
+def delete_professor_account(account_id):
+    account = db.get_or_404(User, account_id)
+    if account.role != UserRole.PROFESSOR or account.professor_verification_status != ProfessorVerificationStatus.VERIFIED:
+        abort(404)
+    page = dict(title="Delete verified Professor account", name=account.name,
+                impact="This permanently removes the login and that account's private files, orders, payment details, and history. The separately managed profile and other customers' past orders remain; new student deliveries to this professor stop.",
+                action=url_for("admin_management.delete_professor_account", account_id=account_id))
+    if request.method == "POST":
+        if not FlaskForm().validate_on_submit():
+            abort(400)
+        if request.form.get("confirm_delete") != "yes":
+            return confirm_deletion(**page, error="Confirm the account deletion to continue.", status=400)
+        try:
+            delete_customer_account(account_id)
+        except AccountDeletionCleanupError:
+            current_app.logger.exception("Professor account deleted but private-file cleanup needs attention")
+            flash("Professor account deleted. Private-file cleanup needs operator attention.", "warning")
+        except AccountDeletionError:
+            current_app.logger.exception("Professor account deletion failed")
+            return confirm_deletion(**page, error="The account could not be deleted. Try again.", status=503)
+        else:
+            flash("Verified Professor account and its owned data deleted.", "success")
+        return redirect(url_for("admin_management.professors"))
+    return confirm_deletion(**page)
 
 
 @admin_management_bp.route("/payment", methods=["GET", "POST"])
