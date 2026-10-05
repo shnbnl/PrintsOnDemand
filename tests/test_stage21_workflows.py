@@ -203,7 +203,7 @@ def test_legacy_onsite_order_cannot_be_converted_to_professor_delivery(client, t
         assert order.destination is None and order.professor_id is None
 
 
-def test_professor_self_selects_controlled_faculty_even_with_acceptance_off(client, test_app):
+def test_professor_self_uses_managed_faculty_even_with_acceptance_off(client, test_app):
     blue = shop(test_app, name="Blue and Silver Bookstore")
     offer_professor_service(test_app, blue)
     profile_id = approved_professor(test_app, accepts=False, faculty="MITL", linked=False)
@@ -215,22 +215,25 @@ def test_professor_self_selects_controlled_faculty_even_with_acceptance_off(clie
     file_id = file(test_app, account_id)
     sign_in(client, account_id)
     page = client.get("/orders/new", query_string={"shop_id": blue})
-    assert b"Deliver to Me" in page.data and b'id="professor_id"' not in page.data
-    assert b'id="professor_faculty"' in page.data
+    assert b"Deliver to Faculty" in page.data and b'id="professor_id"' not in page.data
+    assert b'id="professor_faculty"' not in page.data
     invalid = client.get("/orders/new", query_string={
         "file_id": file_id, "shop_id": blue, "destination": "PROFESSOR", "professor_faculty": "INVALID",
     })
     assert invalid.status_code == 400
-    reviewed = client.get("/orders/new", query_string={
+    assert client.get("/orders/new", query_string={
         "file_id": file_id, "shop_id": blue, "destination": "PROFESSOR", "professor_faculty": "GE",
+    }).status_code == 400
+    reviewed = client.get("/orders/new", query_string={
+        "file_id": file_id, "shop_id": blue, "destination": "PROFESSOR",
     })
-    assert reviewed.status_code == 200 and b"GE" in reviewed.data
+    assert reviewed.status_code == 200 and b"MITL" in reviewed.data
     placed = client.post("/orders/create", data={
         "csrf_token": token(reviewed), "file_id": file_id, "shop_id": blue,
-        "destination": "PROFESSOR", "professor_faculty": "GE",
+        "destination": "PROFESSOR",
     })
     assert placed.status_code == 302
     with test_app.app_context():
         order = db.session.scalar(select(Order))
-        assert (order.professor_recipient_type, order.professor_faculty) == ("SELF", "GE")
+        assert (order.professor_recipient_type, order.professor_faculty) == ("SELF", "MITL")
         assert db.session.get(Professor, profile_id).accepts_student_deliveries is False

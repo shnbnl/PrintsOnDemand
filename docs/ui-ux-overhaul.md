@@ -49,8 +49,8 @@ Motion uses 120ms interaction feedback, 180ms state feedback, and 220ms page arr
 - `git diff --check`: passed.
 - Chrome walkthrough: **56 screens/states**, with complete student, professor, and staff flows executed at **390px and 1440px**.
 - Layout checks: **360, 375, 390, 412, 430, 768, 1024, 1280, 1366, 1440, 1536, and 1920px**. No page overflow, clipped controls at viewport edges, or missing images detected.
-- Browser workflows included guest entry and role preselection, registration errors, login, dashboard, shop list/detail, map fallback, private upload and configuration, checkout/review, online reference submission, onsite payment, confirmation, delivered tracking, history/filter/empty states, professor Faculty selection, staff payment verification/processing/physical handoff, professor management, and admin screens.
-- Student selections still derive Faculty from the approved professor. Professor self-delivery still selects Faculty without a professor dropdown. Other-shop staff still receive 403 for Professor Management.
+- Browser workflows included guest entry and role preselection, registration errors, login, dashboard, shop list/detail, map fallback, private upload and configuration, checkout/review, online reference submission, onsite payment, confirmation, delivered tracking, history/filter/empty states, professor Faculty confirmation, staff payment verification/processing/physical handoff, professor management, and admin screens.
+- Student selections derive Faculty from the approved managed professor. Professor faculty delivery uses that linked managed Faculty as a read-only destination. Other-shop staff still receive 403 for Professor Management.
 - Additional checks: keyboard focus, menu Escape/outside click, browser Back, native transitions, reduced motion, JavaScript-disabled navigation/history, Edge login/history, and iPhone 13/Pixel 5 emulation.
 - No JavaScript exceptions or unexpected console errors in the completed walkthrough. Expected HTTP errors were deliberately exercised for validation, 403, and 404 screens.
 

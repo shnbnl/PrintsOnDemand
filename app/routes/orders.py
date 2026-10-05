@@ -11,7 +11,7 @@ from app.authorization import roles_required
 from app.extensions import db
 from app.models import (
     Order, OrderDestination, OrderItem, OrderStatus, Payment, PaymentMethod, PaymentStatus,
-    ColorMode, Faculty, PaperSize, PrintConfiguration, PrintingShop, UploadedFile, UserRole,
+    ColorMode, PaperSize, PrintConfiguration, PrintingShop, UploadedFile, UserRole,
 )
 from app.order_forms import PlaceOrderForm, SelectProfessorForm
 from app.payment_forms import PaymentMethodForm, PaymentReferenceForm
@@ -172,7 +172,6 @@ def render_selection(*, file_ids=None, shop_id=None, destination=None, professor
         "orders/new.html", files=files, shops=shops,
         professors=professors, selected_file_ids=set(file_ids or []),
         own_professor=current_user.professor if professor_can_self_deliver(current_user) else None,
-        faculties=list(Faculty),
         selected_shop_id=shop_id, selected_destination=destination,
         selected_professor_id=professor_id, selected_options=options or {},
         fulfillment_fields=fulfillment_fields or {},

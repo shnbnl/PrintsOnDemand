@@ -76,26 +76,22 @@
           <h2>How would you like to receive your order?</h2>
           <p class="hint">Choose one method offered by the selected shop. Dates and time slots are requests in Philippine time.</p>
           {% if current_user.role.value == 'STUDENT' and not professors %}<p class="hint">No professors are currently accepting student print deliveries.</p>{% endif %}
-          {% if current_user.role.value == 'PROFESSOR' and not own_professor %}<p class="hint">Deliver to Me becomes available after Blue and Silver verifies your account and links an active, approved professor profile.</p>{% endif %}
+          {% if current_user.role.value == 'PROFESSOR' and not own_professor %}<p class="hint">Deliver to Faculty becomes available after Blue and Silver verifies your account and links an active, approved professor profile with a Faculty.</p>{% endif %}
           <fieldset class="choice-fieldset"><legend>Fulfillment method</legend>
             <div class="choice-grid fulfillment-choices">
-              {% for value, label, description in [('PROFESSOR', 'Deliver to Me' if current_user.role.value == 'PROFESSOR' else 'Deliver to Professor', 'Blue and Silver physically delivers the printed papers.'), ('PICKUP', 'Scheduled Pickup', 'Request a date and time at the shop.'), ('DELIVERY', 'Delivery', 'Request delivery to your address.')] %}
+               {% for value, label, description in [('PROFESSOR', 'Deliver to Faculty' if current_user.role.value == 'PROFESSOR' else 'Deliver to Professor', 'Blue and Silver physically delivers the printed papers.'), ('PICKUP', 'Scheduled Pickup', 'Request a date and time at the shop.'), ('DELIVERY', 'Delivery', 'Request delivery to your address.')] if current_user.role.value == 'STUDENT' or value != 'DELIVERY' %}
                 <label class="choice-card" data-method-choice="{{ value }}" {% if value == 'PROFESSOR' and not shop_availability.get(selected_shop_id, {}).get('PROFESSOR') %}hidden{% endif %}><input type="radio" name="destination" value="{{ value }}" {% if selected_destination == value %}checked{% endif %} required><span><strong>{{ label }}</strong><small>{{ description }}</small></span></label>
               {% endfor %}
             </div>
           </fieldset>
           <div class="field fulfillment-fields" data-method-fields="PROFESSOR" {% if selected_destination != 'PROFESSOR' %}hidden{% endif %}>
             {% if current_user.role.value == 'PROFESSOR' %}
-              <p>Your printed papers will be physically delivered to your saved professor profile and selected Faculty. Professor delivery requires online payment.</p>
+               <p>Your printed papers will be physically delivered to the Faculty assigned by Blue and Silver. Professor delivery requires online payment.</p>
               {% if own_professor %}<dl class="detail-list"><div class="detail-row"><dt>Name</dt><dd>{{ own_professor.name }}</dd></div>
                 <div class="detail-row"><dt>Department</dt><dd>{{ own_professor.department or 'Not listed' }}</dd></div>
                 <div class="detail-row"><dt>Office</dt><dd>{{ own_professor.office or 'Not listed' }}</dd></div>
                 <div class="detail-row"><dt>Email</dt><dd>{{ own_professor.email }}</dd></div></dl>{% endif %}
-              <label for="professor_faculty">Faculty</label>
-              <select id="professor_faculty" name="professor_faculty" required>
-                <option value="">Select Faculty</option>
-                {% for faculty in faculties %}<option value="{{ faculty.value }}" {% if (fulfillment_fields.get('professor_faculty') or (own_professor.faculty if own_professor else '')) == faculty.value %}selected{% endif %}>{{ faculty.value }}</option>{% endfor %}
-              </select>
+               {% if own_professor %}<div class="managed-faculty"><span class="page-eyebrow">Destination · Faculty / Department</span><strong>{{ own_professor.faculty }}</strong>{% if own_professor.department %}<span>{{ own_professor.department }}</span>{% endif %}</div>{% endif %}
             {% else %}
             <label for="professor_id">Approved professor</label>
             <select id="professor_id" name="professor_id" aria-describedby="professor-hint">

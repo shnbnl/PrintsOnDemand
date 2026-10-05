@@ -32,31 +32,34 @@
     </section>
     <section class="content-card destination-card"><p class="page-eyebrow">Fulfillment</p><h2>How would you like to receive your order?</h2><p class="hint">Dates and time slots are requests in Philippine time.</p>
       <fieldset class="choice-fieldset"><legend>Fulfillment method</legend><div class="choice-grid fulfillment-choices">
-        {% for value, label, description in [('PROFESSOR', 'Deliver to Me' if current_user.role.value == 'PROFESSOR' else 'Deliver to Professor', 'Blue and Silver physically delivers the printed papers.'), ('PICKUP', 'Scheduled Pickup', 'Request a date and time at the shop.'), ('DELIVERY', 'Delivery', 'Request delivery to your address.')] %}
-          <label class="choice-card" data-method-choice="{{ value }}" {% if not offered.get(value) %}hidden{% endif %}><input type="radio" name="destination" value="{{ value }}" {% if fields.get('destination') == value %}checked{% endif %} {% if not offered.get(value) %}disabled{% endif %} required><span><strong>{{ label }}</strong><small>{{ description }}</small></span></label>
+        {% set methods = [('PICKUP', 'Scheduled Pickup', 'Request a date and time at the shop.')] %}
+        {% if current_user.role.value == 'STUDENT' %}{% set methods = methods + [('DELIVERY', 'Delivery', 'Request delivery to your address.'), ('PROFESSOR', 'Deliver to Professor', 'Blue and Silver physically delivers the printed papers.')] %}
+        {% else %}{% set methods = methods + [('PROFESSOR', 'Deliver to Faculty', 'Blue and Silver delivers your printed papers to your managed Faculty.')] %}{% endif %}
+        {% for value, label, description in methods if offered.get(value) %}
+          <label class="choice-card" data-method-choice="{{ value }}"><input type="radio" name="destination" value="{{ value }}" {% if fields.get('destination') == value %}checked{% endif %} required><span><strong>{{ label }}</strong><small>{{ description }}</small></span></label>
         {% endfor %}
       </div></fieldset>
-      <div class="fulfillment-fields" data-method-fields="PROFESSOR" {% if fields.get('destination') != 'PROFESSOR' %}hidden{% endif %}>
+      {% if offered.PROFESSOR %}<div class="fulfillment-fields" data-method-fields="PROFESSOR" {% if fields.get('destination') != 'PROFESSOR' %}hidden{% endif %}>
         <p class="hint">Professor Delivery requires online payment. Staff will physically deliver the printed papers; no file is emailed.</p>
         {% if current_user.role.value == 'PROFESSOR' %}
-          {% if own_professor %}<dl class="detail-list"><div class="detail-row"><dt>Name</dt><dd>{{ own_professor.name }}</dd></div><div class="detail-row"><dt>Department</dt><dd>{{ own_professor.department or 'Not listed' }}</dd></div><div class="detail-row"><dt>Office</dt><dd>{{ own_professor.office or 'Not listed' }}</dd></div><div class="detail-row"><dt>Email</dt><dd>{{ own_professor.email }}</dd></div></dl>{% else %}<p class="hint">Your professor account must be verified and linked to an approved profile before using this option.</p>{% endif %}
-          <div class="field"><label for="professor_faculty">Faculty</label><select id="professor_faculty" name="professor_faculty"><option value="">Select Faculty</option>{% for faculty in faculties %}<option value="{{ faculty.value }}" {% if fields.get('professor_faculty', own_professor.faculty if own_professor else '') == faculty.value %}selected{% endif %}>{{ faculty.value }}</option>{% endfor %}</select></div>
+          <div class="managed-faculty"><span class="page-eyebrow">Destination · Faculty / Department</span><strong>{{ own_professor.faculty }}</strong>{% if own_professor.department %}<span>{{ own_professor.department }}</span>{% endif %}<p class="hint">The physical printed copies will be delivered to the {{ own_professor.faculty }} faculty. This destination is assigned by Blue and Silver.</p></div>
         {% else %}
           <div class="field"><label for="professor_id">Approved professor</label><select id="professor_id" name="professor_id"><option value="">Select a professor</option>{% for professor in professors %}<option value="{{ professor.id }}" data-name="{{ professor.name }}" data-department="{{ professor.department or 'Not listed' }}" data-faculty="{{ professor.faculty }}" data-office="{{ professor.office or 'Not listed' }}" data-email="{{ professor.email }}" {% if fields.get('professor_id') == professor.id|string %}selected{% endif %}>{{ professor.name }} — {{ professor.faculty }}</option>{% endfor %}</select></div>
           <dl class="professor-preview summary-list" id="professor-preview" aria-live="polite" hidden>{% for label, name in [('Name','name'), ('Department','department'), ('Faculty','faculty'), ('Office','office'), ('Email','email')] %}<div class="summary-row"><dt>{{ label }}</dt><dd data-professor-{{ name }}></dd></div>{% endfor %}</dl>
+          <p class="hint">Faculty is assigned by Blue and Silver and cannot be changed here.</p>
         {% endif %}
-      </div>
-      <div class="fulfillment-fields" data-method-fields="PICKUP" {% if fields.get('destination') != 'PICKUP' %}hidden{% endif %}>
+      </div>{% endif %}
+      {% if offered.PICKUP %}<div class="fulfillment-fields" data-method-fields="PICKUP" {% if fields.get('destination') != 'PICKUP' %}hidden{% endif %}>
         <div class="field"><label for="pickup_date">Pickup date</label><input id="pickup_date" name="pickup_date" type="date" min="{{ pickup_min }}" max="{{ pickup_max }}" value="{{ fields.get('pickup_date', '') }}"></div>
         <div class="field"><label for="pickup_slot">Pickup time (Philippine time)</label><select id="pickup_slot" name="pickup_slot"><option value="">Select a time slot</option>{% for value, label in pickup_slots %}<option value="{{ value }}" {% if fields.get('pickup_slot') == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
-      </div>
-      <div class="fulfillment-fields" data-method-fields="DELIVERY" {% if fields.get('destination') != 'DELIVERY' %}hidden{% endif %}><p class="hint">Delivery is a request to the shop. A courier is not booked automatically.</p>
+      </div>{% endif %}
+      {% if current_user.role.value == 'STUDENT' and offered.DELIVERY %}<div class="fulfillment-fields" data-method-fields="DELIVERY" {% if fields.get('destination') != 'DELIVERY' %}hidden{% endif %}><p class="hint">Delivery is a request to the shop. A courier is not booked automatically.</p>
         <div class="field"><label for="delivery_recipient_name">Recipient name</label><input id="delivery_recipient_name" name="delivery_recipient_name" maxlength="120" value="{{ fields.get('delivery_recipient_name', '') }}"></div>
         <div class="field"><label for="delivery_recipient_phone">Recipient phone</label><input id="delivery_recipient_phone" name="delivery_recipient_phone" type="tel" maxlength="32" value="{{ fields.get('delivery_recipient_phone', '') }}"></div>
         <div class="field"><label for="delivery_address">Delivery address</label><textarea id="delivery_address" name="delivery_address" maxlength="500" rows="3">{{ fields.get('delivery_address', '') }}</textarea></div>
         <div class="field"><label for="delivery_date">Delivery date</label><input id="delivery_date" name="delivery_date" type="date" min="{{ delivery_min }}" max="{{ delivery_max }}" value="{{ fields.get('delivery_date', '') }}"></div>
         <div class="field"><label for="delivery_slot">Delivery time (Philippine time)</label><select id="delivery_slot" name="delivery_slot"><option value="">Select a time slot</option>{% for value, label in delivery_slots %}<option value="{{ value }}" {% if fields.get('delivery_slot') == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
-      </div>
+      </div>{% endif %}
     </section>
     {% if preview_quote %}<section class="content-card price-summary" aria-label="Current price summary"><p class="page-eyebrow">Saved configuration</p><h2>Current price</h2><p>Subtotal: {{ preview_quote.currency }} {{ preview_quote.subtotal }} · Rush fee: {{ preview_quote.currency }} {{ preview_quote.rush_fee }} · Delivery fee: {{ preview_quote.currency }} {{ preview_quote.delivery_fee }}</p><p class="summary-total"><strong>Total: {{ preview_quote.currency }} {{ preview_quote.total }}</strong></p><p class="hint">Changing settings recalculates this total on the next step.</p></section>{% endif %}
     <div class="form-actions"><a class="button button-secondary" href="{{ url_for('checkout.shop') }}">← Back to shop</a><button class="button button-primary" type="submit">Next: Choose Payment →</button></div>

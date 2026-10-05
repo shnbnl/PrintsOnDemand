@@ -72,7 +72,7 @@
       <div class="summary-row"><dt>Type</dt><dd>{{ order.destination.label if order.destination else 'Not selected' }}</dd></div>
       {% if order.destination and order.destination.value == 'PROFESSOR' %}
         <div class="summary-row"><dt>Physical handoff</dt><dd>Deliver printed papers to professor</dd></div>
-        <div class="summary-row"><dt>Recipient type</dt><dd>{{ 'Deliver to Me' if order.professor_recipient_type == 'SELF' else 'Deliver to Professor' }}</dd></div>
+        <div class="summary-row"><dt>Recipient type</dt><dd>{{ 'Deliver to Faculty' if order.professor_recipient_type == 'SELF' else 'Deliver to Professor' }}</dd></div>
         <div class="summary-row"><dt>Professor</dt><dd>{{ order.professor_name }}</dd></div>
         <div class="summary-row"><dt>Faculty</dt><dd>{{ order.professor_faculty or 'Not recorded for this older order' }}</dd></div>
         <div class="summary-row"><dt>Department</dt><dd>{{ order.professor_department or 'Not listed' }}</dd></div>

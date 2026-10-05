@@ -48,7 +48,7 @@
     {% if order.destination and order.destination.value == 'PROFESSOR' %}
       <div class="destination-panel">
         <h3>Professor Delivery</h3>
-        <p>{{ 'Deliver to Me' if order.professor_recipient_type == 'SELF' else 'Deliver to Professor' }}</p>
+        <p>{{ 'Deliver to Faculty' if order.professor_recipient_type == 'SELF' else 'Deliver to Professor' }}</p>
         <p>Intended recipient: <strong>{{ order.professor_name }}</strong></p>
         <p>Department: {{ order.professor_department or 'Not listed' }}</p>
         <p>Faculty: {{ order.professor_faculty or 'Not recorded for this older order' }}</p>

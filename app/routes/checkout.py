@@ -12,7 +12,7 @@ from werkzeug.exceptions import RequestEntityTooLarge
 from app.authorization import roles_required
 from app.extensions import db
 from app.models import (
-    ColorMode, Faculty, Order, OrderDestination, PaperSize, PrintConfiguration,
+    ColorMode, Order, OrderDestination, PaperSize, PrintConfiguration,
     PrintingShop, ServiceType, UploadedFile, UserRole,
 )
 from app.models.user import utc_now
@@ -228,9 +228,12 @@ def shop():
 
 
 def render_config(files, shop, *, options=None, fields=None, error=None, status=200):
-    professors = selectable_professors() if current_user.role == UserRole.STUDENT else []
-    own_professor = current_user.professor if professor_can_self_deliver(current_user) else None
     offered = availability(shop)
+    professors = (selectable_professors() if current_user.role == UserRole.STUDENT
+                  and offered[OrderDestination.PROFESSOR.value] else [])
+    own_professor = current_user.professor if professor_can_self_deliver(current_user) else None
+    if current_user.role == UserRole.PROFESSOR:
+        offered[OrderDestination.DELIVERY.value] = False
     if (current_user.role == UserRole.STUDENT and not professors) or (
         current_user.role == UserRole.PROFESSOR and own_professor is None
     ):
@@ -251,7 +254,7 @@ def render_config(files, shop, *, options=None, fields=None, error=None, status=
         "checkout/configure.html", files=files, shop=shop, options=options,
         fields=fields, error=error, offered=offered, preview_quote=preview_quote,
         rush_available=service_available(shop.id, ServiceType.RUSH_PRINTING),
-        professors=professors, own_professor=own_professor, faculties=list(Faculty),
+        professors=professors, own_professor=own_professor,
         paper_sizes=list(PaperSize), color_modes=list(ColorMode),
         pickup_slots=slot_options(OrderDestination.PICKUP),
         delivery_slots=slot_options(OrderDestination.DELIVERY),

@@ -152,7 +152,7 @@ def test_professor_self_delivery_requires_online(client, test_app):
         user.professor_verification_status = ProfessorVerificationStatus.VERIFIED
         db.session.commit()
     offer_professor_service(test_app, shop_id)
-    assert start(client, shop_id, file_id, destination={"destination": "PROFESSOR", "professor_faculty": "MITL"}).status_code == 302
+    assert start(client, shop_id, file_id, destination={"destination": "PROFESSOR"}).status_code == 302
     assert post(client, "/checkout/payment", {"payment_method": "ONSITE"}).status_code == 400
     assert post(client, "/checkout/payment", {"payment_method": "ONLINE"}).status_code == 302
     assert post(client, "/checkout/place").status_code == 302

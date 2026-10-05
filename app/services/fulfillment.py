@@ -61,7 +61,7 @@ class Fulfillment:
         return {
             "destination": self.destination.value,
             "professor_id": str(self.professor_id or "") if self.professor_recipient_type != "SELF" else "",
-            "professor_faculty": (self.professor_details or {}).get("faculty", "") if self.professor_recipient_type == "SELF" else "",
+            "professor_faculty": "",
             "pickup_date": self.pickup_date.isoformat() if self.pickup_date else "",
             "pickup_slot": self.pickup_slot or "",
             "delivery_recipient_name": self.delivery_recipient_name or "",
@@ -194,19 +194,15 @@ def validate_fulfillment(*, shop: PrintingShop, values, actor=None) -> Fulfillme
         except ProfessorSelectionError as error:
             raise FulfillmentError(str(error)) from error
         self_order = actor is not None and actor.role == UserRole.PROFESSOR
-        if self_order:
-            try:
-                faculty = Faculty(data["professor_faculty"] or professor.faculty).value
-            except (TypeError, ValueError) as error:
-                raise FulfillmentError("Select a valid Faculty for delivery.") from error
-        else:
-            if data["professor_faculty"]:
-                raise FulfillmentError("The selected professor determines the Faculty.")
-            faculty = professor.faculty
-            if faculty is None:
-                raise FulfillmentError("The selected professor needs a Faculty on their profile.")
+        if data["professor_faculty"]:
+            raise FulfillmentError("Faculty is assigned by Blue and Silver and cannot be changed here.")
+        faculty = professor.faculty
+        if faculty not in Faculty._value2member_map_:
+            raise FulfillmentError("The managed professor profile needs a valid Faculty.")
         return Fulfillment(destination, professor.id, professor_snapshot(professor, faculty=faculty),
                            "SELF" if self_order else "STUDENT_SELECTED")
+    if actor is not None and actor.role == UserRole.PROFESSOR and destination == OrderDestination.DELIVERY:
+        raise FulfillmentError("Professor accounts can choose Scheduled Pickup or Deliver to Faculty.")
     service = ServiceType.PICKUP if destination == OrderDestination.PICKUP else ServiceType.DELIVERY
     if not service_available(shop.id, service):
         raise FulfillmentError(f"This shop does not offer {destination.label}.")

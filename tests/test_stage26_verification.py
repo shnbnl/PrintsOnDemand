@@ -166,7 +166,7 @@ def test_self_delivery_requires_verification_and_active_approval(client, test_ap
         account_id = db.session.get(Professor, professor_id).account.id
     document_id = file(test_app, account_id)
     sign_in(client, account_id)
-    assert b"Deliver to Me" in client.get("/orders/new", query_string={"shop_id": blue}).data
+    assert b"Deliver to Faculty" in client.get("/orders/new", query_string={"shop_id": blue}).data
     assert professor_review(client, document_id, blue, None).status_code == 200
     for status in (ProfessorVerificationStatus.PENDING, ProfessorVerificationStatus.REJECTED):
         with test_app.app_context():

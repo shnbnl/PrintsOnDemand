@@ -49,7 +49,7 @@ def test_professor_self_delivery_and_setting_do_not_expose_dropdown(client, test
     file_id = file(test_app, account_id)
     sign_in(client, account_id)
     selection = client.get("/orders/new", query_string={"shop_id": blue})
-    assert b"Deliver to Me" in selection.data
+    assert b"Deliver to Faculty" in selection.data
     assert b'id="professor_id"' not in selection.data
     assert b"Engineering Building 204" in selection.data
     assert client.get("/professor/settings").status_code == 200
@@ -64,7 +64,7 @@ def test_professor_self_delivery_and_setting_do_not_expose_dropdown(client, test
         "file_id": file_id, "shop_id": blue, "destination": "PROFESSOR",
     })
     assert reviewed.status_code == 200
-    assert b"Deliver to Me" in reviewed.data
+    assert b"Deliver to Faculty" in reviewed.data
     placed = client.post("/orders/create", data={
         "csrf_token": token(reviewed), "file_id": file_id, "shop_id": blue,
         "destination": "PROFESSOR",

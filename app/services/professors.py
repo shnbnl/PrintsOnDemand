@@ -25,6 +25,7 @@ def professor_can_self_deliver(account: User) -> bool:
         account.role == UserRole.PROFESSOR and account.is_active
         and account.professor_verification_status == ProfessorVerificationStatus.VERIFIED
         and profile is not None and profile.is_active and profile.direct_send_approved
+        and profile.faculty in Faculty._value2member_map_
     )
 
 

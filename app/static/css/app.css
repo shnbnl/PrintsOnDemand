@@ -527,6 +527,9 @@ input[type="file"]::file-selector-button { min-height: 2.75rem; margin-right: va
 .destination-card .choice-fieldset legend { font-size: 1rem; margin-bottom: var(--space-sm); }
 .fulfillment-fields { gap: var(--space-md); }
 .professor-preview .summary-row { padding-block: var(--space-sm); }
+.managed-faculty { display: grid; gap: 0.4rem; margin-top: var(--space-md); padding: var(--space-lg); border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-muted); }
+.managed-faculty strong { color: var(--navy); font-size: 1.35rem; }
+.managed-faculty .hint { margin: 0.2rem 0 0; }
 .order-item-card .detail-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 var(--space-lg); }
 .order-item-card .detail-row { display: block; padding-block: var(--space-sm); }
 .order-item-card .detail-row dd { text-align: left; }
