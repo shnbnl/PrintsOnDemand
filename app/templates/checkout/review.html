@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Review order | Prints On Demand{% endblock %}
+{% block content %}
+  {% include "checkout/progress.html" %}
+  <header class="page-intro"><p class="page-eyebrow">Step 5 · Review</p><h1>Review and Place Order</h1><p class="page-lead">Check every detail before submitting your print job.</p></header>
+  {% if warning %}<p class="notice notice-warning" role="alert">{{ warning }}</p>{% endif %}
+  {% if quote.is_demo %}<p class="sample-label">Sample shop or rates — confirm with the shop before paying.</p>{% endif %}
+  <div class="checkout-grid"><div class="checkout-main">
+    <section class="content-card"><p class="page-eyebrow">Customer and shop</p><h2>{{ current_user.name }}</h2><p>{{ quote.shop.name }} · {{ quote.shop.address }}</p><a href="{{ url_for('checkout.shop') }}">Change shop</a></section>
+    <section class="content-card"><p class="page-eyebrow">Files and configuration</p><h2>{{ quote.items|length }} file{{ '' if quote.items|length == 1 else 's' }}</h2><div class="order-item-list">{% for item in quote.items %}<article class="order-item-card"><h3>{{ item.uploaded_file.original_filename }}</h3><dl class="detail-list"><div class="detail-row"><dt>Paper / output</dt><dd>{{ item.paper_size.label }} · {{ item.color_mode.label }}</dd></div><div class="detail-row"><dt>Print count</dt><dd>{{ item.quantity }}</dd></div><div class="detail-row"><dt>Rush printing</dt><dd>{{ 'Yes' if item.is_rush else 'No' }}</dd></div><div class="detail-row"><dt>Line total</dt><dd>{{ quote.currency }} {{ item.line_total }}</dd></div></dl></article>{% endfor %}</div><a href="{{ url_for('checkout.configure') }}">Edit print settings</a></section>
+    <section class="content-card"><p class="page-eyebrow">Fulfillment</p><h2>{{ 'Deliver to Me' if fulfillment.professor_recipient_type == 'SELF' else fulfillment.destination.label }}</h2>
+      {% if fulfillment.destination.value == 'PROFESSOR' %}<p><strong>{{ fulfillment.professor_details.name }}</strong> · {{ fulfillment.professor_details.faculty }}</p><p>{{ fulfillment.professor_details.department or 'Department not listed' }} · {{ fulfillment.professor_details.office or 'Office not listed' }}</p><p class="hint">Blue and Silver staff will physically deliver the printed papers. Online payment is required.</p>
+      {% elif fulfillment.destination.value == 'PICKUP' %}<p>{{ fulfillment.pickup_date }} · {{ fulfillment.pickup_slot }} (Philippine time)</p>
+      {% else %}<p>{{ fulfillment.delivery_recipient_name }} · {{ fulfillment.delivery_recipient_phone }}</p><p>{{ fulfillment.delivery_address }}</p><p>{{ fulfillment.delivery_date }} · {{ fulfillment.delivery_slot }} (Philippine time)</p>{% endif %}
+      <a href="{{ url_for('checkout.configure') }}">Edit fulfillment</a></section>
+    <section class="content-card"><p class="page-eyebrow">Payment</p><h2>{{ 'Pay Online — InstaPay' if payment_method == 'ONLINE' else 'Pay Onsite — Cash' }}</h2>{% if payment_reference %}<p>Submitted reference: {{ payment_reference }}</p>{% endif %}<p class="hint">{{ 'A submitted reference still requires staff verification.' if payment_reference else 'This order will begin pending payment.' }}</p><a href="{{ url_for('checkout.payment') }}">Change payment</a></section>
+  </div><aside class="content-card price-summary"><p class="page-eyebrow">Price summary</p><h2>Amount due</h2><div class="summary-list"><p class="summary-row">Subtotal: {{ quote.currency }} {{ quote.subtotal }}</p><p class="summary-row">Rush fee: {{ quote.currency }} {{ quote.rush_fee }}</p><p class="summary-row">Delivery fee: {{ quote.currency }} {{ quote.delivery_fee }}</p><p class="summary-row summary-total"><strong>Total: {{ quote.currency }} {{ quote.total }}</strong></p></div>
+    <form method="post" action="{{ url_for('checkout.place') }}" data-submit-feedback><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="button button-primary button-block" type="submit">Place Order</button></form><p class="hint">The shop, price, payment, and recipient are checked again when you place the order.</p>
+  </aside></div>
+{% endblock %}

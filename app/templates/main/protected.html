@@ -12,12 +12,12 @@
     <div class="card-grid action-grid">
       <article class="content-card action-card action-card-primary">
         <span class="action-icon" aria-hidden="true">01</span>
-        <div><h2>Find a printing shop</h2><p>Explore available shops, services, hours, and prices.</p></div>
-        <a class="button button-primary" href="{{ next_url }}">{{ next_label }}</a>
+        <div><h2>Start a print order</h2><p>Upload files, choose a shop, configure printing, and review payment in one guided flow.</p></div>
+        <a class="button button-primary" href="{{ url_for('checkout.upload') }}">Start Order</a>
       </article>
       <article class="content-card action-card">
         <span class="action-icon" aria-hidden="true">02</span>
-        <div><h2>My Files</h2><p>Upload a document and set its print options before ordering.</p></div>
+        <div><h2>My Files</h2><p>Manage the files stored in your private library.</p></div>
         <a class="button button-secondary" href="{{ files_url }}">My uploaded files</a>
       </article>
       <article class="content-card action-card">
@@ -26,6 +26,7 @@
         <a class="button button-secondary" href="{{ orders_url }}">Order History</a>
       </article>
     </div>
+    <p class="form-actions"><a href="{{ next_url }}">Browse printing shops and map</a></p>
   {% else %}
     <header class="page-intro"><h1>{{ title }}</h1></header>
     <section class="content-card empty-state">

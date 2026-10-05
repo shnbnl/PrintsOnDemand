@@ -54,11 +54,11 @@
 
   {% if not staff_view %}
     <section class="content-card action-panel">
-      <div><h2>Ready to continue?</h2><p>Choose a configured file and review the live price before placing an order.</p></div>
+      <div><h2>Ready to continue?</h2><p>Add your files, configure printing, and review the live price before placing an order.</p></div>
       {% if can_order %}
-        <a class="button button-primary" href="{{ url_for('orders.new', shop_id=shop.id) }}">Proceed to file selection <span aria-hidden="true">→</span></a>
+        <a class="button button-primary" href="{{ url_for('checkout.upload', shop_id=shop.id) }}">Start Order <span aria-hidden="true">→</span></a>
       {% else %}
-        <div><a class="button button-primary" href="{{ url_for('files.index') }}">Select files to print <span aria-hidden="true">→</span></a><p class="hint">Upload and configure a file before placing an order.</p></div>
+        <div><a class="button button-primary" href="{{ url_for('checkout.upload', shop_id=shop.id) }}">Start Order <span aria-hidden="true">→</span></a></div>
       {% endif %}
     </section>
   {% endif %}

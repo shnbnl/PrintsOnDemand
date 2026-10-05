@@ -1,0 +1,208 @@
+"""Guided checkout: order, payment, file ownership, and fulfillment boundaries."""
+
+from decimal import Decimal
+from io import BytesIO
+
+from sqlalchemy import select
+
+from app.extensions import db
+from app.models import Order, PaymentMethod, PaymentStatus, PrintPrice, PrintingShop, UploadedFile, UserRole
+from test_orders import (
+    PDF, approved_professor, file, offer_professor_service, pickup_fields,
+    shop, sign_in, student, token,
+)
+
+
+def post(client, path, data=None):
+    return client.post(path, data={"csrf_token": token(client.get("/checkout/upload")), **(data or {})})
+
+
+def setup(client, app, *, professor=False, online=False):
+    owner = student(app, role=UserRole.PROFESSOR if professor else UserRole.STUDENT)
+    shop_id = shop(app)
+    file_id = file(app, owner, configured=False)
+    if online:
+        app.config.update(
+            ONLINE_PAYMENT_ENABLED=True,
+            ONLINE_PAYMENT_INSTRUCTIONS="Use the configured shop account.",
+            ONLINE_PAYMENT_ACCOUNT_NAME="Campus Prints",
+            ONLINE_PAYMENT_DESTINATION="Sample account 12345",
+        )
+    sign_in(client, owner)
+    return owner, shop_id, file_id
+
+
+def start(client, shop_id, file_id, *, quantity="2", destination=None):
+    uploaded = post(client, "/checkout/upload", {"file_id": str(file_id)})
+    assert uploaded.status_code == 302, uploaded.get_data(as_text=True)[:500]
+    assert post(client, "/checkout/shop", {"shop_id": str(shop_id)}).status_code == 302
+    fields = {"file_id": str(file_id), f"paper_size_{file_id}": "A4",
+              f"color_mode_{file_id}": "GRAYSCALE", f"quantity_{file_id}": quantity,
+              **(destination or pickup_fields())}
+    return post(client, "/checkout/configure", fields)
+
+
+def test_student_cash_checkout_creates_order_payment_and_success(client, test_app):
+    owner, shop_id, file_id = setup(client, test_app)
+    assert start(client, shop_id, file_id).headers["Location"].endswith("/checkout/payment")
+    assert b"PHP 4.50" in client.get("/checkout/payment").data
+    assert post(client, "/checkout/payment", {"payment_method": "ONSITE"}).status_code == 302
+    assert b"Pay Onsite" in client.get("/checkout/review").data
+    placed = post(client, "/checkout/place", {"total": "0.01", "shop_id": "9999"})
+    assert placed.status_code == 302 and "/checkout/success/" in placed.headers["Location"]
+    confirmation = client.get(placed.headers["Location"])
+    assert b"Order Created Successfully!" in confirmation.data
+    assert b"PHP 4.50" in confirmation.data
+    with test_app.app_context():
+        order = db.session.scalar(select(Order))
+        assert order.user_id == owner and order.shop_id == shop_id
+        assert order.order_reference.encode() in confirmation.data
+        assert order.total == Decimal("4.50")
+        assert [item.uploaded_file_id for item in order.items] == [file_id]
+        assert order.payment.payment_method == PaymentMethod.ONSITE
+        assert order.payment.payment_status == PaymentStatus.PENDING
+    assert client.get("/orders").status_code == 200
+    assert client.post("/checkout/place", data={"csrf_token": token(confirmation)}).headers["Location"] == placed.headers["Location"]
+    with test_app.app_context():
+        assert len(db.session.scalars(select(Order)).all()) == 1
+
+
+def test_student_online_reference_waits_for_verification(client, test_app):
+    _, shop_id, file_id = setup(client, test_app, online=True)
+    assert start(client, shop_id, file_id).status_code == 302
+    payment_page = client.get("/checkout/payment")
+    assert b"Placeholder QR" in payment_page.data
+    assert post(client, "/checkout/payment", {"payment_method": "ONLINE", "payment_reference": "ABC-1234"}).status_code == 302
+    assert post(client, "/checkout/place").status_code == 302
+    with test_app.app_context():
+        payment = db.session.scalar(select(Order)).payment
+        assert payment.payment_method == PaymentMethod.ONLINE
+        assert payment.payment_status == PaymentStatus.SUBMITTED
+        assert payment.payment_reference == "ABC-1234"
+
+
+def test_invalid_shop_file_configuration_payment_and_csrf(client, test_app):
+    owner, shop_id, file_id = setup(client, test_app)
+    foreign_id = file(test_app, student(test_app, "foreign@school.edu"), configured=False)
+    assert post(client, "/checkout/upload", {"file_id": str(foreign_id)}).status_code == 400
+    assert post(client, "/checkout/upload", {"file_id": str(file_id)}).status_code == 302
+    assert post(client, "/checkout/shop", {"shop_id": "99999"}).status_code == 400
+    assert post(client, "/checkout/shop", {"shop_id": str(shop_id)}).status_code == 302
+    assert post(client, "/checkout/configure", {
+        "file_id": str(file_id), f"paper_size_{file_id}": "A4",
+        f"color_mode_{file_id}": "GRAYSCALE", f"quantity_{file_id}": "0", **pickup_fields(),
+    }).status_code == 400
+    assert client.get("/checkout/payment").status_code == 302
+    assert start(client, shop_id, file_id).status_code == 302
+    assert post(client, "/checkout/payment", {"payment_method": "FAKE"}).status_code == 400
+    assert post(client, "/checkout/payment", {"payment_method": "ONLINE"}).status_code == 400
+    assert client.post("/checkout/place", data={}).status_code == 400
+    with test_app.app_context():
+        assert db.session.scalar(select(Order)) is None
+
+
+def test_upload_multiple_files_and_remove_from_draft(client, test_app):
+    owner, shop_id, first = setup(client, test_app)
+    response = client.post("/checkout/upload/files", data={
+        "csrf_token": token(client.get("/checkout/upload")),
+        "files": [(BytesIO(PDF), "one.pdf"), (BytesIO(PDF), "two.pdf")],
+    }, content_type="multipart/form-data")
+    assert response.status_code == 302
+    with test_app.app_context():
+        from app.models import UploadedFile
+        files = db.session.scalars(select(UploadedFile).where(UploadedFile.user_id == owner)).all()
+        assert len(files) == 3
+        selected = [item.id for item in files if item.id != first]
+    assert post(client, "/checkout/upload", {"file_id": [str(value) for value in selected]}).status_code == 302
+    assert post(client, "/checkout/shop", {"shop_id": str(shop_id)}).status_code == 302
+    data = {"file_id": [str(value) for value in selected], **pickup_fields()}
+    for value in selected:
+        data.update({f"paper_size_{value}": "A4", f"color_mode_{value}": "GRAYSCALE", f"quantity_{value}": "1"})
+    assert post(client, "/checkout/configure", data).status_code == 302
+    assert post(client, "/checkout/payment", {"payment_method": "ONSITE"}).status_code == 302
+    assert post(client, "/checkout/place").status_code == 302
+    with test_app.app_context():
+        assert {item.uploaded_file_id for item in db.session.scalar(select(Order)).items} == set(selected)
+
+
+def test_professor_self_delivery_requires_online(client, test_app):
+    _, shop_id, file_id = setup(client, test_app, professor=True, online=True)
+    professor_id = approved_professor(test_app, name="Verified Teacher")
+    with test_app.app_context():
+        from app.models import User, Professor, ProfessorVerificationStatus
+        user = db.session.scalar(select(User).where(User.email == "student@example.com"))
+        linked = db.session.get(Professor, professor_id)
+        other = db.session.scalar(select(User).where(User.professor_id == professor_id))
+        other.professor = None
+        db.session.flush()
+        user.professor = linked
+        user.professor_department = linked.faculty
+        user.professor_verification_status = ProfessorVerificationStatus.VERIFIED
+        db.session.commit()
+    offer_professor_service(test_app, shop_id)
+    assert start(client, shop_id, file_id, destination={"destination": "PROFESSOR", "professor_faculty": "MITL"}).status_code == 302
+    assert post(client, "/checkout/payment", {"payment_method": "ONSITE"}).status_code == 400
+    assert post(client, "/checkout/payment", {"payment_method": "ONLINE"}).status_code == 302
+    assert post(client, "/checkout/place").status_code == 302
+    with test_app.app_context():
+        order = db.session.scalar(select(Order))
+        assert order.professor_recipient_type == "SELF"
+        assert order.payment.payment_method == PaymentMethod.ONLINE
+
+
+def test_student_professor_delivery_and_professor_normal_order(client, test_app):
+    _, shop_id, file_id = setup(client, test_app, online=True)
+    professor_id = approved_professor(test_app)
+    offer_professor_service(test_app, shop_id)
+    assert start(client, shop_id, file_id, destination={
+        "destination": "PROFESSOR", "professor_id": str(professor_id),
+    }).status_code == 302
+    assert post(client, "/checkout/payment", {"payment_method": "ONSITE"}).status_code == 400
+    assert post(client, "/checkout/payment", {"payment_method": "ONLINE"}).status_code == 302
+    assert post(client, "/checkout/place").status_code == 302
+    with test_app.app_context():
+        order = db.session.scalar(select(Order))
+        assert order.professor_id == professor_id
+        assert order.professor_name == "Maria Santos"
+        assert order.payment.payment_method == PaymentMethod.ONLINE
+
+    professor_user = student(test_app, "unverified@example.edu", UserRole.PROFESSOR)
+    professor_file = file(test_app, professor_user, configured=False)
+    sign_in(client, professor_user)
+    assert start(client, shop_id, professor_file).status_code == 302
+    assert post(client, "/checkout/payment", {"payment_method": "ONSITE"}).status_code == 302
+    assert post(client, "/checkout/place").status_code == 302
+    with test_app.app_context():
+        orders = db.session.scalars(select(Order).order_by(Order.id)).all()
+        assert len(orders) == 2 and orders[1].user_id == professor_user
+        assert orders[1].payment.payment_method == PaymentMethod.ONSITE
+
+
+def test_review_rechecks_database_price_before_placement(client, test_app):
+    _, shop_id, file_id = setup(client, test_app)
+    assert start(client, shop_id, file_id).status_code == 302
+    assert post(client, "/checkout/payment", {"payment_method": "ONSITE"}).status_code == 302
+    with test_app.app_context():
+        rate = db.session.scalar(select(PrintPrice).where(PrintPrice.shop_id == shop_id))
+        rate.price = Decimal("9.00")
+        db.session.commit()
+    changed = post(client, "/checkout/place", {"total": "4.50"})
+    assert changed.status_code == 409
+    assert b"PHP 18.00" in changed.data
+    with test_app.app_context():
+        assert db.session.scalar(select(Order)) is None
+    placed = post(client, "/checkout/place")
+    assert placed.status_code == 302
+    with test_app.app_context():
+        assert db.session.scalar(select(Order)).total == Decimal("18.00")
+
+
+def test_checkout_settings_do_not_overwrite_saved_library_defaults(client, test_app):
+    owner, shop_id, _ = setup(client, test_app)
+    existing = file(test_app, owner, name="Saved.pdf", configured=True, quantity=3)
+    assert start(client, shop_id, existing, quantity="2").status_code == 302
+    assert post(client, "/checkout/payment", {"payment_method": "ONSITE"}).status_code == 302
+    assert post(client, "/checkout/place").status_code == 302
+    with test_app.app_context():
+        assert db.session.get(UploadedFile, existing).configuration.quantity == 3
+        assert db.session.scalar(select(Order)).items[0].quantity == 2

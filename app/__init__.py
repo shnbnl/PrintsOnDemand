@@ -48,6 +48,7 @@ def create_app(config_object: object | None = None) -> Flask:
     from app.routes.account import account_bp
     from app.routes.admin_management import admin_management_bp
     from app.routes.auth import auth_bp
+    from app.routes.checkout import checkout_bp
     from app.routes.files import files_bp
     from app.routes.main import main_bp
     from app.routes.orders import orders_bp
@@ -60,6 +61,7 @@ def create_app(config_object: object | None = None) -> Flask:
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp)
+    app.register_blueprint(checkout_bp)
     app.register_blueprint(account_bp)
     app.register_blueprint(files_bp)
     app.register_blueprint(orders_bp)

@@ -8,17 +8,20 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
-from app.models import Order, OrderDestination, OrderItem, OrderStatus, Professor, User
+from app.models import Order, OrderDestination, OrderItem, OrderStatus, Payment, PaymentStatus, Professor, User
 from app.models.user import utc_now
 from app.services.pricing import CartQuote, OrderQuote
 from app.services.professors import assign_professor, validate_professor_selection
 from app.services.fulfillment import Fulfillment, FulfillmentError, validate_fulfillment
+from app.services.payments import validate_checkout_payment
 
 
 def create_order(
     quote: CartQuote | OrderQuote, *, destination: str | None = None,
     professor_id: str | int | None = None,
     fulfillment: Fulfillment | None = None,
+    payment_method: str | None = None,
+    payment_reference: str = "",
 ) -> Order:
     """Commit one order and all quoted items, retrying rare reference collisions."""
     for _ in range(5):
@@ -33,6 +36,14 @@ def create_order(
         else:
             professor = validate_professor_selection(
                 shop_id=quote.shop.id, destination=destination, professor_id=professor_id, actor=actor
+            )
+        payment_choice = None
+        if payment_method is not None:
+            if fulfillment is None:
+                raise FulfillmentError("Choose fulfillment before payment.")
+            payment_choice = validate_checkout_payment(
+                destination=fulfillment.destination, method=payment_method,
+                reference=payment_reference,
             )
         reference = f"POD-{utc_now().year}-{secrets.token_hex(6).upper()}"
         order = Order(
@@ -72,6 +83,15 @@ def create_order(
                 unit_price=item.unit_price,
                 line_total=item.line_total,
             ))
+        if payment_choice is not None:
+            selected_method, reference_value = payment_choice
+            order.payment = Payment(
+                payment_method=selected_method,
+                payment_status=(PaymentStatus.SUBMITTED if reference_value else PaymentStatus.PENDING),
+                amount=quote.total, currency=quote.currency,
+                payment_reference=reference_value,
+                submitted_at=utc_now() if reference_value else None,
+            )
         db.session.add(order)
         try:
             db.session.commit()

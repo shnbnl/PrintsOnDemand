@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Upload your files | Prints On Demand{% endblock %}
+{% block content %}
+  {% include "checkout/progress.html" %}
+  <header class="page-intro"><p class="page-eyebrow">Step 1 · Upload</p><h1>Upload Your File</h1>
+    <p class="page-lead">Add documents privately, or choose files already in your library. You can include up to {{ max_files }} files in one order.</p></header>
+  {% if error %}<p class="notice notice-error" role="alert">{{ error }}</p>{% endif %}
+  <div class="checkout-step-grid">
+    <section class="content-card"><h2>Add files</h2>
+      <p class="hint">Supported: {{ extensions|sort|join(', ')|upper }}. Each file may be up to {{ (config.UPLOAD_MAX_SIZE / 1048576)|round(1) }} MiB. Add fewer files at a time if the combined upload is too large.</p>
+      <form class="form-stack" action="{{ url_for('checkout.upload_files') }}" method="post" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="field"><label for="checkout-files">Files to upload</label><input id="checkout-files" name="files" type="file" accept="{{ accept_types }}" multiple required></div>
+        <button class="button button-secondary" type="submit">Upload selected files</button>
+      </form>
+      <p class="hint">Uploads stay in your private library even if you remove them from this draft. No order is placed yet.</p>
+    </section>
+    <section class="content-card"><h2>Files for this order</h2>
+      {% if records %}<form class="form-stack" method="post" action="{{ url_for('checkout.upload') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <ul class="checkout-file-list">{% for record in records %}
+          <li><label class="checkout-file-choice"><input type="checkbox" name="file_id" value="{{ record.id }}" {% if record.id in selected %}checked{% endif %}>
+            <span><strong>{{ record.original_filename }}</strong><small>{{ record.file_extension|upper }} · {{ record.file_size }} bytes{% if record.configuration %} · Settings saved{% endif %}</small></span></label></li>
+        {% endfor %}</ul>
+        <p class="hint">Uncheck a file to remove it from this order. Its private library copy remains available.</p>
+        <button class="button button-primary" type="submit">Next: Pick a Shop →</button>
+      </form>{% else %}<p>No files uploaded yet. Use the upload form to start.</p>{% endif %}
+    </section>
+  </div>
+{% endblock %}

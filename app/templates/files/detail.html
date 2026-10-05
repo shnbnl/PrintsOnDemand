@@ -41,7 +41,7 @@
       {% endif %}
       <div class="form-actions">
         <a class="button button-secondary" href="{{ url_for('files.configure', file_id=record.id) }}">{{ 'Edit' if record.configuration else 'Set' }} print configuration</a>
-        {% if record.configuration %}<a class="button button-primary" href="{{ url_for('orders.new', file_id=record.id) }}">Review an order for this file</a>{% endif %}
+        <a class="button button-primary" href="{{ url_for('checkout.upload', file_id=record.id) }}">Start an order for this file</a>
       </div>
     </section>
   </div>

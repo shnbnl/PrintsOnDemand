@@ -1,0 +1,10 @@
+<nav class="checkout-progress" aria-label="Checkout progress">
+  <ol>
+    {% for number, label, endpoint in [(1, 'Upload', 'checkout.upload'), (2, 'Shop', 'checkout.shop'), (3, 'Configure', 'checkout.configure'), (4, 'Payment', 'checkout.payment'), (5, 'Review', 'checkout.review')] %}
+      <li class="{{ 'is-current' if step == number else 'is-complete' if step > number else '' }}">
+        {% if step > number %}<a href="{{ url_for(endpoint) }}"><span aria-hidden="true">{{ number }}</span>{{ label }}</a>
+        {% else %}<span {% if step == number %}aria-current="step"{% endif %}><span aria-hidden="true">{{ number }}</span>{{ label }}</span>{% endif %}
+      </li>
+    {% endfor %}
+  </ol>
+</nav>

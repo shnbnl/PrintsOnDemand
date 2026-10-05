@@ -4,9 +4,8 @@
 (() => {
   const toggles = [...document.querySelectorAll("[data-order-file-toggle]")];
   const count = document.querySelector("#order-file-count");
-  if (!count) return;
-
   function update() {
+    if (!count) return;
     toggles.forEach((toggle) => {
       const card = toggle.closest("[data-order-file-card]");
       const selected = toggle.checked;
@@ -30,6 +29,7 @@
   update();
 
   const shop = document.querySelector("#shop_id");
+  const fixedShop = document.querySelector("[data-fixed-shop]");
   const professor = document.querySelector("#professor_id");
   const professorPreview = document.querySelector("#professor-preview");
   function updateProfessorPreview() {
@@ -46,8 +46,8 @@
   const methods = [...document.querySelectorAll('input[name="destination"]')];
   const panels = [...document.querySelectorAll("[data-method-fields]")];
   function updateFulfillment() {
-    if (!shop) return;
-    const selectedShop = shop.selectedOptions[0];
+    if (!shop && !fixedShop) return;
+    const selectedShop = shop ? shop.selectedOptions[0] : fixedShop;
     document.querySelectorAll('#pickup_slot, #delivery_slot').forEach((slotSelect) => {
       slotSelect.querySelectorAll('option[value]:not([value=""])').forEach((option) => {
         const [start, end] = option.value.split("-");

@@ -95,6 +95,31 @@ def owned_order(order_reference: str, user_id: int) -> Order:
     return order
 
 
+def normalize_payment_reference(reference: str) -> str:
+    if isinstance(reference, str) and len(reference) > 120:
+        raise PaymentError("Enter a payment reference of 4–120 permitted characters.")
+    cleaned = " ".join(reference.split()) if isinstance(reference, str) else ""
+    if not REFERENCE_PATTERN.fullmatch(cleaned):
+        raise PaymentError("Enter a payment reference of 4–120 permitted characters.")
+    return cleaned
+
+
+def validate_checkout_payment(*, destination: OrderDestination, method: str,
+                              reference: str = "") -> tuple[PaymentMethod, str | None]:
+    """Validate pre-order payment intent without treating it as paid."""
+    try:
+        selected = PaymentMethod(method)
+    except ValueError as error:
+        raise PaymentError("Select a valid payment method.") from error
+    if destination == OrderDestination.PROFESSOR and selected != PaymentMethod.ONLINE:
+        raise PaymentError("Professor delivery requires online payment.")
+    if selected == PaymentMethod.ONLINE and online_payment_details() is None:
+        raise PaymentError("Online payment is not configured for this service.")
+    if selected == PaymentMethod.ONSITE and reference.strip():
+        raise PaymentError("A payment reference is only accepted for online payment.")
+    return selected, normalize_payment_reference(reference) if reference.strip() else None
+
+
 def select_payment_method(*, order_reference: str, user_id: int, method: str) -> Payment:
     order = owned_order(order_reference, user_id)
     if order.status != OrderStatus.PENDING_PAYMENT:
@@ -159,11 +184,7 @@ def submit_online_reference(*, order_reference: str, user_id: int, reference: st
         raise PaymentError("Payment amount no longer matches the order.", 409)
     if online_payment_details() is None:
         raise PaymentError("Online payment is currently unavailable.", 409)
-    if isinstance(reference, str) and len(reference) > 120:
-        raise PaymentError("Enter a payment reference of 4–120 permitted characters.")
-    cleaned = " ".join(reference.split()) if isinstance(reference, str) else ""
-    if not REFERENCE_PATTERN.fullmatch(cleaned):
-        raise PaymentError("Enter a payment reference of 4–120 permitted characters.")
+    cleaned = normalize_payment_reference(reference)
     if payment.payment_status == PaymentStatus.SUBMITTED and payment.payment_reference == cleaned:
         return payment  # Browser retry must not create another submission.
     if payment.payment_status != PaymentStatus.PENDING:

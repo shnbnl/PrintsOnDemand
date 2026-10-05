@@ -90,7 +90,8 @@ def test_student_map_search_and_existing_shop_flow(client, test_app):
     detail = client.get(detail_url)
     assert detail.status_code == 200
     assert b"8.75" in detail.data
-    assert b"Upload and configure a file" in detail.data
+    assert b"Start Order" in detail.data
+    assert f"/checkout/upload?shop_id={mapped}".encode() in detail.data
 
     searched = client.get("/shops/map?q=MaPpEd")
     assert [shop["id"] for shop in map_data(searched)] == [mapped]
