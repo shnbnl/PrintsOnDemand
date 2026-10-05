@@ -47,14 +47,17 @@ def upload_checkout_file(client, app, owner, name="notes.pdf"):
         ).order_by(UploadedFile.id.desc()))
 
 
+def print_fields(file_id, *, quantity="1"):
+    return {"file_id": str(file_id), f"paper_size_{file_id}": "A4",
+            f"color_mode_{file_id}": "GRAYSCALE", f"quantity_{file_id}": quantity}
+
+
 def start(client, shop_id, file_id, *, quantity="2", destination=None):
     uploaded = post(client, "/checkout/upload", {"file_id": str(file_id)})
     assert uploaded.status_code == 302, uploaded.get_data(as_text=True)[:500]
-    assert post(client, "/checkout/shop", {"shop_id": str(shop_id)}).status_code == 302
-    fields = {"file_id": str(file_id), f"paper_size_{file_id}": "A4",
-              f"color_mode_{file_id}": "GRAYSCALE", f"quantity_{file_id}": quantity,
-              **(destination or pickup_fields())}
-    return post(client, "/checkout/configure", fields)
+    selected = post(client, "/checkout/shop", {"shop_id": str(shop_id), **print_fields(file_id, quantity=quantity)})
+    assert selected.status_code == 302, selected.get_data(as_text=True)[:500]
+    return post(client, "/checkout/fulfillment", destination or pickup_fields())
 
 
 def test_student_cash_checkout_creates_order_payment_and_success(client, test_app):
@@ -171,9 +174,8 @@ def test_invalid_shop_file_configuration_payment_and_csrf(client, test_app):
     assert post(client, "/checkout/upload", {"file_id": str(foreign_id)}).status_code == 400
     assert post(client, "/checkout/upload", {"file_id": str(file_id)}).status_code == 302
     assert post(client, "/checkout/shop", {"shop_id": "99999"}).status_code == 400
-    assert post(client, "/checkout/shop", {"shop_id": str(shop_id)}).status_code == 302
-    assert post(client, "/checkout/configure", {
-        "file_id": str(file_id), f"paper_size_{file_id}": "A4",
+    assert post(client, "/checkout/shop", {
+        "shop_id": str(shop_id), "file_id": str(file_id), f"paper_size_{file_id}": "A4",
         f"color_mode_{file_id}": "GRAYSCALE", f"quantity_{file_id}": "0", **pickup_fields(),
     }).status_code == 400
     assert client.get("/checkout/payment").status_code == 302
@@ -198,11 +200,11 @@ def test_upload_multiple_files_and_remove_from_draft(client, test_app):
         assert len(files) == 3
         selected = [item.id for item in files if item.id != first]
     assert post(client, "/checkout/upload", {"file_id": [str(value) for value in selected]}).status_code == 302
-    assert post(client, "/checkout/shop", {"shop_id": str(shop_id)}).status_code == 302
     data = {"file_id": [str(value) for value in selected], **pickup_fields()}
     for value in selected:
         data.update({f"paper_size_{value}": "A4", f"color_mode_{value}": "GRAYSCALE", f"quantity_{value}": "1"})
-    assert post(client, "/checkout/configure", data).status_code == 302
+    assert post(client, "/checkout/shop", {"shop_id": str(shop_id), **data}).status_code == 302
+    assert post(client, "/checkout/fulfillment", pickup_fields()).status_code == 302
     assert post(client, "/checkout/payment", {"payment_method": "ONSITE"}).status_code == 302
     assert post(client, "/checkout/place").status_code == 302
     with test_app.app_context():

@@ -10,7 +10,7 @@ from app.extensions import db
 from app.models import FeeType, Order, OrderDestination, OrderStatus, PaymentStatus, PrintingShop, ShopFee, ShopService, ServiceType, User, UserRole
 from app.services.tracking import build_tracking
 from test_checkout_delivery_shops import SHOPS, seeded_shop
-from test_checkout_flow import post, upload_checkout_file
+from test_checkout_flow import print_fields, post, upload_checkout_file
 from test_fulfillment import delivery_fields
 from test_orders import sign_in, student, token
 from test_payment_verification import post_action, review_url
@@ -59,10 +59,10 @@ def test_shop_fee_checkout_and_verification_start_printing(client, test_app, nam
     sign_in(client, owner)
     file_id = upload_checkout_file(client, test_app, owner)
     select_shop(client, file_id, shop_id)
-    assert post(client, "/checkout/configure", configure(
+    assert post(client, "/checkout/fulfillment", configure(
         file_id, **delivery_fields(), delivery_fee="0.01",
     )).status_code == 400
-    assert post(client, "/checkout/configure", configure(file_id, **delivery_fields())).status_code == 302
+    assert post(client, "/checkout/fulfillment", configure(file_id, **delivery_fields())).status_code == 302
     assert b"Delivery fee: PHP 45.50" in client.get("/checkout/payment").data
     assert post(client, "/checkout/payment", {"payment_method": "ONLINE", "payment_reference": "FEE-1234"}).status_code == 302
     assert post(client, "/checkout/place").status_code == 302
@@ -152,18 +152,19 @@ def test_payment_verification_rolls_back_if_order_transition_fails(client, test_
 
 
 @pytest.mark.parametrize("role", (UserRole.STUDENT, UserRole.PROFESSOR))
-def test_checkout_map_panel_selection_posts_directly_and_validates_shop(client, test_app, role):
+def test_checkout_workspace_proceed_validates_shop(client, test_app, role):
     shop_id = seeded_shop(test_app, SHOPS[0])
     owner = student(test_app, role=role)
     sign_in(client, owner)
     file_id = upload_checkout_file(client, test_app, owner)
     assert post(client, "/checkout/upload", {"file_id": str(file_id)}).status_code == 302
     page = client.get("/checkout/shop")
-    assert page.data.count(b'class="checkout-map-info"') == 4
-    assert b'data-checkout-select' in page.data
+    assert page.data.count(b'data-workspace-content') == 1
+    assert b'data-workspace-proceed' in page.data
     assert b'Next: Configure Printing' not in page.data
     assert b'checkout-shop-grid' not in page.data
-    assert b'data-shop-fallback open' in page.data
+    assert b'data-workspace-picker' in page.data
+    assert b'Choose a shop from a list' not in page.data
     assert post(client, "/checkout/shop", {}).status_code == 400
     assert post(client, "/checkout/shop", {"shop_id": "999999"}).status_code == 400
     with test_app.app_context():
@@ -171,13 +172,13 @@ def test_checkout_map_panel_selection_posts_directly_and_validates_shop(client, 
         shop.is_active = False
         db.session.commit()
     db.session.expire_all()
-    assert post(client, "/checkout/shop", {"shop_id": str(shop_id)}).status_code == 400
+    assert post(client, "/checkout/shop", {"shop_id": str(shop_id), **print_fields(file_id)}).status_code == 400
     with test_app.app_context():
         shop = db.session.get(PrintingShop, shop_id)
         shop.is_active = True
         db.session.commit()
     db.session.expire_all()
-    response = post(client, "/checkout/shop", {"shop_id": str(shop_id)})
-    assert response.status_code == 302 and response.headers["Location"].endswith("/checkout/configure")
+    response = post(client, "/checkout/shop", {"shop_id": str(shop_id), **print_fields(file_id)})
+    assert response.status_code == 302 and response.headers["Location"].endswith("/checkout/fulfillment")
     with client.session_transaction() as state:
         assert state["checkout_draft"]["shop_id"] == shop_id

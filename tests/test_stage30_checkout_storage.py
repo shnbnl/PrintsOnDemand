@@ -13,7 +13,7 @@ from app.models import (
 )
 from app.models.user import utc_now
 from app.services.staged_uploads import cleanup_staged_uploads
-from test_checkout_flow import post, setup, start, upload_checkout_file
+from test_checkout_flow import print_fields, post, setup, start, upload_checkout_file
 from test_orders import PDF, file, pickup_fields, shop, sign_in, student
 from test_shop_map import map_data
 
@@ -22,13 +22,7 @@ def test_expired_staged_cleanup_preserves_legacy_and_order_files(client, test_ap
     owner, shop_id, staged_id = setup(client, test_app)
     legacy_id = file(test_app, owner, name="legacy.pdf")
     completed_id = upload_checkout_file(client, test_app, owner, "completed.pdf")
-    assert post(client, "/checkout/upload", {"file_id": str(completed_id)}).status_code == 302
-    assert post(client, "/checkout/shop", {"shop_id": str(shop_id)}).status_code == 302
-    assert post(client, "/checkout/configure", {
-        "file_id": str(completed_id), f"paper_size_{completed_id}": "A4",
-        f"color_mode_{completed_id}": "GRAYSCALE", f"quantity_{completed_id}": "1",
-        **pickup_fields(),
-    }).status_code == 302
+    assert start(client, shop_id, completed_id, quantity="1").status_code == 302
     assert post(client, "/checkout/payment", {"payment_method": "ONSITE"}).status_code == 302
     assert post(client, "/checkout/place").status_code == 302
     with test_app.app_context():
@@ -98,7 +92,7 @@ def test_checkout_shop_reuses_four_database_map_markers(client, test_app):
     assert test_app.test_cli_runner().invoke(args=["seed-demo-shops"]).exit_code == 0
     owner = student(test_app)
     sign_in(client, owner)
-    upload_checkout_file(client, test_app, owner)
+    file_id = upload_checkout_file(client, test_app, owner)
     page = client.get("/checkout/shop")
     assert page.status_code == 200
     markers = map_data(page)
@@ -107,9 +101,9 @@ def test_checkout_shop_reuses_four_database_map_markers(client, test_app):
     }
     assert b'/static/js/shop-map.js' in page.data
     for marker in markers:
-        assert f'data-shop-id="{marker["id"]}"'.encode() in page.data
+        assert f'value="{marker["id"]}"'.encode() in page.data
     chosen = markers[2]
-    assert post(client, "/checkout/shop", {"shop_id": str(chosen["id"])}).status_code == 302
+    assert post(client, "/checkout/shop", {"shop_id": str(chosen["id"]), **print_fields(file_id)}).status_code == 302
     assert f'value="{chosen["id"]}"'.encode() in client.get("/checkout/shop").data
     assert post(client, "/checkout/shop", {"shop_id": "99999"}).status_code == 400
 
@@ -124,7 +118,7 @@ def test_configure_each_supported_size_color_count_and_rush_rule(client, test_ap
                 db.session.add(PrintPrice(shop_id=shop_id, paper_size=size, color_mode=mode, price=Decimal("3.00")))
         db.session.commit()
     assert post(client, "/checkout/upload", {"file_id": str(file_id)}).status_code == 302
-    assert post(client, "/checkout/shop", {"shop_id": str(shop_id)}).status_code == 302
+    assert post(client, "/checkout/shop", {"shop_id": str(shop_id), **print_fields(file_id)}).status_code == 302
 
     def configure(*, size="A4", mode="GRAYSCALE", count="1", rush=False):
         fields = {"file_id": str(file_id), f"paper_size_{file_id}": size,
@@ -132,10 +126,10 @@ def test_configure_each_supported_size_color_count_and_rush_rule(client, test_ap
                   **pickup_fields()}
         if rush:
             fields[f"is_rush_{file_id}"] = "1"
-        return post(client, "/checkout/configure", fields)
+        return post(client, "/checkout/shop", {"shop_id": str(shop_id), **fields})
 
-    page = client.get("/checkout/configure")
-    assert b"Customize Print" in page.data
+    page = client.get("/checkout/shop")
+    assert b"Print settings" in page.data
     for size in PaperSize:
         assert f'value="{size.value}"'.encode() in page.data
         assert configure(size=size.value).status_code == 302
@@ -152,4 +146,5 @@ def test_configure_each_supported_size_color_count_and_rush_rule(client, test_ap
         db.session.add(ShopFee(shop_id=shop_id, fee_type=FeeType.RUSH_PRINTING, amount=Decimal("5.50")))
         db.session.commit()
     assert configure(rush=True).status_code == 302
+    assert post(client, "/checkout/fulfillment", pickup_fields()).status_code == 302
     assert b"PHP 5.50" in client.get("/checkout/payment").data

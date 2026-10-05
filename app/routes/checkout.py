@@ -3,7 +3,7 @@
 from datetime import timedelta
 from io import BytesIO
 
-from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, send_file, session, url_for
+from flask import Blueprint, abort, current_app, flash, jsonify, redirect, render_template, request, send_file, session, url_for
 from flask_login import current_user
 from flask_wtf import FlaskForm
 from sqlalchemy import select
@@ -196,42 +196,143 @@ def upload_too_large(error):
     return render_upload(error="The combined upload is too large. Add fewer files at a time.", status=413)
 
 
-def render_shop(*, error=None, status=200):
+def print_options(files, saved):
+    """Preserve saved per-file choices, with defaults for newly staged files."""
+    raw = saved.get("options", {})
+    return {file.id: PrintOptions(**raw[str(file.id)]) if str(file.id) in raw else PrintOptions(
+        paper_size=file.configuration.paper_size.value if file.configuration else "A4",
+        color_mode=file.configuration.color_mode.value if file.configuration else "GRAYSCALE",
+        quantity=file.configuration.quantity if file.configuration else 1,
+        is_rush=file.configuration.is_rush if file.configuration else False,
+    ) for file in files}
+
+
+def options_state(options):
+    return {str(file_id): {
+        "paper_size": choice.paper_size, "color_mode": choice.color_mode,
+        "quantity": choice.quantity, "is_rush": choice.is_rush,
+    } for file_id, choice in options.items()}
+
+
+def submitted_options(files, values):
+    posted_ids, options = parse_files(values)
+    if posted_ids != [file.id for file in files] or len(options) != len(files):
+        raise PricingError("Complete the print settings for each selected file.")
+    for file in files:
+        choice = options[file.id]
+        if not 1 <= choice.quantity <= current_app.config["UPLOAD_MAX_QUANTITY"]:
+            raise PricingError("Print count is invalid.")
+        if choice.paper_size not in PaperSize._value2member_map_ or choice.color_mode not in ColorMode._value2member_map_:
+            raise PricingError("Print configuration is invalid.")
+        if any(len(values.getlist(f"{key}_{file.id}")) > 1
+               for key in ("paper_size", "color_mode", "quantity", "is_rush")):
+            raise PricingError("Select one value for each print setting.")
+    return options
+
+
+def workspace_context(files, selected, options, *, error=None):
+    from app.routes.shops import detail_context
+
+    quote = None
+    if selected:
+        try:
+            quote = quote_for([file.id for file in files], selected.id, options)
+        except PricingError as issue:
+            error = error or str(issue)
+    return dict(files=files, shop=selected, options=options, error=error, preview_quote=quote,
+                shop_details=detail_context(selected) if selected else None,
+                rush_available=bool(selected and service_available(selected.id, ServiceType.RUSH_PRINTING)),
+                paper_sizes=list(PaperSize), color_modes=list(ColorMode),
+                max_quantity=current_app.config["UPLOAD_MAX_QUANTITY"])
+
+
+def render_shop(*, error=None, status=200, options=None):
     from app.routes.shops import SCHOOL_AREA_CENTER, map_markers
 
     shops = db.session.scalars(select(PrintingShop).where(
         PrintingShop.is_active.is_(True),
     ).order_by(PrintingShop.name)).all()
-    return render_template("checkout/shop.html", shops=shops, selected_shop_id=draft().get("shop_id"),
+    files = selected_files(draft()) or []
+    selected = selected_shop(draft())
+    context = workspace_context(files, selected, options or print_options(files, draft()), error=error)
+    return render_template("checkout/shop.html", shops=shops, selected_shop_id=selected.id if selected else None,
                            markers=map_markers(), center=SCHOOL_AREA_CENTER,
                            maps_api_key=current_app.config["GOOGLE_MAPS_API_KEY"],
                            maps_map_id=current_app.config["GOOGLE_MAPS_MAP_ID"],
-                           error=error, step=2), status
+                           step=2, **context), status
 
 
 @checkout_bp.route("/shop", methods=["GET", "POST"])
 @roles_required(*ROLES)
 def shop():
     saved = draft().copy()
-    if selected_files(saved) is None:
+    files = selected_files(saved)
+    if files is None:
         return redirect(url_for("checkout.upload"))
     if request.method == "GET":
         return render_shop()
     if not FlaskForm().validate_on_submit():
         abort(400)
+    intent = request.form.get("intent", "proceed")
+    asynchronous = request.headers.get("Accept") == "application/json"
     shop_id = positive_id(request.form.get("shop_id"))
     selected = db.session.get(PrintingShop, shop_id) if shop_id else None
-    if selected is None or not selected.is_active:
+    if selected is None or not selected.is_active or len(request.form.getlist("shop_id")) != 1:
+        if asynchronous:
+            return jsonify(error="Select an available printing shop."), 400
         return render_shop(error="Select an available printing shop.", status=400)
-    if saved.get("shop_id") != selected.id:
-        saved["shop_id"] = selected.id
+    if intent not in {"select", "quote", "proceed"}:
+        abort(400)
+    try:
+        options = submitted_options(files, request.form)
+    except PricingError as issue:
+        if asynchronous:
+            return jsonify(error=str(issue)), 400
+        return render_shop(error=str(issue), status=400)
+    changed_shop = saved.get("shop_id") != selected.id
+    if intent == "select" and changed_shop and not service_available(selected.id, ServiceType.RUSH_PRINTING):
+        options = {file_id: PrintOptions(choice.paper_size, choice.color_mode, choice.quantity, False)
+                   for file_id, choice in options.items()}
+    if intent == "quote":
+        try:
+            quote = quote_for(saved["file_ids"], selected.id, options)
+        except PricingError as issue:
+            return jsonify(error=str(issue)), issue.status_code
+        return jsonify(total=str(quote.total), subtotal=str(quote.subtotal), rush_fee=str(quote.rush_fee), currency=quote.currency)
+    if changed_shop or saved.get("options") != options_state(options):
         for key in ("fulfillment", "payment_method", "payment_reference", "review"):
             saved.pop(key, None)
+    saved["shop_id"] = selected.id
+    saved["options"] = options_state(options)
     save(saved)
-    return redirect(url_for("checkout.configure"))
+    if intent == "select":
+        if asynchronous:
+            return jsonify(html=render_template("checkout/shop_workspace.html", **workspace_context(files, selected, options)), shop_id=selected.id)
+        return redirect(url_for("checkout.shop"))
+    try:
+        quote_for(saved["file_ids"], selected.id, options)
+        for file in files:
+            choice = options[file.id]
+            if file.configuration is None:
+                db.session.add(PrintConfiguration(uploaded_file=file, paper_size=PaperSize(choice.paper_size),
+                    color_mode=ColorMode(choice.color_mode), quantity=choice.quantity, is_rush=choice.is_rush))
+            else:
+                file.configuration.paper_size = PaperSize(choice.paper_size)
+                file.configuration.color_mode = ColorMode(choice.color_mode)
+                file.configuration.quantity = choice.quantity
+                file.configuration.is_rush = choice.is_rush
+        db.session.commit()
+    except (PricingError, ValueError) as issue:
+        db.session.rollback()
+        return render_shop(error=str(issue), status=400, options=options)
+    except SQLAlchemyError:
+        db.session.rollback()
+        current_app.logger.exception("Could not save checkout print settings")
+        return render_shop(error="Print settings could not be saved. Please try again.", status=503, options=options)
+    return redirect(url_for("checkout.fulfillment"))
 
 
-def render_config(files, shop, *, options=None, fields=None, error=None, status=200):
+def render_fulfillment(shop, *, fields=None, error=None, status=200):
     offered = availability(shop)
     professors = (selectable_professors() if current_user.role == UserRole.STUDENT
                   and offered[OrderDestination.PROFESSOR.value] else [])
@@ -241,30 +342,17 @@ def render_config(files, shop, *, options=None, fields=None, error=None, status=
     ):
         offered[OrderDestination.PROFESSOR.value] = False
     fields = fields or {}
-    if options is None:
-        try:
-            options = checkout_options(draft())
-        except PricingError:
-            options = {}
-    preview_quote = None
-    if draft().get("fulfillment"):
-        try:
-            preview_quote, _ = current_quote(draft())
-        except (PricingError, FulfillmentError):
-            pass
     return render_template(
-        "checkout/configure.html", files=files, shop=shop, options=options,
-        fields=fields, error=error, offered=offered, preview_quote=preview_quote,
-        rush_available=service_available(shop.id, ServiceType.RUSH_PRINTING),
+        "checkout/fulfillment.html", shop=shop,
+        fields=fields, error=error, offered=offered,
         professors=professors, own_professor=own_professor,
-        paper_sizes=list(PaperSize), color_modes=list(ColorMode),
         pickup_slots=slot_options(OrderDestination.PICKUP),
         delivery_slots=slot_options(OrderDestination.DELIVERY),
         pickup_min=(today() + timedelta(days=max(1, current_app.config["PICKUP_LEAD_DAYS"]))).isoformat(),
         pickup_max=(today() + timedelta(days=current_app.config["PICKUP_MAX_DAYS"])).isoformat(),
         delivery_min=(today() + timedelta(days=max(1, current_app.config["DELIVERY_LEAD_DAYS"]))).isoformat(),
         delivery_max=(today() + timedelta(days=current_app.config["DELIVERY_MAX_DAYS"])).isoformat(),
-        max_quantity=current_app.config["UPLOAD_MAX_QUANTITY"], step=3,
+        step=3,
     ), status
 
 
@@ -285,7 +373,7 @@ def current_quote(saved):
     files = selected_files(saved)
     shop = selected_shop(saved)
     if files is None or shop is None or not saved.get("fulfillment"):
-        raise FulfillmentError("Complete the print configuration first.")
+        raise FulfillmentError("Complete the Shop and Fulfillment steps first.")
     options = checkout_options(saved)
     preliminary = quote_for(saved["file_ids"], shop.id, options)
     fulfillment = validate_fulfillment(shop=shop, values=saved["fulfillment"], actor=current_user)
@@ -295,9 +383,16 @@ def current_quote(saved):
     return quote, fulfillment
 
 
-@checkout_bp.route("/configure", methods=["GET", "POST"])
+@checkout_bp.get("/configure")
 @roles_required(*ROLES)
 def configure():
+    """Keep old bookmarks usable without retaining the old combined form."""
+    return redirect(url_for("checkout.fulfillment"))
+
+
+@checkout_bp.route("/fulfillment", methods=["GET", "POST"])
+@roles_required(*ROLES)
+def fulfillment():
     saved = draft().copy()
     files = selected_files(saved)
     if files is None:
@@ -305,44 +400,29 @@ def configure():
     shop = selected_shop(saved)
     if shop is None:
         return redirect(url_for("checkout.shop"))
+    try:
+        options = checkout_options(saved)
+        quote_for(saved["file_ids"], shop.id, options)
+    except PricingError:
+        return redirect(url_for("checkout.shop"))
     if request.method == "GET":
-        return render_config(files, shop, fields=saved.get("fulfillment"))
+        return render_fulfillment(shop, fields=saved.get("fulfillment"))
     if not FlaskForm().validate_on_submit():
         abort(400)
     try:
-        posted_ids, options = parse_files(request.form)
-        if posted_ids != saved["file_ids"] or len(options) != len(files):
-            raise PricingError("Complete the print settings for each selected file.")
-        for file in files:
-            choice = options[file.id]
-            if not 1 <= choice.quantity <= current_app.config["UPLOAD_MAX_QUANTITY"]:
-                raise PricingError("Print count is invalid.")
-            if file.configuration is None:
-                db.session.add(PrintConfiguration(
-                    uploaded_file=file, paper_size=PaperSize(choice.paper_size),
-                    color_mode=ColorMode(choice.color_mode), quantity=choice.quantity,
-                    is_rush=choice.is_rush,
-                ))
-        db.session.flush()
-        preliminary = quote_for(saved["file_ids"], shop.id, options)
         fulfillment = validate_fulfillment(shop=shop, values=request.form, actor=current_user)
         if fulfillment.destination == OrderDestination.DELIVERY:
             quote_for(saved["file_ids"], shop.id, options, delivery_fee=fulfillment.delivery_fee,
                       delivery_fee_is_demo=fulfillment.delivery_fee_is_demo)
-        db.session.commit()
     except (PricingError, FulfillmentError, ValueError) as error:
         db.session.rollback()
-        return render_config(files, shop, options=locals().get("options"), fields=request.form,
+        return render_fulfillment(shop, fields=request.form,
                              error=str(error), status=getattr(error, "status_code", 400))
     except SQLAlchemyError:
         db.session.rollback()
-        current_app.logger.exception("Could not save checkout configuration")
+        current_app.logger.exception("Could not validate checkout fulfillment")
         abort(500)
     saved["fulfillment"] = fulfillment.fields()
-    saved["options"] = {str(file_id): {
-        "paper_size": choice.paper_size, "color_mode": choice.color_mode,
-        "quantity": choice.quantity, "is_rush": choice.is_rush,
-    } for file_id, choice in options.items()}
     for key in ("payment_method", "payment_reference", "review"):
         saved.pop(key, None)
     save(saved)
@@ -386,7 +466,7 @@ def payment():
     try:
         quote, fulfillment = current_quote(saved)
     except (PricingError, FulfillmentError):
-        return redirect(url_for("checkout.configure"))
+        return redirect(url_for("checkout.fulfillment"))
     if request.method == "GET":
         return render_payment(quote, fulfillment)
     if not FlaskForm().validate_on_submit():
@@ -428,7 +508,7 @@ def review():
                                   method=saved["payment_method"],
                                   reference=saved.get("payment_reference", ""))
     except (PricingError, FulfillmentError, PaymentError):
-        return redirect(url_for("checkout.configure"))
+        return redirect(url_for("checkout.fulfillment"))
     current = review_state(quote, fulfillment)
     if saved.get("review") != current:
         saved["review"] = current
@@ -459,7 +539,7 @@ def place():
                                   method=saved["payment_method"],
                                   reference=saved.get("payment_reference", ""))
     except (PricingError, FulfillmentError, PaymentError):
-        return redirect(url_for("checkout.configure"))
+        return redirect(url_for("checkout.fulfillment"))
     current = review_state(quote, fulfillment)
     if saved.get("review") != current:
         saved["review"] = current
@@ -471,7 +551,7 @@ def place():
                              payment_method=saved["payment_method"],
                              payment_reference=saved.get("payment_reference", ""))
     except (PaymentError, FulfillmentError):
-        return redirect(url_for("checkout.configure"))
+        return redirect(url_for("checkout.fulfillment"))
     except (SQLAlchemyError, RuntimeError):
         db.session.rollback()
         current_app.logger.exception("Could not create checkout order")

@@ -4,23 +4,19 @@ from sqlalchemy import select
 
 from app.extensions import db
 from app.models import Order, Professor, ProfessorVerificationStatus, User
-from test_checkout_flow import post, setup
+from test_checkout_flow import print_fields, post, setup
 from test_fulfillment import delivery_fields, offer_delivery
 from test_orders import approved_professor, offer_professor_service, pickup_fields, shop
 
 
 def configure(file_id, **fulfillment):
-    return {
-        "file_id": str(file_id), f"paper_size_{file_id}": "A4",
-        f"color_mode_{file_id}": "GRAYSCALE", f"quantity_{file_id}": "1",
-        **fulfillment,
-    }
+    return fulfillment
 
 
 def select_shop(client, file_id, shop_id):
     assert post(client, "/checkout/upload", {"file_id": str(file_id)}).status_code == 302
-    assert post(client, "/checkout/shop", {"shop_id": str(shop_id)}).status_code == 302
-    return client.get("/checkout/configure")
+    assert post(client, "/checkout/shop", {"shop_id": str(shop_id), **print_fields(file_id)}).status_code == 302
+    return client.get("/checkout/fulfillment")
 
 
 def test_student_professor_option_only_at_blue_and_managed_faculty_is_immutable(client, test_app):
@@ -33,7 +29,7 @@ def test_student_professor_option_only_at_blue_and_managed_faculty_is_immutable(
         page = select_shop(client, file_id, other)
         assert b'Deliver to Professor' not in page.data
         assert b'id="professor_id"' not in page.data
-        assert post(client, "/checkout/configure", configure(
+        assert post(client, "/checkout/fulfillment", configure(
             file_id, destination="PROFESSOR", professor_id=str(eligible),
         )).status_code == 400
     page = select_shop(client, file_id, blue)
@@ -41,13 +37,13 @@ def test_student_professor_option_only_at_blue_and_managed_faculty_is_immutable(
     assert b'Eligible Professor' in page.data and b'Not Accepting' not in page.data
     assert b'data-faculty="CCIS"' in page.data
     assert b'name="professor_faculty"' not in page.data
-    assert post(client, "/checkout/configure", configure(
+    assert post(client, "/checkout/fulfillment", configure(
         file_id, destination="PROFESSOR", professor_id=str(eligible), professor_faculty="GE",
     )).status_code == 400
-    assert post(client, "/checkout/configure", configure(
+    assert post(client, "/checkout/fulfillment", configure(
         file_id, destination="PROFESSOR", professor_id="999999",
     )).status_code == 400
-    assert post(client, "/checkout/configure", configure(
+    assert post(client, "/checkout/fulfillment", configure(
         file_id, destination="PROFESSOR", professor_id=str(eligible),
     )).status_code == 302
     assert post(client, "/checkout/payment", {"payment_method": "ONSITE"}).status_code == 400
@@ -70,14 +66,14 @@ def test_student_shop_change_resets_professor_delivery(client, test_app):
     professor_id = approved_professor(test_app)
     other = shop(test_app, name="CHALECOSPOT")
     select_shop(client, file_id, blue)
-    assert post(client, "/checkout/configure", configure(
+    assert post(client, "/checkout/fulfillment", configure(
         file_id, destination="PROFESSOR", professor_id=str(professor_id),
     )).status_code == 302
-    assert post(client, "/checkout/shop", {"shop_id": str(other)}).status_code == 302
-    page = client.get("/checkout/configure")
+    assert post(client, "/checkout/shop", {"shop_id": str(other), **print_fields(file_id)}).status_code == 302
+    page = client.get("/checkout/fulfillment")
     assert b'Deliver to Professor' not in page.data
-    assert client.get("/checkout/payment").headers["Location"].endswith("/checkout/configure")
-    assert post(client, "/checkout/configure", configure(
+    assert client.get("/checkout/payment").headers["Location"].endswith("/checkout/fulfillment")
+    assert post(client, "/checkout/fulfillment", configure(
         file_id, destination="PROFESSOR", professor_id=str(professor_id),
     )).status_code == 400
 
@@ -96,13 +92,13 @@ def test_professor_pickup_and_faculty_destination_use_managed_profile(client, te
     assert b'Scheduled Pickup' in page.data and b'Deliver to Faculty' in page.data
     assert b'Deliver to Professor' not in page.data and b'id="professor_id"' not in page.data
     assert b'<strong>CCIS</strong>' in page.data and b'name="professor_faculty"' not in page.data
-    assert post(client, "/checkout/configure", configure(
+    assert post(client, "/checkout/fulfillment", configure(
         file_id, destination="PROFESSOR", professor_faculty="MITL",
     )).status_code == 400
-    assert post(client, "/checkout/configure", configure(
+    assert post(client, "/checkout/fulfillment", configure(
         file_id, destination="PROFESSOR", professor_id=str(managed),
     )).status_code == 400
-    assert post(client, "/checkout/configure", configure(file_id, destination="PROFESSOR")).status_code == 302
+    assert post(client, "/checkout/fulfillment", configure(file_id, destination="PROFESSOR")).status_code == 302
     assert post(client, "/checkout/payment", {"payment_method": "ONSITE"}).status_code == 400
     assert post(client, "/checkout/payment", {"payment_method": "ONLINE"}).status_code == 400
     assert post(client, "/checkout/payment", {"payment_method": "ONLINE", "payment_reference": "FACULTY-1234"}).status_code == 302
@@ -133,27 +129,27 @@ def test_professor_unverified_unlinked_or_inactive_profile_cannot_deliver_to_fac
             )
             db.session.get(Professor, managed).is_active = active
             db.session.commit()
-        page = client.get("/checkout/configure")
+        page = client.get("/checkout/fulfillment")
         assert b'Scheduled Pickup' in page.data and b'Deliver to Faculty' not in page.data
-        assert post(client, "/checkout/configure", configure(file_id, destination="PROFESSOR")).status_code == 400
+        assert post(client, "/checkout/fulfillment", configure(file_id, destination="PROFESSOR")).status_code == 400
     with test_app.app_context():
         db.session.get(User, owner).professor_verification_status = ProfessorVerificationStatus.VERIFIED
         db.session.get(Professor, managed).is_active = True
         db.session.get(Professor, managed).faculty = None
         db.session.commit()
-    assert b'Deliver to Faculty' not in client.get("/checkout/configure").data
-    assert post(client, "/checkout/configure", configure(file_id, **pickup_fields())).status_code == 302
+    assert b'Deliver to Faculty' not in client.get("/checkout/fulfillment").data
+    assert post(client, "/checkout/fulfillment", configure(file_id, **pickup_fields())).status_code == 302
     assert post(client, "/checkout/payment", {"payment_method": "ONSITE"}).status_code == 302
 
 
 def test_professor_general_delivery_uses_shop_setting_and_preserves_csrf(client, test_app):
     _, blue, file_id = setup(client, test_app, professor=True)
     select_shop(client, file_id, blue)
-    assert b'value="DELIVERY"' not in client.get("/checkout/configure").data
-    assert post(client, "/checkout/configure", configure(
+    assert b'value="DELIVERY"' not in client.get("/checkout/fulfillment").data
+    assert post(client, "/checkout/fulfillment", configure(
         file_id, **delivery_fields(),
     )).status_code == 400
     offer_delivery(test_app, blue)
-    assert b'value="DELIVERY"' in client.get("/checkout/configure").data
-    assert post(client, "/checkout/configure", configure(file_id, **delivery_fields())).status_code == 302
-    assert client.post("/checkout/configure", data=configure(file_id, **pickup_fields())).status_code == 400
+    assert b'value="DELIVERY"' in client.get("/checkout/fulfillment").data
+    assert post(client, "/checkout/fulfillment", configure(file_id, **delivery_fields())).status_code == 302
+    assert client.post("/checkout/fulfillment", data=configure(file_id, **pickup_fields())).status_code == 400

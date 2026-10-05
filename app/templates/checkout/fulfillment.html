@@ -1,35 +1,12 @@
 {% extends "base.html" %}
-{% block title %}Configure printing | Prints On Demand{% endblock %}
+{% block title %}Fulfillment | Prints On Demand{% endblock %}
 {% block content %}
   {% include "checkout/progress.html" %}
-  <header class="page-intro"><p class="page-eyebrow">Step 3 · Configure</p><h1>Customize Print</h1><p class="page-lead">Set each file's paper size, color, print count, and priority for {{ shop.name }}.</p></header>
+  <header class="page-intro"><p class="page-eyebrow">Step 3 · Fulfillment</p><h1>Choose fulfillment</h1><p class="page-lead">Choose how you would like to receive your printed papers.</p></header>
   {% if error %}<p class="notice notice-error" role="alert">{{ error }}</p>{% endif %}
-  <form class="form-stack checkout-configure-form" method="post" action="{{ url_for('checkout.configure') }}">
+  <form class="form-stack checkout-fulfillment-form" method="post" action="{{ url_for('checkout.fulfillment') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div data-fixed-shop data-professor="{{ '1' if offered.PROFESSOR else '0' }}" data-pickup="{{ '1' if offered.PICKUP else '0' }}" data-delivery="{{ '1' if offered.DELIVERY else '0' }}" data-opening="{{ shop.opening_time.strftime('%H:%M') }}" data-closing="{{ shop.closing_time.strftime('%H:%M') }}"></div>
-    <section class="content-card"><p class="page-eyebrow">Selected shop</p><h2>{{ shop.name }}</h2><p>{{ shop.address }}</p><a href="{{ url_for('checkout.shop') }}">Change shop</a></section>
-    <section class="content-card checkout-customize"><p class="page-eyebrow">Customize print</p><h2>Configure each file</h2><p class="hint">Each file has its own settings. The shop's database rates determine the final price.</p>
-      <div class="checkout-config-list">{% for file in files %}{% set choice = options.get(file.id) %}{% set saved = file.configuration %}
-        <fieldset class="checkout-file-group"><legend>{{ loop.index }}. {{ file.original_filename }}</legend>
-          <p class="hint">Choose how this file should be printed.</p><input type="hidden" name="file_id" value="{{ file.id }}">
-          <div class="print-option-grid">
-            <fieldset class="print-option-card"><legend>Paper Size</legend><div class="print-radio-grid">
-              {% for size in paper_sizes %}<label class="print-option-choice"><input type="radio" name="paper_size_{{ file.id }}" value="{{ size.value }}" {% if size.value == (choice.paper_size if choice else saved.paper_size.value if saved else 'A4') %}checked{% endif %} required><span>{{ size.label }}</span></label>{% endfor %}
-            </div></fieldset>
-            <fieldset class="print-option-card"><legend>Print Color Output</legend><div class="print-radio-grid">
-              {% for mode in color_modes %}<label class="print-option-choice"><input type="radio" name="color_mode_{{ file.id }}" value="{{ mode.value }}" {% if mode.value == (choice.color_mode if choice else saved.color_mode.value if saved else 'GRAYSCALE') %}checked{% endif %} required><span>{{ mode.label }}</span></label>{% endfor %}
-            </div></fieldset>
-            <fieldset class="print-option-card"><legend>Print Count</legend><div class="print-count-control" data-print-count>
-              <button type="button" data-count-step="-1" aria-label="Decrease print count for {{ file.original_filename }}">−</button>
-              <input id="quantity-{{ file.id }}" name="quantity_{{ file.id }}" type="number" inputmode="numeric" min="1" max="{{ max_quantity }}" step="1" value="{{ choice.quantity if choice else saved.quantity if saved else 1 }}" aria-describedby="count-hint-{{ file.id }}" required>
-              <button type="button" data-count-step="1" aria-label="Increase print count for {{ file.original_filename }}">+</button>
-            </div><p class="hint" id="count-hint-{{ file.id }}">Print count must be between 1 and {{ max_quantity }}.</p></fieldset>
-            <fieldset class="print-option-card"><legend>Printing Priority</legend><label class="print-option-choice print-rush-choice"><input type="checkbox" name="is_rush_{{ file.id }}" value="1" {% if rush_available and (choice.is_rush if choice else saved.is_rush if saved else false) %}checked{% endif %} {% if not rush_available %}disabled{% endif %}><span>Rush printing</span></label>
-              <p class="hint">{% if rush_available %}Request priority handling. Any fee appears in the price summary.{% else %}This shop does not offer rush printing.{% endif %}</p></fieldset>
-          </div>
-        </fieldset>{% endfor %}</div>
-      <p class="hint">The current price model charges per print count; it does not inspect document page counts or offer page ranges or duplex printing.</p>
-    </section>
     <section class="content-card destination-card"><p class="page-eyebrow">Fulfillment</p><h2>How would you like to receive your order?</h2><p class="hint">Dates and time slots are requests in Philippine time.</p>
       <fieldset class="choice-fieldset"><legend>Fulfillment method</legend><div class="choice-grid fulfillment-choices">
         {% set methods = [('PICKUP', 'Scheduled Pickup', 'Request a date and time at the shop.'), ('DELIVERY', 'Delivery', 'Have your printed papers delivered to you.')] %}
@@ -61,9 +38,7 @@
         <div class="field"><label for="delivery_slot">Delivery time (Philippine time)</label><select id="delivery_slot" name="delivery_slot"><option value="">Select a time slot</option>{% for value, label in delivery_slots %}<option value="{{ value }}" {% if fields.get('delivery_slot') == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
       </div>{% endif %}
     </section>
-    {% if preview_quote %}<section class="content-card price-summary" aria-label="Current price summary"><p class="page-eyebrow">Saved configuration</p><h2>Current price</h2><p>Subtotal: {{ preview_quote.currency }} {{ preview_quote.subtotal }} · Rush fee: {{ preview_quote.currency }} {{ preview_quote.rush_fee }} · Delivery fee: {{ preview_quote.currency }} {{ preview_quote.delivery_fee }}</p><p class="summary-total"><strong>Total: {{ preview_quote.currency }} {{ preview_quote.total }}</strong></p><p class="hint">Changing settings recalculates this total on the next step.</p></section>{% endif %}
     <div class="form-actions"><a class="button button-secondary" href="{{ url_for('checkout.shop') }}">← Back to shop</a><button class="button button-primary" type="submit">Next: Choose Payment →</button></div>
   </form>
   <script src="{{ url_for('static', filename='js/order-selection.js') }}" defer></script>
-  <script src="{{ url_for('static', filename='js/checkout-configure.js') }}" defer></script>
 {% endblock %}

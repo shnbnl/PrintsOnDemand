@@ -13,18 +13,17 @@
   const locationStatus = document.querySelector("#location-status");
   const choices = [...document.querySelectorAll("[data-shop-id]")];
   const panels = [...document.querySelectorAll("[data-shop-panel]")];
-  const checkoutForm = canvas.closest("[data-checkout-shop-form]");
-  const fallback = document.querySelector("[data-shop-fallback]");
+  const workspace = canvas.closest("[data-shop-workspace]");
+  const picker = document.querySelector("[data-workspace-picker]");
+  const preview = document.querySelector("[data-pin-preview]");
   const markers = new Map();
   let map;
   let userMarker;
   let loadTimer;
-  let previewTimer;
-  let pinnedShopId = canvas.dataset.selectedShopId || null;
 
   function selectShop(id, moveMap = false, revealPanel = false) {
     const shop = shops.find((item) => String(item.id) === String(id));
-    if (!shop && !choices.some((choice) => choice.dataset.shopId === String(id))) return;
+    if (!workspace && !shop && !choices.some((choice) => choice.dataset.shopId === String(id))) return;
     choices.forEach((choice) => {
       const selected = choice.dataset.shopId === String(id);
       if (choice.matches('input[type="radio"]')) choice.checked = selected;
@@ -33,7 +32,7 @@
     panels.forEach((panel) => {
       panel.hidden = panel.dataset.shopPanel !== String(id);
     });
-    if (!checkoutForm && shop && revealPanel && window.matchMedia("(max-width: 48rem)").matches) {
+    if (!workspace && shop && revealPanel && window.matchMedia("(max-width: 48rem)").matches) {
       document.querySelector(`[data-shop-panel="${shop.id}"]`)?.scrollIntoView({
         behavior: "smooth", block: "start",
       });
@@ -46,38 +45,7 @@
     if (shop && moveMap && map) map.panTo(shop.position);
   }
 
-  function restorePinnedShop() {
-    clearTimeout(previewTimer);
-    if (pinnedShopId) selectShop(pinnedShopId);
-    else {
-      panels.forEach((panel) => { panel.hidden = true; });
-      markers.forEach(({ pin, marker }) => {
-        pin.classList.remove("is-selected");
-        marker.zIndex = 1;
-      });
-    }
-  }
-
-  function schedulePreviewEnd() {
-    previewTimer = window.setTimeout(restorePinnedShop, 200);
-  }
-
-  if (checkoutForm) {
-    panels.forEach((panel) => {
-      panel.addEventListener("pointerenter", () => clearTimeout(previewTimer));
-      panel.addEventListener("pointerleave", schedulePreviewEnd);
-      panel.querySelector("[data-close-shop-panel]").addEventListener("click", () => {
-        pinnedShopId = null;
-        restorePinnedShop();
-      });
-    });
-    checkoutForm.addEventListener("keydown", (event) => {
-      if (event.key === "Escape") {
-        pinnedShopId = null;
-        restorePinnedShop();
-      }
-    });
-  }
+  document.addEventListener("pod:shop-highlight", (event) => selectShop(event.detail.id));
 
   choices.forEach((choice) => {
     choice.addEventListener(choice.matches('input[type="radio"]') ? "change" : "click",
@@ -91,10 +59,10 @@
     const title = document.createElement("h2");
     title.textContent = "Map unavailable";
     const detail = document.createElement("p");
-    detail.textContent = "The interactive map could not load. You can still choose a shop below.";
-    message.replaceChildren(title, detail, link);
+    detail.textContent = workspace ? "Use the shop selector to keep preparing your order." : "The interactive map could not load. You can still choose a shop below.";
+    message.replaceChildren(title, detail, ...(link ? [link] : []));
     message.hidden = false;
-    if (fallback) fallback.open = true;
+    if (picker) picker.hidden = false;
   }
 
   const apiKey = canvas.dataset.apiKey;
@@ -141,26 +109,29 @@
         });
         marker.append(pin);
         marker.addEventListener("gmp-click", () => {
-          clearTimeout(previewTimer);
-          pinnedShopId = shop.id;
           selectShop(shop.id, false, true);
+          if (workspace) {
+            preview.hidden = true;
+            document.dispatchEvent(new CustomEvent("pod:shop-selected", { detail: { id: shop.id } }));
+          }
         });
-        if (checkoutForm) {
+        if (workspace) {
           pin.addEventListener("pointerenter", () => {
             if (!window.matchMedia("(hover: hover)").matches) return;
-            clearTimeout(previewTimer);
-            selectShop(shop.id);
+            preview.textContent = `${shop.name} · ${shop.hours}`;
+            preview.hidden = false;
           });
-          pin.addEventListener("pointerleave", schedulePreviewEnd);
+          pin.addEventListener("pointerleave", () => { preview.hidden = true; });
         }
         markers.set(shop.id, { pin, marker });
       });
       const selectedRadio = choices.find((choice) => choice.matches('input[type="radio"]:checked'));
       if (selectedRadio) selectShop(selectedRadio.dataset.shopId);
-      else if (checkoutForm && pinnedShopId) selectShop(pinnedShopId);
-      else if (!checkoutForm && !choices.some((choice) => choice.matches('input[type="radio"]')) && shops.length) selectShop(shops[0].id);
+      else if (workspace && canvas.dataset.selectedShopId) selectShop(canvas.dataset.selectedShopId);
+      else if (!workspace && !choices.some((choice) => choice.matches('input[type="radio"]')) && shops.length) selectShop(shops[0].id);
       message.hidden = true;
-      if (fallback) fallback.open = false;
+      // Keep the compact selector available when any active shop has no pin.
+      if (picker && workspace) picker.hidden = workspace.querySelector('[name="shop_id"]').options.length - 1 === shops.length;
       locateButton.disabled = false;
       clearTimeout(loadTimer);
 

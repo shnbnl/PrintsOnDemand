@@ -1,52 +1,38 @@
 {% extends "base.html" %}
-{% block title %}Pick a shop | Prints On Demand{% endblock %}
+{% block title %}Shop & print settings | Prints On Demand{% endblock %}
 {% block content %}
   {% include "checkout/progress.html" %}
-  <header class="page-intro"><p class="page-eyebrow">Step 2 · Shop</p><h1>Pick a Shop</h1>
-    <p class="page-lead">Explore a pin, then select its shop to configure your printing.</p></header>
-  {% if error %}<p class="notice notice-error" role="alert">{{ error }}</p>{% endif %}
-  {% if shops %}<form method="post" action="{{ url_for('checkout.shop') }}" data-checkout-shop-form>
+  <header class="page-intro"><p class="page-eyebrow">Step 2 · Shop</p><h1>Your printing workspace</h1><p class="page-lead">Pick a pin, explore the shop's rates, and set up your files here.</p></header>
+  {% if shops %}
+  <form method="post" action="{{ url_for('checkout.shop') }}" data-shop-workspace>
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <section class="checkout-map" aria-label="Live printing shop map">
-      <div class="map-stage"><div class="checkout-map-viewport"><div id="shop-map" class="map-canvas" role="region" aria-label="Interactive map of available printing shops"
-        data-api-key="{{ maps_api_key }}" data-map-id="{{ maps_map_id }}"
-        data-center-lat="{{ center.lat }}" data-center-lng="{{ center.lng }}" data-selected-shop-id="{{ selected_shop_id or '' }}"></div>
-        <div id="map-message" class="map-message" role="status">
-          {% if not maps_api_key or not maps_map_id %}<h2>Map unavailable</h2><p>You can still select a shop from the list below.</p>
-          {% else %}<p>Loading the interactive map…</p>{% endif %}
-          <a class="button button-secondary" href="{{ url_for('shops.map_view') }}">Open shop discovery</a>
+    <div class="shop-workspace-layout">
+      <section class="workspace-map" aria-label="Printing shop map">
+        <div class="map-stage">
+          <div class="workspace-map-viewport">
+            <div id="shop-map" class="map-canvas" role="region" aria-label="Select a printing shop on the map" data-api-key="{{ maps_api_key }}" data-map-id="{{ maps_map_id }}" data-center-lat="{{ center.lat }}" data-center-lng="{{ center.lng }}" data-selected-shop-id="{{ selected_shop_id or '' }}"></div>
+            <div id="map-message" class="map-message" role="status"><h2>{{ 'Loading map…' if maps_api_key and maps_map_id else 'Map unavailable' }}</h2><p>Use the shop selector to keep preparing your order.</p></div>
+            <div class="workspace-pin-preview" data-pin-preview hidden aria-live="polite"></div>
+          </div>
+          <div class="workspace-shop-picker" data-workspace-picker>
+            <label for="workspace-shop">Printing shop</label>
+            <select id="workspace-shop" name="shop_id" required><option value="">Select a printing shop</option>{% for item in shops %}<option value="{{ item.id }}" {% if item.id == selected_shop_id %}selected{% endif %}>{{ item.name }}</option>{% endfor %}</select>
+            <button class="button button-secondary" type="submit" name="intent" value="select" formnovalidate data-load-shop>View shop</button>
+          </div>
+          <div class="map-toolbar"><button id="locate-me" type="button" class="button button-secondary" disabled>Use my location</button><p id="location-status" class="map-location-status" role="status">Location is off until you choose to share it.</p></div>
         </div>
-        {% for marker in markers %}
-          <section class="checkout-map-info" data-shop-panel="{{ marker.id }}" aria-label="{{ marker.name }} information" hidden>
-            <header class="checkout-map-info-heading">
-              <div class="map-panel-heading"><span class="shop-avatar" aria-hidden="true">{% if marker.photo_url %}<img src="{{ marker.photo_url }}" alt="">{% else %}P{% endif %}</span><h2>{{ marker.name }}</h2></div>
-              <button class="checkout-map-close" type="button" data-close-shop-panel aria-label="Close shop information">×</button>
-            </header>
-            <div class="checkout-map-info-body" tabindex="0" aria-label="{{ marker.name }} details and prices">
-              <p><strong>Address:</strong> {{ marker.address }}</p>
-              <p><strong>Hours:</strong> {{ marker.hours }}</p>
-              {% if marker.description %}<p>{{ marker.description }}</p>{% endif %}
-              {% if marker.services %}<p><strong>Services:</strong> {{ marker.services|join(', ') }}</p>{% endif %}
-              {% if marker.fees %}<ul class="summary-list">{% for fee in marker.fees %}<li class="summary-row"><span>{{ fee.label }}</span><strong>{{ fee.amount }}</strong></li>{% endfor %}</ul>{% endif %}
-              <details><summary>View current print rates</summary><ul class="checkout-rate-list">{% for price in marker.prices %}<li><strong>{{ price.size }}</strong><span>Grayscale: {{ price.grayscale }} · Color: {{ price.color }}</span></li>{% endfor %}</ul></details>
-            </div>
-            <footer><button class="button button-primary button-block" type="submit" name="shop_id" value="{{ marker.id }}" data-checkout-select>Select this shop <span aria-hidden="true">→</span></button></footer>
-          </section>
-        {% endfor %}
-        </div>
-        <div class="map-toolbar"><button id="locate-me" type="button" class="button button-secondary" disabled>Use my location</button><p id="location-status" class="map-location-status" role="status">Location is off until you choose to share it.</p></div>
-      </div>
-      <p class="hint">Hover over or tap a pin for shop details. Select this shop to go straight to Configure.</p>
-    </section>
-    <details class="checkout-shop-fallback" data-shop-fallback open><summary>Choose a shop from a list</summary>
-      <div class="checkout-shop-list">{% for shop in shops %}
-        <div class="checkout-shop-list-item"><div><strong>{{ shop.name }}</strong><span>{{ shop.address }}</span><small>{{ shop.opening_time.strftime('%I:%M %p') }} – {{ shop.closing_time.strftime('%I:%M %p') }}</small></div>
-          <button class="button button-secondary" type="submit" name="shop_id" value="{{ shop.id }}" data-shop-id="{{ shop.id }}" aria-label="Select {{ shop.name }}">Select shop <span aria-hidden="true">→</span></button>
-        </div>
-      {% endfor %}</div>
-    </details>
-    <div class="form-actions"><a class="button button-secondary" href="{{ url_for('checkout.upload') }}">← Back to files</a></div>
-  </form>{% else %}<section class="content-card empty-state"><p>No active shops are available right now.</p></section>{% endif %}
+        <p class="hint">Tap a pin to select a shop. Your files stay with you when you switch.</p>
+        <a class="back-link" href="{{ url_for('checkout.upload') }}">← Back to files</a>
+      </section>
+      <aside class="workspace-panel" aria-label="Shop information and print settings">
+        <p class="notice notice-error" data-workspace-error role="alert" hidden></p>
+        <div data-workspace-content>{% include "checkout/shop_workspace.html" %}</div>
+      </aside>
+    </div>
+  </form>
+  {% else %}<section class="content-card empty-state"><p>No active shops are available right now.</p></section>{% endif %}
   <script id="map-shop-data" type="application/json">{{ markers|tojson }}</script>
   <script src="{{ url_for('static', filename='js/shop-map.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/checkout-print-settings.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/checkout-shop.js') }}" defer></script>
 {% endblock %}

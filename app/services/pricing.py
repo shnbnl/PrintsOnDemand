@@ -116,7 +116,7 @@ def quote_order(
 
     try:
         configuration = uploaded_file.configuration
-        if configuration is None:
+        if configuration is None and options is None:
             raise PricingError("Configure this file before ordering.")
         paper_size = PaperSize(options.paper_size if options else configuration.paper_size)
         color_mode = ColorMode(options.color_mode if options else configuration.color_mode)

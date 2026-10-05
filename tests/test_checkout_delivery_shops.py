@@ -7,7 +7,7 @@ from sqlalchemy import select
 
 from app.extensions import db
 from app.models import FeeType, Order, OrderDestination, PrintingShop, ServiceType, ShopFee, ShopService, UserRole
-from test_checkout_flow import post, upload_checkout_file
+from test_checkout_flow import print_fields, post, upload_checkout_file
 from test_fulfillment import delivery_fields
 from test_orders import pickup_fields, sign_in, student
 from test_stage31_fulfillment import configure, select_shop
@@ -40,7 +40,7 @@ def test_delivery_checkout_for_each_shop_and_customer_role(client, test_app, nam
     professor_label = b'Deliver to Professor' if role == UserRole.STUDENT else b'Deliver to Faculty'
     assert professor_label not in page.data
 
-    configured = post(client, "/checkout/configure", configure(file_id, **delivery_fields()))
+    configured = post(client, "/checkout/fulfillment", configure(file_id, **delivery_fields()))
     assert configured.status_code == 302
     assert configured.headers["Location"].endswith("/checkout/payment")
     payment = client.get("/checkout/payment")
@@ -75,9 +75,9 @@ def test_disabled_delivery_hidden_and_forged_post_rejected(client, test_app, rol
     page = select_shop(client, file_id, shop_id)
     assert b'data-method-choice="DELIVERY"' not in page.data
     assert b'data-method-fields="DELIVERY"' not in page.data
-    assert post(client, "/checkout/configure", configure(file_id, **delivery_fields())).status_code == 400
-    assert client.get("/checkout/payment").headers["Location"].endswith("/checkout/configure")
-    assert post(client, "/checkout/configure", configure(file_id, **pickup_fields())).status_code == 302
+    assert post(client, "/checkout/fulfillment", configure(file_id, **delivery_fields())).status_code == 400
+    assert client.get("/checkout/payment").headers["Location"].endswith("/checkout/fulfillment")
+    assert post(client, "/checkout/fulfillment", configure(file_id, **pickup_fields())).status_code == 302
 
 
 def test_switching_shops_clears_delivery_and_recomputes_options(client, test_app):
@@ -93,16 +93,16 @@ def test_switching_shops_clears_delivery_and_recomputes_options(client, test_app
     sign_in(client, owner)
     file_id = upload_checkout_file(client, test_app, owner)
     select_shop(client, file_id, enabled)
-    assert post(client, "/checkout/configure", configure(file_id, **delivery_fields())).status_code == 302
+    assert post(client, "/checkout/fulfillment", configure(file_id, **delivery_fields())).status_code == 302
     assert post(client, "/checkout/payment", {"payment_method": "ONSITE"}).status_code == 302
-    assert post(client, "/checkout/shop", {"shop_id": str(disabled)}).status_code == 302
-    page = client.get("/checkout/configure")
+    assert post(client, "/checkout/shop", {"shop_id": str(disabled), **print_fields(file_id)}).status_code == 302
+    page = client.get("/checkout/fulfillment")
     assert b'data-method-choice="DELIVERY"' not in page.data
     assert b'name="destination"' in page.data and b'name="destination" value="PICKUP" checked' not in page.data
-    assert client.get("/checkout/payment").headers["Location"].endswith("/checkout/configure")
-    assert post(client, "/checkout/configure", configure(file_id, **delivery_fields())).status_code == 400
-    assert post(client, "/checkout/shop", {"shop_id": str(enabled)}).status_code == 302
-    assert b'data-method-choice="DELIVERY"' in client.get("/checkout/configure").data
+    assert client.get("/checkout/payment").headers["Location"].endswith("/checkout/fulfillment")
+    assert post(client, "/checkout/fulfillment", configure(file_id, **delivery_fields())).status_code == 400
+    assert post(client, "/checkout/shop", {"shop_id": str(enabled), **print_fields(file_id)}).status_code == 302
+    assert b'data-method-choice="DELIVERY"' in client.get("/checkout/fulfillment").data
 
 
 def test_upload_shop_link_also_clears_previous_fulfillment(client, test_app):
@@ -113,12 +113,12 @@ def test_upload_shop_link_also_clears_previous_fulfillment(client, test_app):
     sign_in(client, owner)
     file_id = upload_checkout_file(client, test_app, owner)
     select_shop(client, file_id, enabled)
-    assert post(client, "/checkout/configure", configure(file_id, **delivery_fields())).status_code == 302
+    assert post(client, "/checkout/fulfillment", configure(file_id, **delivery_fields())).status_code == 302
     assert client.get("/checkout/upload", query_string={"shop_id": other}).status_code == 200
     with client.session_transaction() as state:
         assert state["checkout_draft"]["shop_id"] == other
         assert "fulfillment" not in state["checkout_draft"]
-    assert client.get("/checkout/payment").headers["Location"].endswith("/checkout/configure")
+    assert client.get("/checkout/payment").headers["Location"].endswith("/checkout/fulfillment")
 
 
 def test_seed_updates_missing_delivery_without_overwriting_saved_choice(test_app):
