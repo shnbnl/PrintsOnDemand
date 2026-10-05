@@ -3,41 +3,16 @@
 from __future__ import annotations
 
 import re
-from urllib.parse import unquote, urlsplit
 
-from flask import current_app
 from sqlalchemy import exists, select, update
 from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
-from app.models import Order, OrderDestination, OrderStatus, Payment, PaymentMethod, PaymentSettings, PaymentStatus
+from app.models import Order, OrderDestination, OrderStatus, Payment, PaymentMethod, PaymentStatus, PrintingShop
 from app.models.user import utc_now
 
 
 REFERENCE_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9 ._/-]{3,119}\Z")
-STATIC_QR_PATH = re.compile(r"/static/[A-Za-z0-9/_-]+\.(?:png|jpe?g|webp|svg)\Z", re.IGNORECASE)
-
-
-def payment_qr_image_url() -> str | None:
-    """Return only a safe public QR image URL; never use private upload paths."""
-    value = current_app.config.get("PAYMENT_QR_IMAGE_URL", "")
-    if not isinstance(value, str):
-        return None
-    value = value.strip()
-    if not value or any(char.isspace() or ord(char) < 32 for char in value) or "\\" in value:
-        return None
-    try:
-        parsed = urlsplit(value)
-        if parsed.scheme == "https":
-            return value if parsed.hostname and not parsed.username and not parsed.password and not parsed.fragment else None
-        if parsed.scheme or parsed.netloc or parsed.query or parsed.fragment:
-            return None
-        path = unquote(parsed.path)
-        if ".." in path.split("/"):
-            return None
-        return value if STATIC_QR_PATH.fullmatch(path) else None
-    except ValueError:
-        return None
 
 
 def pending_order_for_payment():
@@ -52,38 +27,19 @@ class PaymentError(ValueError):
         self.status_code = status_code
 
 
-def payment_configuration() -> dict[str, str | bool]:
-    """Admin-managed public values override the existing environment defaults."""
-    saved = db.session.get(PaymentSettings, 1)
-    if saved is not None:
-        return {
-            "online_enabled": saved.online_enabled,
-            "online_instructions": saved.online_instructions,
-            "online_account_name": saved.online_account_name,
-            "online_destination": saved.online_destination,
-            "onsite_instructions": saved.onsite_instructions,
-        }
-    config = current_app.config
-    return {
-        "online_enabled": config["ONLINE_PAYMENT_ENABLED"],
-        "online_instructions": config["ONLINE_PAYMENT_INSTRUCTIONS"],
-        "online_account_name": config["ONLINE_PAYMENT_ACCOUNT_NAME"],
-        "online_destination": config["ONLINE_PAYMENT_DESTINATION"],
-        "onsite_instructions": config["ONSITE_PAYMENT_INSTRUCTIONS"],
-    }
-
-
-def online_payment_details() -> dict[str, str] | None:
-    """Only advertise online payment when every public instruction is configured."""
-    config = payment_configuration()
-    if not config["online_enabled"]:
+def online_payment_details(shop: PrintingShop) -> dict[str, str] | None:
+    """Show only this shop's enabled online payment configuration."""
+    db.session.refresh(shop, attribute_names=[
+        "cash_enabled", "online_enabled", "payment_qr_digest", "online_instructions",
+        "online_account_name", "online_account_reference",
+    ])
+    if not shop.online_enabled or not shop.payment_qr_digest:
         return None
-    details = {
-        "instructions": config["online_instructions"].strip(),
-        "account_name": config["online_account_name"].strip(),
-        "destination": config["online_destination"].strip(),
+    return {
+        "instructions": shop.online_instructions.strip(),
+        "account_name": shop.online_account_name.strip(),
+        "destination": shop.online_account_reference.strip(),
     }
-    return details if all(details.values()) else None
 
 
 def owned_order(order_reference: str, user_id: int) -> Order:
@@ -92,6 +48,7 @@ def owned_order(order_reference: str, user_id: int) -> Order:
     ))
     if order is None:
         raise PaymentError("Order not found.", 404)
+    db.session.refresh(order.shop, attribute_names=["cash_enabled"])
     return order
 
 
@@ -104,7 +61,7 @@ def normalize_payment_reference(reference: str) -> str:
     return cleaned
 
 
-def validate_checkout_payment(*, destination: OrderDestination, method: str,
+def validate_checkout_payment(*, shop: PrintingShop, destination: OrderDestination, method: str,
                               reference: str = "") -> tuple[PaymentMethod, str | None]:
     """Validate pre-order payment intent without treating it as paid."""
     try:
@@ -113,8 +70,10 @@ def validate_checkout_payment(*, destination: OrderDestination, method: str,
         raise PaymentError("Select a valid payment method.") from error
     if destination == OrderDestination.PROFESSOR and selected != PaymentMethod.ONLINE:
         raise PaymentError("Professor delivery requires online payment.")
-    if selected == PaymentMethod.ONLINE and online_payment_details() is None:
-        raise PaymentError("Online payment is not configured for this service.")
+    if selected == PaymentMethod.ONLINE and online_payment_details(shop) is None:
+        raise PaymentError("Online payment is unavailable for this shop.")
+    if selected == PaymentMethod.ONSITE and not shop.cash_enabled:
+        raise PaymentError("Onsite cash payment is unavailable for this shop.")
     if selected == PaymentMethod.ONSITE and reference.strip():
         raise PaymentError("A payment reference is only accepted for online payment.")
     return selected, normalize_payment_reference(reference) if reference.strip() else None
@@ -130,8 +89,10 @@ def select_payment_method(*, order_reference: str, user_id: int, method: str) ->
         raise PaymentError("Select a valid payment method.") from error
     if order.destination == OrderDestination.PROFESSOR and selected != PaymentMethod.ONLINE:
         raise PaymentError("Professor delivery requires online payment.")
-    if selected == PaymentMethod.ONLINE and online_payment_details() is None:
-        raise PaymentError("Online payment is not configured for this service.")
+    if selected == PaymentMethod.ONLINE and online_payment_details(order.shop) is None:
+        raise PaymentError("Online payment is unavailable for this shop.")
+    if selected == PaymentMethod.ONSITE and not order.shop.cash_enabled:
+        raise PaymentError("Onsite cash payment is unavailable for this shop.")
 
     payment = order.payment
     if payment is not None:
@@ -182,7 +143,7 @@ def submit_online_reference(*, order_reference: str, user_id: int, reference: st
         raise PaymentError("This order cannot accept payment information.", 409)
     if payment.amount != order.total or payment.currency != order.currency:
         raise PaymentError("Payment amount no longer matches the order.", 409)
-    if online_payment_details() is None:
+    if online_payment_details(order.shop) is None:
         raise PaymentError("Online payment is currently unavailable.", 409)
     cleaned = normalize_payment_reference(reference)
     if payment.payment_status == PaymentStatus.SUBMITTED and payment.payment_reference == cleaned:

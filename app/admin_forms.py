@@ -1,8 +1,8 @@
-"""CSRF-protected professor, staff-assignment, and public payment forms."""
+"""CSRF-protected professor and staff-assignment forms."""
 
 from flask_wtf import FlaskForm
-from wtforms import BooleanField, EmailField, SelectField, StringField, SubmitField, TextAreaField
-from wtforms.validators import DataRequired, Email, Length, ValidationError
+from wtforms import BooleanField, EmailField, SelectField, StringField, SubmitField
+from wtforms.validators import DataRequired, Email, Length
 
 from app.forms import strip_text
 from app.models import Faculty
@@ -24,29 +24,3 @@ class ProfessorForm(FlaskForm):
 class StaffShopForm(FlaskForm):
     shop_id = SelectField("Assigned shop", coerce=int)
     submit = SubmitField("Save assignment")
-
-
-class PaymentSettingsForm(FlaskForm):
-    online_enabled = BooleanField("Enable manual online payment")
-    online_instructions = TextAreaField(
-        "Online payment instructions", filters=[strip_text], validators=[Length(max=2000)]
-    )
-    online_account_name = StringField(
-        "Public account name", filters=[strip_text], validators=[Length(max=120)]
-    )
-    online_destination = StringField(
-        "Public payment destination", filters=[strip_text], validators=[Length(max=255)]
-    )
-    onsite_instructions = TextAreaField(
-        "Onsite payment instructions", filters=[strip_text],
-        validators=[DataRequired(), Length(max=2000)],
-    )
-    submit = SubmitField("Save payment information")
-
-    def validate_online_enabled(self, field):
-        if field.data and not all((
-            self.online_instructions.data,
-            self.online_account_name.data,
-            self.online_destination.data,
-        )):
-            raise ValidationError("Complete all public online payment fields before enabling it.")

@@ -1,8 +1,9 @@
 """Guided customer checkout built on the existing private-file and order services."""
 
 from datetime import timedelta
+from io import BytesIO
 
-from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, session, url_for
+from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, send_file, session, url_for
 from flask_login import current_user
 from flask_wtf import FlaskForm
 from sqlalchemy import select
@@ -22,7 +23,7 @@ from app.services.fulfillment import (
 )
 from app.services.orders import create_order
 from app.services.payments import (
-    PaymentError, online_payment_details, payment_configuration, validate_checkout_payment,
+    PaymentError, online_payment_details, validate_checkout_payment,
 )
 from app.services.pricing import PricingError, PrintOptions
 from app.services.professors import professor_can_self_deliver, selectable_professors
@@ -348,13 +349,28 @@ def configure():
 
 
 def render_payment(quote, fulfillment, *, error=None, status=200):
+    online_details = online_payment_details(quote.shop)
+    cash_available = quote.shop.cash_enabled and fulfillment.destination != OrderDestination.PROFESSOR
     return render_template(
         "checkout/payment.html", quote=quote, fulfillment=fulfillment,
         error=error, chosen=draft().get("payment_method"),
         reference=draft().get("payment_reference", ""),
-        online_details=online_payment_details(),
-        onsite_instructions=payment_configuration()["onsite_instructions"], step=4,
+        online_details=online_details, cash_available=cash_available,
+        no_method_available=not cash_available and online_details is None,
+        step=4,
     ), status
+
+
+@checkout_bp.get("/payment/qr")
+@roles_required(*ROLES)
+def payment_qr():
+    saved = draft()
+    shop = selected_shop(saved)
+    if shop is None or selected_files(saved) is None or online_payment_details(shop) is None:
+        abort(404)
+    response = send_file(BytesIO(shop.payment_qr_data), mimetype=shop.payment_qr_mime)
+    response.headers["Cache-Control"] = "private, no-store"
+    return response
 
 
 @checkout_bp.route("/payment", methods=["GET", "POST"])
@@ -377,6 +393,7 @@ def payment():
         return render_payment(quote, fulfillment, error="Select one valid payment method.", status=400)
     try:
         method, reference = validate_checkout_payment(
+            shop=quote.shop,
             destination=fulfillment.destination,
             method=request.form.get("payment_method", ""),
             reference=request.form.get("payment_reference", ""),
@@ -405,7 +422,7 @@ def review():
         return redirect(url_for("checkout.payment"))
     try:
         quote, fulfillment = current_quote(saved)
-        validate_checkout_payment(destination=fulfillment.destination,
+        validate_checkout_payment(shop=quote.shop, destination=fulfillment.destination,
                                   method=saved["payment_method"],
                                   reference=saved.get("payment_reference", ""))
     except (PricingError, FulfillmentError, PaymentError):
@@ -436,7 +453,7 @@ def place():
         return redirect(url_for("checkout.upload"))
     try:
         quote, fulfillment = current_quote(saved)
-        validate_checkout_payment(destination=fulfillment.destination,
+        validate_checkout_payment(shop=quote.shop, destination=fulfillment.destination,
                                   method=saved["payment_method"],
                                   reference=saved.get("payment_reference", ""))
     except (PricingError, FulfillmentError, PaymentError):

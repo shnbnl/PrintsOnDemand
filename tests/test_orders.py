@@ -52,9 +52,14 @@ def sign_in(client, user_id):
 
 def shop(app, *, name="Campus Prints", active=True, price="2.25", rush=False, rush_fee="5.50"):
     with app.app_context():
+        online = app.config.get("_TEST_SHOP_ONLINE_DEFAULTS")
         record = PrintingShop(
             name=name, address="Campus Road", opening_time=time(9),
             closing_time=time(17), is_active=active,
+            online_enabled=bool(online),
+            online_account_name=online["account_name"] if online else "",
+            online_account_reference=online["reference"] if online else "",
+            online_instructions=online["instructions"] if online else "",
         )
         db.session.add(record)
         db.session.flush()

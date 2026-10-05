@@ -12,6 +12,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.extensions import db
 from app.models.user import utc_now
+from app.services.payment_qr import development_qr
 
 
 class CoordinateDecimal(TypeDecorator):
@@ -98,6 +99,20 @@ class PrintingShop(db.Model):
     photo_data: Mapped[bytes | None] = mapped_column(db.LargeBinary, nullable=True, deferred=True)
     photo_mime: Mapped[str | None] = mapped_column(db.String(32), nullable=True)
     photo_digest: Mapped[str | None] = mapped_column(db.String(64), nullable=True)
+    cash_enabled: Mapped[bool] = mapped_column(db.Boolean, nullable=False, default=True)
+    online_enabled: Mapped[bool] = mapped_column(db.Boolean, nullable=False, default=False)
+    online_account_name: Mapped[str] = mapped_column(db.String(120), nullable=False, default="")
+    online_account_reference: Mapped[str] = mapped_column(db.String(255), nullable=False, default="")
+    online_instructions: Mapped[str] = mapped_column(db.Text, nullable=False, default="")
+    payment_qr_data: Mapped[bytes | None] = mapped_column(
+        db.LargeBinary, nullable=True, deferred=True,
+        default=lambda context: development_qr(context.get_current_parameters()["name"])[0],
+    )
+    payment_qr_mime: Mapped[str | None] = mapped_column(db.String(32), nullable=True, default="image/png")
+    payment_qr_digest: Mapped[str | None] = mapped_column(
+        db.String(64), nullable=True,
+        default=lambda context: development_qr(context.get_current_parameters()["name"])[2],
+    )
     created_at: Mapped[datetime] = mapped_column(db.DateTime(timezone=True), nullable=False, default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(
         db.DateTime(timezone=True), nullable=False, default=utc_now, onupdate=utc_now

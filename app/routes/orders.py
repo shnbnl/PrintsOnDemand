@@ -1,6 +1,7 @@
 """Owner-only order selection, quote review, creation, and detail."""
 
-from flask import Blueprint, abort, current_app, redirect, render_template, request, session, url_for
+from flask import Blueprint, abort, current_app, redirect, render_template, request, send_file, session, url_for
+from io import BytesIO
 from flask_login import current_user
 from datetime import timedelta
 from sqlalchemy import select
@@ -20,8 +21,7 @@ from app.services.fulfillment import (
     FIELDS, FulfillmentError, availability, slot_options, today, validate_fulfillment,
 )
 from app.services.payments import (
-    PaymentError, online_payment_details, owned_order, payment_configuration,
-    payment_qr_image_url,
+    PaymentError, online_payment_details, owned_order,
     select_payment_method, submit_online_reference,
 )
 from app.services.pricing import PricingError, PrintOptions, quote_cart
@@ -378,13 +378,13 @@ def download_file(order_reference: str, item_id: int):
 
 
 def render_order_detail(order, *, payment_error=None, professor_error=None, status=200):
-    online_details = online_payment_details()
+    online_details = online_payment_details(order.shop)
     method_form = None
     if order.status == OrderStatus.PENDING_PAYMENT and (
         order.payment is None or order.payment.payment_status == PaymentStatus.PENDING
     ):
         method_form = PaymentMethodForm()
-        method_form.payment_method.choices = ([] if order.destination == OrderDestination.PROFESSOR
+        method_form.payment_method.choices = ([] if order.destination == OrderDestination.PROFESSOR or not order.shop.cash_enabled
                                               else [(PaymentMethod.ONSITE.value, "Onsite payment")])
         if online_details is not None:
             method_form.payment_method.choices.append((PaymentMethod.ONLINE.value, "Online payment"))
@@ -403,10 +403,11 @@ def render_order_detail(order, *, payment_error=None, professor_error=None, stat
     return render_template(
         "orders/detail.html", order=order, professor_form=professor_form(order),
         method_form=method_form, reference_form=reference_form,
-        online_details=online_details, payment_qr_image_url=payment_qr_image_url(),
+        online_details=online_details,
+        payment_qr_image_url=url_for("orders.payment_qr", order_reference=order.order_reference) if online_details else None,
         payment_error=payment_error,
         professor_error=professor_error,
-        onsite_instructions=payment_configuration()["onsite_instructions"],
+        onsite_instructions="Pay at the printing shop with your order reference. Your payment remains pending until staff records it.",
         tracking=build_tracking(order),
     ), status
 
@@ -419,9 +420,9 @@ def choose_payment(order_reference: str):
     except PaymentError:
         abort(404)
     form = PaymentMethodForm()
-    form.payment_method.choices = ([] if order.destination == OrderDestination.PROFESSOR
+    form.payment_method.choices = ([] if order.destination == OrderDestination.PROFESSOR or not order.shop.cash_enabled
                                    else [(PaymentMethod.ONSITE.value, "Onsite payment")])
-    if online_payment_details() is not None:
+    if online_payment_details(order.shop) is not None:
         form.payment_method.choices.append((PaymentMethod.ONLINE.value, "Online payment"))
     if not form.validate_on_submit():
         return render_order_detail(order, payment_error="Select a valid payment method.", status=400)
@@ -435,6 +436,20 @@ def choose_payment(order_reference: str):
             abort(404)
         return render_order_detail(order, payment_error=str(error), status=error.status_code)
     return redirect(url_for("orders.detail", order_reference=order_reference))
+
+
+@orders_bp.get("/<order_reference>/payment/qr")
+@roles_required(*ORDERING_ROLES)
+def payment_qr(order_reference: str):
+    try:
+        order = owned_order(order_reference, current_user.id)
+    except PaymentError:
+        abort(404)
+    if online_payment_details(order.shop) is None:
+        abort(404)
+    response = send_file(BytesIO(order.shop.payment_qr_data), mimetype=order.shop.payment_qr_mime)
+    response.headers["Cache-Control"] = "private, no-store"
+    return response
 
 
 @orders_bp.post("/<order_reference>/payment/submit")

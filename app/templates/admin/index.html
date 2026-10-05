@@ -6,7 +6,7 @@
   <header class="page-intro">
     <p class="eyebrow">Administration</p>
     <h1>Admin management</h1>
-    <p class="page-lead">Keep printing shops, people, and student-facing payment instructions up to date.</p>
+      <p class="page-lead">Manage printing shops and people, and review payment availability across shops.</p>
   </header>
 
   <div class="card-grid" aria-label="Management areas">
@@ -23,10 +23,10 @@
       <span class="card-action">View staff <span aria-hidden="true">→</span></span>
     </a>
     <a class="action-card" href="{{ url_for('admin_management.payment') }}">
-      <span class="eyebrow">Student instructions</span>
+        <span class="eyebrow">Shop payment overview</span>
       <h2>Payment configuration</h2>
-      <p>Edit the public information students see when choosing payment.</p>
-      <span class="card-action">Edit instructions <span aria-hidden="true">→</span></span>
+        <p>View each shop's payment availability. Assigned staff manage their own details and QR.</p>
+        <span class="card-action">View methods <span aria-hidden="true">→</span></span>
     </a>
     <a class="action-card" href="{{ url_for('payment_verification.index') }}"><span class="eyebrow">Manual review</span><h2>Payment verification</h2><p>Review submitted online references and record a verification or rejection.</p><span class="card-action">Review payments <span aria-hidden="true">→</span></span></a>
   </div>

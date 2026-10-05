@@ -97,7 +97,7 @@ def test_onsite_confirmation_and_tracking_remain_pending(client, test_app):
     assert b"Payment method: <strong>Onsite</strong>" in response.data
     assert b"Payment pending" in response.data
     assert b"Payment will be made onsite" in response.data
-    assert b"Pay at the shop counter" in response.data
+    assert b"Pay at the printing shop" in response.data
     assert b"Onsite payment selected; payment is pending" in response.data
     assert b"Payment is pending" in response.data
     assert f'datetime="{selected_at}"'.encode() in response.data

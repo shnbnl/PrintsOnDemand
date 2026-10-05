@@ -1,4 +1,4 @@
-"""Admin-managed public instructions for the existing manual payment flow."""
+"""Legacy global payment record retained for migration/backward data access."""
 
 from datetime import datetime
 

@@ -7,7 +7,7 @@ from sqlalchemy import select, text
 from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
-from app.models import Order, OrderStatus, Payment, PaymentMethod, PaymentStatus, UserRole
+from app.models import Order, OrderStatus, Payment, PaymentMethod, PaymentStatus, PrintingShop, UserRole
 from app.services.payments import PaymentError, select_payment_method, submit_online_reference
 from test_orders import (
     approved_professor, file, offer_professor_service, place, professor_place,
@@ -16,13 +16,19 @@ from test_orders import (
 
 
 def configured_online(app):
-    app.config.update(
-        ONLINE_PAYMENT_ENABLED=True,
-        ONLINE_PAYMENT_INSTRUCTIONS="Use the example transfer destination below.",
-        ONLINE_PAYMENT_ACCOUNT_NAME="Demo Campus Payments",
-        ONLINE_PAYMENT_DESTINATION="DEMO-ACCOUNT-123",
-        ONSITE_PAYMENT_INSTRUCTIONS="Pay at the shop counter with your order reference.",
-    )
+    details = {
+        "instructions": "Use the example transfer destination below.",
+        "account_name": "Demo Campus Payments", "reference": "DEMO-ACCOUNT-123",
+    }
+    app.config["_TEST_SHOP_ONLINE_DEFAULTS"] = details
+    with app.app_context():
+        for record in db.session.scalars(select(PrintingShop)):
+            record.online_enabled = True
+            record.online_instructions = details["instructions"]
+            record.online_account_name = details["account_name"]
+            record.online_account_reference = details["reference"]
+        db.session.commit()
+        db.session.expire_all()
 
 
 def created_order(client, app, *, professor=False):
@@ -149,7 +155,7 @@ def test_onsite_selection_and_pending_method_change(client, test_app):
     assert choose(client, url, "ONSITE", total="0.01", payment_status="PAID").status_code == 302
     detail = client.get(url)
     assert b"Order created. Payment will be made onsite." in detail.data
-    assert b"Pay at the shop counter" in detail.data
+    assert b"Pay at the printing shop" in detail.data
     assert b"Payment pending" in detail.data
     assert b"Payment is pending" in detail.data
     assert choose(client, url, "ONSITE").status_code == 302
@@ -177,7 +183,10 @@ def test_online_requires_complete_configuration_and_valid_method(client, test_ap
     test_app.config["ONLINE_PAYMENT_ENABLED"] = True
     assert choose(client, url, "ONLINE").status_code == 400
     configured_online(test_app)
-    assert choose(client, url, "ONLINE").status_code == 302
+    with test_app.app_context():
+        assert all(s.online_enabled and s.payment_qr_digest for s in db.session.scalars(select(PrintingShop)))
+    selected = choose(client, url, "ONLINE")
+    assert selected.status_code == 302, selected.get_data(as_text=True)
 
 
 @pytest.mark.parametrize("reference", ["x", "bad<script>", "x" * 121, " " * 121 + "VALID-REF", " "])
@@ -192,29 +201,19 @@ def test_invalid_reference_is_rejected_without_state_change(client, test_app, re
         assert payment.payment_reference is None
 
 
-@pytest.mark.parametrize("qr_url,shown", [
-    ("", False),
-    ("/static/payment/qr.png", True),
-    ("https://example.test/qr.png?version=1&size=2", True),
-    ("javascript:alert(1)", False),
-    ("data:image/png;base64,AAAA", False),
-    ("//example.test/qr.png", False),
-    ("http://example.test/qr.png", False),
-    ("/private/uploads/qr.png", False),
-    ("/static/../private/qr.png", False),
-])
-def test_online_qr_is_optional_and_safe(client, test_app, qr_url, shown):
+def test_online_qr_comes_from_owned_shop_not_global_url(client, test_app):
     configured_online(test_app)
-    test_app.config["PAYMENT_QR_IMAGE_URL"] = qr_url
+    test_app.config["PAYMENT_QR_IMAGE_URL"] = "https://example.test/foreign.png"
     _, url = created_order(client, test_app)
     assert choose(client, url, "ONLINE").status_code == 302
     response = client.get(url)
     assert response.status_code == 200
-    assert (b'alt="Configured payment QR code' in response.data) is shown
-    assert (b"No QR image is configured" in response.data) is not shown
+    assert b'/payment/qr' in response.data
+    assert b"foreign.png" not in response.data
+    qr = client.get(url + "/payment/qr")
+    assert qr.status_code == 200 and qr.mimetype == "image/png"
+    assert qr.data.startswith(b"\x89PNG")
     assert b"Use the example transfer destination below" in response.data
-    if qr_url.startswith("https:"):
-        assert b"version=1&amp;size=2" in response.data
 
 
 def test_payment_summary_and_normalized_reference_keep_stored_amount(client, test_app):

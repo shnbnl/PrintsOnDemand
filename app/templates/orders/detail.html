@@ -124,10 +124,11 @@
           <div class="payment-instructions" role="status"><h3>Payment reference submitted</h3><p>Payment submitted for verification. A staff member will check the transfer before printing starts.</p><p>Submitted reference: {{ order.payment.payment_reference }}</p></div>
         {% elif order.payment.payment_status.value == 'PENDING' %}
           {% if online_details %}
-            <div class="payment-instructions"><h3>Online payment instructions</h3><p>Use these configured manual payment instructions. Selecting online payment does not confirm a transfer.</p>
-              {% if payment_qr_image_url %}<div class="payment-qr"><img src="{{ payment_qr_image_url }}" alt="Configured payment QR code for this order's online payment" loading="lazy"><p>Scan using the configured payment app, then enter your payment reference below.</p></div>
-              {% else %}<p class="payment-qr-fallback">No QR image is configured. Use the payment details below, then enter your payment reference.</p>{% endif %}
-              <p>Instructions: {{ online_details.instructions }}</p><p>Account/name: {{ online_details.account_name }}</p><p>Payment destination: {{ online_details.destination }}</p>
+            <div class="payment-instructions"><h3>Online payment instructions</h3><p>Use {{ order.shop_name }}'s payment QR. Selecting online payment does not confirm a transfer.</p>
+              <div class="payment-qr"><img src="{{ payment_qr_image_url }}" alt="Payment QR for {{ order.shop_name }}" loading="lazy"><p>Scan using your payment app, then enter the payment reference below.</p></div>
+              {% if online_details.instructions %}<p>Instructions: {{ online_details.instructions }}</p>{% endif %}
+              {% if online_details.account_name %}<p>Account/name: {{ online_details.account_name }}</p>{% endif %}
+              {% if online_details.destination %}<p>Payment destination: {{ online_details.destination }}</p>{% endif %}
             </div>
           {% else %}
             <p>Online payment instructions are currently unavailable. Contact the shop before making a transfer.</p>

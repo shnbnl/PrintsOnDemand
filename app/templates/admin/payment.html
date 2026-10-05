@@ -7,23 +7,10 @@
   <header class="page-intro">
     <p class="eyebrow">Administration / Payment</p>
     <h1>Payment configuration</h1>
-    <p class="page-lead">Edit the instructions students see when they select online or onsite payment.</p>
+    <p class="page-lead">Payment methods and QR details are managed by the staff assigned to each printing shop.</p>
   </header>
 
-  <div class="section-card">
-    <p class="hint">These public instructions do not verify payments. Saving them overrides environment defaults.</p>
-    <p>Current source: <span class="status-badge status-badge--muted">{{ 'Admin-managed values' if saved else 'Environment defaults' }}</span></p>
-  </div>
-
-  <form class="account-form form-card form-grid" method="post" novalidate>
-    {{ form.hidden_tag() }}
-    <div class="checkbox-field">{{ form.online_enabled() }} {{ form.online_enabled.label }}</div>
-    {% for error in form.online_enabled.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
-    {% for field in [form.online_instructions, form.online_account_name, form.online_destination, form.onsite_instructions] %}
-      <div class="field{% if field.name in ('online_instructions', 'onsite_instructions') %} field-wide{% endif %}">{{ field.label }} {{ field() }}
-        {% for error in field.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
-      </div>
-    {% endfor %}
-    <div class="form-actions">{{ form.submit(class_='button') }}</div>
-  </form>
+  <div class="section-card"><ul class="summary-list">
+    {% for shop in shops %}<li class="summary-row"><span>{{ shop.name }}</span><strong>{{ 'Cash' if shop.cash_enabled else 'Cash off' }} · {{ 'Online' if shop.online_enabled else 'Online off' }}</strong></li>{% endfor %}
+  </ul><p class="hint">A submitted payment reference still requires authorized staff verification.</p></div>
 {% endblock %}

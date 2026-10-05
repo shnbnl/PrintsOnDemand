@@ -3,6 +3,7 @@
   const methods = [...document.querySelectorAll('input[name="payment_method"]')];
   const onlinePanel = document.querySelector('[data-online-payment]');
   const reference = document.querySelector('#payment_reference');
+  if (!onlinePanel || !reference) return;
   function update() {
     const online = methods.find((method) => method.checked)?.value === 'ONLINE';
     onlinePanel.hidden = !online;

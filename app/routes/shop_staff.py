@@ -1,6 +1,7 @@
 """Assigned-shop editing for staff accounts."""
 
-from flask import Blueprint, abort, flash, redirect, render_template, url_for
+from flask import Blueprint, abort, flash, redirect, render_template, send_file, url_for
+from io import BytesIO
 from flask_login import current_user
 from flask_wtf import FlaskForm
 from sqlalchemy import select
@@ -11,7 +12,8 @@ from app.extensions import db
 from app.models import ColorMode, FeeType, PaperSize, PrintPrice, ServiceType, ShopFee, ShopService, UserRole
 from app.services.professors import PROFESSOR_DELIVERY_SHOP
 from app.services.shop_photos import ShopPhotoError, normalize_shop_photo
-from app.shop_forms import FeeForm, PriceForm, ServiceForm, ShopPhotoForm, ShopStaffDetailsForm
+from app.services.payment_qr import PaymentQRError, normalize_payment_qr
+from app.shop_forms import FeeForm, PriceForm, ServiceForm, ShopPhotoForm, ShopStaffDetailsForm, ShopPaymentForm
 
 
 shop_staff_bp = Blueprint("shop_staff", __name__, url_prefix="/shop/manage")
@@ -25,7 +27,7 @@ def assigned_shop():
 
 
 def editor(*, details_form=None, service_form=None, price_form=None, fee_form=None,
-           photo_form=None, photo_error=None, status=200):
+           photo_form=None, photo_error=None, payment_form=None, payment_error=None, status=200):
     shop = assigned_shop()
     service_form = service_form or ServiceForm(formdata=None)
     if shop.name != PROFESSOR_DELIVERY_SHOP:
@@ -41,6 +43,8 @@ def editor(*, details_form=None, service_form=None, price_form=None, fee_form=No
         fee_form=fee_form or FeeForm(formdata=None),
         photo_form=photo_form or ShopPhotoForm(formdata=None),
         remove_photo_form=FlaskForm(), photo_error=photo_error,
+        payment_form=payment_form or ShopPaymentForm(formdata=None, obj=shop),
+        payment_error=payment_error,
         services=sorted(shop.services, key=lambda item: item.service_type.value),
         prices=sorted(shop.prices, key=lambda item: (item.paper_size.value, item.color_mode.value)),
         fees=sorted(shop.fees, key=lambda item: item.fee_type.value),
@@ -176,3 +180,42 @@ def remove_photo():
     db.session.commit()
     flash("Shop photo removed.", "success")
     return redirect(url_for("shop_staff.index"))
+
+
+@shop_staff_bp.post("/payment")
+@roles_required(UserRole.SHOP_STAFF)
+def save_payment():
+    shop = assigned_shop()
+    form = ShopPaymentForm()
+    if not form.validate_on_submit():
+        return editor(payment_form=form, status=400)
+    uploaded = form.payment_qr.data
+    if uploaded and uploaded.filename:
+        try:
+            qr_data, qr_mime, qr_digest = normalize_payment_qr(uploaded)
+        except PaymentQRError as error:
+            return editor(payment_form=form, payment_error=str(error), status=400)
+        shop.payment_qr_data = qr_data
+        shop.payment_qr_mime = qr_mime
+        shop.payment_qr_digest = qr_digest
+    if form.online_enabled.data and not shop.payment_qr_digest:
+        return editor(payment_form=form, payment_error="Upload a payment QR to enable online payment.", status=400)
+    shop.cash_enabled = bool(form.cash_enabled.data)
+    shop.online_enabled = bool(form.online_enabled.data)
+    shop.online_account_name = form.online_account_name.data or ""
+    shop.online_account_reference = form.online_account_reference.data or ""
+    shop.online_instructions = form.online_instructions.data or ""
+    db.session.commit()
+    flash("Payment settings updated.", "success")
+    return redirect(url_for("shop_staff.index", _anchor="payment-settings"))
+
+
+@shop_staff_bp.get("/payment/qr")
+@roles_required(UserRole.SHOP_STAFF)
+def payment_qr():
+    shop = assigned_shop()
+    if not shop.payment_qr_data:
+        abort(404)
+    response = send_file(BytesIO(shop.payment_qr_data), mimetype=shop.payment_qr_mime)
+    response.headers["Cache-Control"] = "private, no-store"
+    return response

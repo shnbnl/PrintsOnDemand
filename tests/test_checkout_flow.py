@@ -21,12 +21,13 @@ def setup(client, app, *, professor=False, online=False):
     owner = student(app, role=UserRole.PROFESSOR if professor else UserRole.STUDENT)
     shop_id = shop(app)
     if online:
-        app.config.update(
-            ONLINE_PAYMENT_ENABLED=True,
-            ONLINE_PAYMENT_INSTRUCTIONS="Use the configured shop account.",
-            ONLINE_PAYMENT_ACCOUNT_NAME="Campus Prints",
-            ONLINE_PAYMENT_DESTINATION="Sample account 12345",
-        )
+        with app.app_context():
+            record = db.session.get(PrintingShop, shop_id)
+            record.online_enabled = True
+            record.online_instructions = "Use the configured shop account."
+            record.online_account_name = "Campus Prints"
+            record.online_account_reference = "Sample account 12345"
+            db.session.commit()
     sign_in(client, owner)
     file_id = upload_checkout_file(client, app, owner)
     return owner, shop_id, file_id
@@ -83,7 +84,8 @@ def test_student_online_reference_waits_for_verification(client, test_app):
     _, shop_id, file_id = setup(client, test_app, online=True)
     assert start(client, shop_id, file_id).status_code == 302
     payment_page = client.get("/checkout/payment")
-    assert b"Placeholder QR" in payment_page.data
+    assert b"Payment QR for Campus Prints" in payment_page.data
+    assert b"Placeholder QR" not in payment_page.data
     assert post(client, "/checkout/payment", {"payment_method": "ONLINE", "payment_reference": "ABC-1234"}).status_code == 302
     assert post(client, "/checkout/place").status_code == 302
     with test_app.app_context():

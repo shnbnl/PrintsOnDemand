@@ -124,3 +124,13 @@ class ShopStaffDetailsForm(FlaskForm):
 class ShopPhotoForm(FlaskForm):
     photo = FileField("Shop photo", validators=[DataRequired()])
     submit = SubmitField("Upload photo")
+
+
+class ShopPaymentForm(FlaskForm):
+    cash_enabled = BooleanField("Pay Onsite — Cash")
+    online_enabled = BooleanField("Pay Online — InstaPay")
+    online_account_name = StringField("Payment account name", filters=[strip_text], validators=[Length(max=120)])
+    online_account_reference = StringField("Payment account / reference information", filters=[strip_text], validators=[Length(max=255)])
+    online_instructions = TextAreaField("Payment instructions", filters=[strip_text], validators=[Length(max=2000)])
+    payment_qr = FileField("Replace payment QR")
+    submit = SubmitField("Save payment settings")

@@ -5,25 +5,32 @@
   <header class="page-intro"><p class="page-eyebrow">Step 4 · Payment</p><h1>Choose Payment</h1><p class="page-lead">Your total is {{ quote.currency }} {{ quote.total }}. Choose how you plan to pay before reviewing the order.</p></header>
   {% if error %}<p class="notice notice-error" role="alert">{{ error }}</p>{% endif %}
   {% if quote.is_demo %}<p class="sample-label">Sample shop or rates — confirm with the shop before paying.</p>{% endif %}
+  {% if no_method_available %}<p class="notice notice-warning" role="alert">No payment method is currently available for this shop. <a href="{{ url_for('checkout.shop') }}">Choose another shop</a>.</p>{% endif %}
   <div class="checkout-grid"><div class="checkout-main">
+    {% if not no_method_available %}
     <form class="form-stack" method="post" action="{{ url_for('checkout.payment') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <fieldset class="content-card choice-fieldset"><legend>Payment method</legend><div class="checkout-payment-options">
-        <label class="choice-card"><input type="radio" name="payment_method" value="ONSITE" {% if chosen == 'ONSITE' %}checked{% endif %} {% if fulfillment.destination.value == 'PROFESSOR' %}disabled{% endif %} required><span><strong>Pay Onsite — Cash</strong><small>Pay the printing shop in cash when you complete or pick up your order.</small></span></label>
-        <label class="choice-card"><input type="radio" name="payment_method" value="ONLINE" {% if chosen == 'ONLINE' or fulfillment.destination.value == 'PROFESSOR' %}checked{% endif %} {% if not online_details %}disabled{% endif %} required><span><strong>Pay Online — InstaPay</strong><small>Use the shop's configured payment instructions. A submitted reference awaits staff verification.</small></span></label>
+        {% if cash_available %}<label class="choice-card"><input type="radio" name="payment_method" value="ONSITE" {% if chosen == 'ONSITE' %}checked{% endif %} required><span><strong>Pay Onsite — Cash</strong><small>Pay {{ quote.shop.name }} in cash when you complete or pick up your order.</small></span></label>{% endif %}
+        {% if online_details %}<label class="choice-card"><input type="radio" name="payment_method" value="ONLINE" {% if chosen == 'ONLINE' or fulfillment.destination.value == 'PROFESSOR' %}checked{% endif %} required><span><strong>Pay Online — InstaPay</strong><small>Use {{ quote.shop.name }}'s payment QR and submit your reference for verification.</small></span></label>{% endif %}
       </div>
       {% if fulfillment.destination.value == 'PROFESSOR' %}<p class="hint">Professor Delivery requires online payment; onsite cash is unavailable.</p>{% endif %}
-      {% if not online_details %}<p class="notice notice-warning">Online payment is currently unavailable because payment instructions are not configured. Contact the shop if Professor Delivery is required.</p>{% endif %}
+      {% if not online_details and fulfillment.destination.value == 'PROFESSOR' %}<p class="notice notice-warning">Online payment is currently unavailable for this shop. Choose another fulfillment method or contact the shop.</p>{% endif %}
       </fieldset>
+      {% if online_details %}
       <section class="content-card checkout-online-panel" data-online-payment><h2>Pay with InstaPay</h2>
-        <div class="checkout-online-details"><img src="{{ url_for('static', filename='images/instapay-placeholder.svg') }}" alt="Sample QR illustration. Not a working payment code." width="180" height="180">
-          <div><p class="sample-label">Placeholder QR — not for payment</p><p>This sample image cannot accept a payment. Use only the shop's verified instructions below.</p>
-            {% if online_details %}<p><strong>Account:</strong> {{ online_details.account_name }}<br><strong>Destination:</strong> {{ online_details.destination }}</p><p>{{ online_details.instructions }}</p>{% endif %}
+        <div class="checkout-online-details"><img src="{{ url_for('checkout.payment_qr', v=quote.shop.payment_qr_digest[:12]) }}" alt="Payment QR for {{ quote.shop.name }}" width="180" height="180">
+          <div><p><strong>{{ quote.shop.name }}</strong></p>
+            {% if online_details.account_name %}<p><strong>Account name:</strong> {{ online_details.account_name }}</p>{% endif %}
+            {% if online_details.destination %}<p><strong>Account / reference:</strong> {{ online_details.destination }}</p>{% endif %}
+            {% if online_details.instructions %}<p>{{ online_details.instructions }}</p>{% endif %}
             <p><strong>Amount:</strong> {{ quote.currency }} {{ quote.total }}</p></div></div>
         <div class="field"><label for="payment_reference">Payment reference (optional before placing the order)</label><input id="payment_reference" name="payment_reference" maxlength="120" value="{{ reference }}" autocomplete="off" aria-describedby="reference-hint"><p class="hint" id="reference-hint">Enter the reference only after paying through the configured channel. You can also submit it from your order page later. A reference is reviewed by staff; it does not mark the order paid.</p></div>
       </section>
+      {% endif %}
       <div class="form-actions"><a class="button button-secondary" href="{{ url_for('checkout.configure') }}">← Back to configuration</a><button class="button button-primary" type="submit">Next: Review Order →</button></div>
     </form>
-  </div><aside class="content-card price-summary" aria-label="Price summary"><p class="page-eyebrow">Price summary</p><h2>Order total</h2><div class="summary-list"><p class="summary-row">Subtotal: {{ quote.currency }} {{ quote.subtotal }}</p><p class="summary-row">Rush fee: {{ quote.currency }} {{ quote.rush_fee }}</p><p class="summary-row">Delivery fee: {{ quote.currency }} {{ quote.delivery_fee }}</p><p class="summary-row summary-total"><strong>Total: {{ quote.currency }} {{ quote.total }}</strong></p></div><p class="hint">{{ onsite_instructions }}</p></aside></div>
+    {% else %}<a class="button button-secondary" href="{{ url_for('checkout.shop') }}">← Back to shop selection</a>{% endif %}
+  </div><aside class="content-card price-summary" aria-label="Price summary"><p class="page-eyebrow">Price summary</p><h2>Order total</h2><div class="summary-list"><p class="summary-row">Subtotal: {{ quote.currency }} {{ quote.subtotal }}</p><p class="summary-row">Rush fee: {{ quote.currency }} {{ quote.rush_fee }}</p><p class="summary-row">Delivery fee: {{ quote.currency }} {{ quote.delivery_fee }}</p><p class="summary-row summary-total"><strong>Total: {{ quote.currency }} {{ quote.total }}</strong></p></div></aside></div>
   <script src="{{ url_for('static', filename='js/checkout-payment.js') }}" defer></script>
 {% endblock %}

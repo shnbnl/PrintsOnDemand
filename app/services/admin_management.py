@@ -5,7 +5,7 @@ from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from app.extensions import db
-from app.models import Faculty, Order, PaymentSettings, PrintingShop, Professor, ProfessorVerificationStatus, User, UserRole
+from app.models import Faculty, Order, PrintingShop, Professor, ProfessorVerificationStatus, User, UserRole
 from app.services.professors import PROFESSOR_DELIVERY_SHOP
 
 
@@ -104,19 +104,3 @@ def assign_staff_to_shop(staff_id: int, shop_id: int | None) -> User:
     user.shop = shop
     db.session.commit()
     return user
-
-
-def save_payment_settings(*, online_enabled: bool, online_instructions: str,
-                          online_account_name: str, online_destination: str,
-                          onsite_instructions: str) -> PaymentSettings:
-    record = db.session.get(PaymentSettings, 1)
-    if record is None:
-        record = PaymentSettings(id=1)
-        db.session.add(record)
-    record.online_enabled = online_enabled
-    record.online_instructions = online_instructions
-    record.online_account_name = online_account_name
-    record.online_destination = online_destination
-    record.onsite_instructions = onsite_instructions
-    db.session.commit()
-    return record

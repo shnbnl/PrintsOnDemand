@@ -167,48 +167,23 @@ def test_payment_configuration_changes_student_flow_without_changing_records(cli
     assert b"Online payment" not in client.get(order_url).data
     sign_in(client, admin)
     path = "/admin/payment"
-    assert client.post(path, data={"online_enabled": "y"}).status_code == 400
-    assert post_with_token(client, path, {"online_enabled": "y", "onsite_instructions": "At counter"}).status_code == 200
-    assert post_with_token(client, path, {
-        "online_enabled": "y", "online_instructions": "Use manual transfer.",
-        "online_account_name": "Campus Account", "online_destination": "DEMO-123",
-        "onsite_instructions": "Pay at the campus counter.", "payment_status": "PAID",
-    }).status_code == 302
+    assert client.get(path).status_code == 200
+    assert post_with_token(client, path, {"online_enabled": "y"}).status_code == 405
     with test_app.app_context():
-        assert db.session.get(PaymentSettings, 1).online_enabled
+        assert db.session.get(PaymentSettings, 1) is None
         assert db.session.scalar(select(Payment)) is None
     sign_in(client, owner)
-    assert b"Online payment" in client.get(order_url).data
-    assert choose(client, order_url, "ONLINE").status_code == 302
-    assert b"Use manual transfer" in client.get(order_url).data
-    assert b"DEMO-123" in client.get(order_url).data
-    assert submit(client, order_url, "STUDENT-REF-1").status_code == 302
-    sign_in(client, admin)
-    assert post_with_token(client, path, {
-        "online_enabled": "y", "online_instructions": "Updated instructions.",
-        "online_account_name": "New Account", "online_destination": "DEMO-456",
-        "onsite_instructions": "New counter instructions.",
-    }).status_code == 302
-    sign_in(client, owner)
-    response = client.get(order_url)
-    assert b"Updated instructions" not in response.data  # submitted payment does not show transfer instructions
+    assert b"Online payment" not in client.get(order_url).data
+    assert choose(client, order_url, "ONLINE").status_code == 400
     with test_app.app_context():
-        payment = db.session.scalar(select(Payment))
-        assert payment.payment_status == PaymentStatus.SUBMITTED
-        assert payment.payment_reference == "STUDENT-REF-1"
-        assert payment.amount == Decimal("6.75")
-        assert payment.order.status.value == "PENDING_PAYMENT"
-    second_file = file(test_app, owner, name="second.pdf")
-    assert review(client, second_file, shop_id).status_code == 200
-    second_url = place(client, second_file, shop_id).headers["Location"]
-    assert choose(client, second_url, "ONLINE").status_code == 302
-    assert b"Updated instructions" in client.get(second_url).data
-    assert b"DEMO-456" in client.get(second_url).data
-    third_file = file(test_app, owner, name="third.pdf")
-    assert review(client, third_file, shop_id).status_code == 200
-    third_url = place(client, third_file, shop_id).headers["Location"]
-    assert choose(client, third_url, "ONSITE").status_code == 302
-    assert b"New counter instructions" in client.get(third_url).data
+        record = db.session.get(PrintingShop, shop_id)
+        record.online_enabled = True
+        record.online_account_name = "Campus Account"
+        record.online_account_reference = "ACCOUNT-123"
+        record.online_instructions = "Use this shop's transfer details."
+        db.session.commit()
+    assert choose(client, order_url, "ONLINE").status_code == 302
+    assert b"Campus Account" in client.get(order_url).data
 
 
 def test_admin_shop_changes_preserve_old_order_and_affect_new_quotes(client, test_app):

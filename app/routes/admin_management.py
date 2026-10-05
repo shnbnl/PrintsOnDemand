@@ -7,17 +7,16 @@ from flask_login import current_user
 from flask_wtf import FlaskForm
 from sqlalchemy import select
 
-from app.admin_forms import PaymentSettingsForm, ProfessorForm, StaffShopForm
+from app.admin_forms import ProfessorForm, StaffShopForm
 from app.authorization import roles_required
 from app.extensions import db
 from app.models import PaymentSettings, PrintingShop, Professor, ProfessorVerificationStatus, User, UserRole
 from app.services.admin_management import (
-    ManagementError, assign_staff_to_shop, delete_managed_professor, save_payment_settings, save_professor,
+    ManagementError, assign_staff_to_shop, delete_managed_professor, save_professor,
 )
 from app.services.account_deletion import (
     AccountDeletionCleanupError, AccountDeletionError, delete_customer_account,
 )
-from app.services.payments import payment_configuration
 from app.services.professors import PROFESSOR_DELIVERY_SHOP
 
 
@@ -223,20 +222,7 @@ def delete_professor_account(account_id):
 @admin_management_bp.route("/payment", methods=["GET", "POST"])
 @roles_required(UserRole.ADMIN)
 def payment():
-    form = PaymentSettingsForm()
-    saved = db.session.get(PaymentSettings, 1)
-    if form.validate_on_submit():
-        save_payment_settings(
-            online_enabled=bool(form.online_enabled.data),
-            online_instructions=form.online_instructions.data or "",
-            online_account_name=form.online_account_name.data or "",
-            online_destination=form.online_destination.data or "",
-            onsite_instructions=form.onsite_instructions.data,
-        )
-        flash("Public payment information updated.", "success")
-        return redirect(url_for("admin_management.payment"))
-    if request.method == "GET":
-        values = payment_configuration()
-        for key, value in values.items():
-            getattr(form, key).data = value
-    return render_template("admin/payment.html", form=form, saved=saved)
+    if request.method == "POST":
+        abort(405)
+    shops = db.session.scalars(select(PrintingShop).order_by(PrintingShop.name)).all()
+    return render_template("admin/payment.html", shops=shops)
