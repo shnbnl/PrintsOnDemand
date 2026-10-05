@@ -1,16 +1,21 @@
 """Guided checkout: order, payment, file ownership, and fulfillment boundaries."""
 
 from decimal import Decimal
+import hashlib
 from io import BytesIO
+import zipfile
 
 import pytest
 
 from sqlalchemy import select
 
 from app.extensions import db
-from app.models import Order, PaymentMethod, PaymentStatus, PrintPrice, PrintingShop, UploadedFile, UserRole
+from app.models import ColorMode, Order, PaperSize, PaymentMethod, PaymentStatus, PrintConfiguration, PrintPrice, PrintingShop, UploadedFile, UserRole
+from app.services.fulfillment import FulfillmentError
+from app.services.pricing import quote_cart
+from app.storage import LocalStorage
 from test_orders import (
-    PDF, approved_professor, file, offer_professor_service, pickup_fields,
+    PDF, pdf_bytes, approved_professor, file, offer_professor_service, pickup_fields,
     shop, sign_in, student, token,
 )
 
@@ -47,6 +52,27 @@ def upload_checkout_file(client, app, owner, name="notes.pdf"):
         ).order_by(UploadedFile.id.desc()))
 
 
+@pytest.mark.parametrize(("professor", "desk_path"), [(False, "/student"), (True, "/professor")])
+def test_upload_page_returns_to_role_workspace_without_losing_staged_files(
+    client, test_app, professor, desk_path,
+):
+    _, _, file_id = setup(client, test_app, professor=professor)
+    upload_page = client.get("/checkout/upload")
+    assert upload_page.status_code == 200
+    assert f'href="{desk_path}"'.encode() in upload_page.data
+    assert b'aria-label="Back to Printing Desk"' in upload_page.data
+    assert b'class="vector-back checkout-back-to-desk"' in upload_page.data
+    assert b'<svg ' in upload_page.data
+
+    desk = client.get(desk_path)
+    assert desk.status_code == 200
+    upload_again = client.get("/checkout/upload")
+    assert upload_again.status_code == 200
+    assert b"notes.pdf" in upload_again.data
+    with test_app.app_context():
+        assert db.session.get(UploadedFile, file_id) is not None
+
+
 def print_fields(file_id, *, quantity="1"):
     return {"file_id": str(file_id), f"paper_size_{file_id}": "A4",
             f"color_mode_{file_id}": "GRAYSCALE", f"quantity_{file_id}": quantity}
@@ -79,10 +105,36 @@ def test_student_cash_checkout_creates_order_payment_and_success(client, test_ap
         assert [item.uploaded_file_id for item in order.items] == [file_id]
         assert order.payment.payment_method == PaymentMethod.ONSITE
         assert order.payment.payment_status == PaymentStatus.PENDING
+    order_detail = client.get(f"/orders/{order.order_reference}")
+    assert b"Choose or review your method" not in order_detail.data
+    assert b'name="payment_method"' not in order_detail.data
     assert client.get("/orders").status_code == 200
     assert client.post("/checkout/place", data={"csrf_token": token(confirmation)}).headers["Location"] == placed.headers["Location"]
     with test_app.app_context():
         assert len(db.session.scalars(select(Order)).all()) == 1
+
+
+def test_shop_hover_preview_returns_full_shop_panel_without_changing_selection(client, test_app):
+    owner = student(test_app)
+    selected_id = shop(test_app, name="Selected Shop")
+    preview_id = shop(test_app, name="Preview Shop", price="9.50")
+    sign_in(client, owner)
+    file_id = upload_checkout_file(client, test_app, owner)
+    assert post(client, "/checkout/upload", {"file_id": str(file_id)}).status_code == 302
+    assert post(client, "/checkout/shop", {
+        "shop_id": str(selected_id), **print_fields(file_id),
+    }).status_code == 302
+
+    response = client.post("/checkout/shop", data={
+        "csrf_token": token(client.get("/checkout/shop")), "intent": "preview",
+        "shop_id": str(preview_id), **print_fields(file_id),
+    }, headers={"Accept": "application/json"})
+    assert response.status_code == 200
+    assert response.json["shop_id"] == preview_id
+    assert "Preview Shop" in response.json["html"]
+    assert "PHP 9.50" in response.json["html"]
+    current = client.get("/checkout/shop")
+    assert f'data-current-shop="{selected_id}"'.encode() in current.data
 
 
 def test_student_online_reference_waits_for_verification(client, test_app):
@@ -209,6 +261,161 @@ def test_upload_multiple_files_and_remove_from_draft(client, test_app):
     assert post(client, "/checkout/place").status_code == 302
     with test_app.app_context():
         assert {item.uploaded_file_id for item in db.session.scalar(select(Order)).items} == set(selected)
+
+
+def test_pdf_upload_counts_pages_and_rejects_malformed_pdf(client, test_app):
+    owner = student(test_app)
+    sign_in(client, owner)
+    response = client.post("/checkout/upload/files", data={
+        "csrf_token": token(client.get("/checkout/upload")),
+        "files": (BytesIO(pdf_bytes(5)), "five-pages.pdf"),
+    }, content_type="multipart/form-data")
+    assert response.status_code == 302
+    with test_app.app_context():
+        record = db.session.scalar(select(UploadedFile).where(UploadedFile.user_id == owner))
+        assert record.pdf_page_count == 5
+
+    malformed = client.post("/checkout/upload/files", data={
+        "csrf_token": token(client.get("/checkout/upload")),
+        "files": (BytesIO(b"%PDF-1.7\\ninvalid page tree\\n%%EOF"), "broken.pdf"),
+    }, content_type="multipart/form-data")
+    assert malformed.status_code == 400
+    assert b"Unable to read this PDF" in malformed.data
+    with test_app.app_context():
+        assert db.session.scalar(select(UploadedFile).where(UploadedFile.original_filename == "broken.pdf")) is None
+
+
+def test_order_service_rechecks_stored_pdf_page_count(client, test_app):
+    owner = student(test_app)
+    shop_id = shop(test_app)
+    file_id = file(test_app, owner)
+    with test_app.app_context():
+        quote = quote_cart(user_id=owner, file_ids=[file_id], shop_id=shop_id,
+                           max_quantity=999, max_files=20)
+        db.session.get(UploadedFile, file_id).pdf_page_count = 5
+        db.session.commit()
+        with pytest.raises(FulfillmentError, match="page count changed"):
+            from app.services.orders import create_order
+            create_order(quote)
+        assert db.session.scalar(select(Order)) is None
+
+
+def test_legacy_doc_without_saved_page_count_keeps_copy_based_pricing(test_app):
+    owner = student(test_app)
+    shop_id = shop(test_app)
+    data = bytes.fromhex("d0cf11e0a1b11ae1") + b"legacy document"
+    with test_app.app_context():
+        key = LocalStorage(test_app.config["UPLOAD_STORAGE_ROOT"], test_app.static_folder).save(data, "doc")
+        record = UploadedFile(
+            user_id=owner, original_filename="handout.doc", stored_filename=key,
+            storage_key=key, mime_type="application/msword", file_extension="doc",
+            file_size=len(data), sha256=hashlib.sha256(data).hexdigest(),
+        )
+        db.session.add(record)
+        db.session.flush()
+        db.session.add(PrintConfiguration(file_id=record.id, paper_size=PaperSize.A4,
+                                          color_mode=ColorMode.GRAYSCALE, quantity=3, is_rush=False))
+        db.session.commit()
+        quote = quote_cart(user_id=owner, file_ids=[record.id], shop_id=shop_id,
+                           max_quantity=999, max_files=20)
+        item = quote.items[0]
+        assert (item.pdf_page_count, item.total_printed_pages, item.quantity, item.line_total) == (
+            None, None, 3, Decimal("6.75"),
+        )
+
+
+def test_docx_page_count_is_used_for_page_based_pricing(test_app):
+    owner = student(test_app)
+    shop_id = shop(test_app)
+    buffer = BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        archive.writestr("[Content_Types].xml", '<Types><Override ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>')
+        archive.writestr("word/document.xml", "<document/>")
+        archive.writestr("docProps/app.xml", "<Properties><Pages>4</Pages></Properties>")
+    data = buffer.getvalue()
+    with test_app.app_context():
+        key = LocalStorage(test_app.config["UPLOAD_STORAGE_ROOT"], test_app.static_folder).save(data, "docx")
+        record = UploadedFile(
+            user_id=owner, original_filename="handout.docx", stored_filename=key,
+            storage_key=key, mime_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            file_extension="docx", file_size=len(data), sha256=hashlib.sha256(data).hexdigest(),
+            pdf_page_count=4,
+        )
+        db.session.add(record)
+        db.session.flush()
+        db.session.add(PrintConfiguration(file_id=record.id, paper_size=PaperSize.A4,
+                                          color_mode=ColorMode.GRAYSCALE, quantity=3, is_rush=False))
+        db.session.commit()
+        quote = quote_cart(user_id=owner, file_ids=[record.id], shop_id=shop_id,
+                           max_quantity=999, max_files=20)
+        item = quote.items[0]
+        assert item.pdf_page_count == 4
+        assert item.total_printed_pages == 12
+        assert item.line_total == Decimal("27.00")
+
+
+def test_page_based_price_and_snapshots_are_server_authoritative_for_multiple_files(client, test_app):
+    owner = student(test_app)
+    shop_id = shop(test_app)
+    with test_app.app_context():
+        db.session.add_all([
+            PrintPrice(shop_id=shop_id, paper_size=PaperSize.A4, color_mode=ColorMode.COLOR, price=Decimal("5.00")),
+            PrintPrice(shop_id=shop_id, paper_size=PaperSize.LETTER, color_mode=ColorMode.GRAYSCALE, price=Decimal("2.00")),
+        ])
+        db.session.commit()
+    sign_in(client, owner)
+    uploaded = client.post("/checkout/upload/files", data={
+        "csrf_token": token(client.get("/checkout/upload")),
+        "files": [(BytesIO(pdf_bytes(5)), "resume.pdf"), (BytesIO(pdf_bytes(8)), "portfolio.pdf")],
+    }, content_type="multipart/form-data")
+    assert uploaded.status_code == 302
+    with test_app.app_context():
+        records = db.session.scalars(select(UploadedFile).where(UploadedFile.user_id == owner)
+                                     .order_by(UploadedFile.id)).all()
+        first, second = records
+        assert [first.pdf_page_count, second.pdf_page_count] == [5, 8]
+        first_id, second_id = first.id, second.id
+    assert post(client, "/checkout/upload", {"file_id": [str(first_id), str(second_id)]}).status_code == 302
+    quote = client.post("/checkout/shop", data={
+        "csrf_token": token(client.get("/checkout/upload")),
+        "intent": "quote", "shop_id": str(shop_id), "file_id": [str(first_id), str(second_id)],
+        f"paper_size_{first_id}": "A4", f"color_mode_{first_id}": "COLOR", f"quantity_{first_id}": "2",
+        f"paper_size_{second_id}": "LETTER", f"color_mode_{second_id}": "GRAYSCALE", f"quantity_{second_id}": "1",
+        f"pdf_page_count_{first_id}": "1", f"total_printed_pages_{first_id}": "1",
+        "total": "0.01", "unit_price": "0.01",
+    }, headers={"Accept": "application/json"})
+    assert quote.status_code == 200
+    assert quote.json["subtotal"] == "66.00"
+    assert quote.json["total"] == "66.00"
+    copies_three = client.post("/checkout/shop", data={
+        "csrf_token": token(client.get("/checkout/upload")),
+        "intent": "quote", "shop_id": str(shop_id), "file_id": [str(first_id), str(second_id)],
+        f"paper_size_{first_id}": "A4", f"color_mode_{first_id}": "COLOR", f"quantity_{first_id}": "3",
+        f"paper_size_{second_id}": "LETTER", f"color_mode_{second_id}": "GRAYSCALE", f"quantity_{second_id}": "1",
+        f"pdf_page_count_{first_id}": "0", f"price_{first_id}": "0.01", "total": "0.01",
+    }, headers={"Accept": "application/json"})
+    assert copies_three.status_code == 200
+    assert copies_three.json["subtotal"] == "91.00"
+
+    settings = {"shop_id": str(shop_id), "file_id": [str(first_id), str(second_id)],
+                **pickup_fields()}
+    settings.update({f"paper_size_{first_id}": "A4", f"color_mode_{first_id}": "COLOR", f"quantity_{first_id}": "2",
+                     f"paper_size_{second_id}": "LETTER", f"color_mode_{second_id}": "GRAYSCALE", f"quantity_{second_id}": "1"})
+    assert post(client, "/checkout/shop", settings).status_code == 302
+    assert post(client, "/checkout/fulfillment", pickup_fields()).status_code == 302
+    assert post(client, "/checkout/payment", {"payment_method": "ONSITE"}).status_code == 302
+    assert post(client, "/checkout/place", {"total": "0.01", "pdf_page_count": "1"}).status_code == 302
+    with test_app.app_context():
+        order = db.session.scalar(select(Order).where(Order.user_id == owner))
+        assert order.subtotal == order.total == Decimal("66.00")
+        items = sorted(order.items, key=lambda item: item.uploaded_file_id)
+        assert [(item.pdf_page_count, item.quantity, item.total_printed_pages, item.line_total)
+                for item in items] == [
+                    (5, 2, 10, Decimal("50.00")),
+                    (8, 1, 8, Decimal("16.00")),
+                ]
+    detail = client.get(f"/orders/{order.order_reference}")
+    assert b"Total Printed Pages" in detail.data
 
 
 def test_professor_self_delivery_requires_online(client, test_app):

@@ -79,6 +79,7 @@ def upload():
             file_extension=validated.extension,
             file_size=validated.size,
             sha256=validated.sha256,
+            pdf_page_count=validated.pdf_page_count,
         )
         db.session.add(record)
         try:

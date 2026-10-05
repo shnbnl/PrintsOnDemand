@@ -39,7 +39,7 @@ def detail_context(shop: PrintingShop) -> dict:
         (item for item in shop.fees if item.fee_type.value in service_types),
         key=lambda item: item.fee_type.value,
     )
-    return {"shop": shop, "price_rows": rows, "services": services, "fees": fees}
+    return {"shop": shop, "price_rows": rows, "price_map": prices, "services": services, "fees": fees}
 
 
 def active_shop_statement(query: str):

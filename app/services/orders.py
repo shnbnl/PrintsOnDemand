@@ -14,6 +14,7 @@ from app.services.pricing import CartQuote, OrderQuote
 from app.services.professors import assign_professor, validate_professor_selection
 from app.services.fulfillment import Fulfillment, FulfillmentError, validate_fulfillment
 from app.services.payments import validate_checkout_payment
+from app.services.pricing import PricingError, verify_quote_page_counts
 
 
 def create_order(
@@ -24,6 +25,10 @@ def create_order(
     payment_reference: str = "",
 ) -> Order:
     """Commit one order and all quoted items, retrying rare reference collisions."""
+    try:
+        verify_quote_page_counts(quote)
+    except PricingError as error:
+        raise FulfillmentError(str(error)) from error
     for _ in range(5):
         actor = db.session.get(User, quote.user_id)
         if actor is None:
@@ -81,6 +86,8 @@ def create_order(
                 paper_size=item.paper_size,
                 color_mode=item.color_mode,
                 quantity=item.quantity,
+                pdf_page_count=item.pdf_page_count,
+                total_printed_pages=item.total_printed_pages,
                 is_rush=item.is_rush,
                 unit_price=item.unit_price,
                 line_total=item.line_total,

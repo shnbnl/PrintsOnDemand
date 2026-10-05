@@ -4,8 +4,9 @@
   <select id="workspace-file" data-file-selector>{% for file in files %}<option value="{{ file.id }}">{{ loop.index }}. {{ file.original_filename }}</option>{% endfor %}</select>
   <p class="hint">Click a price to choose paper and output for this file.</p>
   {% for file in files %}{% set choice = options[file.id] %}
-  <fieldset class="workspace-file" data-file-settings="{{ file.id }}">
+  <fieldset class="workspace-file" data-file-settings="{{ file.id }}" data-currency="{{ config.ORDER_CURRENCY }}" data-document-pages="{{ file.pdf_page_count if file.pdf_page_count else '' }}" data-page-count-capable="{{ 'true' if file.file_extension in ('pdf', 'doc', 'docx') else 'false' }}">
     <legend class="sr-only">{{ file.original_filename }}</legend>
+    <p class="workspace-file-pages"><strong>Document Pages</strong> <span data-document-pages-label>{% if file.pdf_page_count %}{{ file.pdf_page_count }} {{ 'page' if file.pdf_page_count == 1 else 'pages' }}{% elif file.file_extension in ('pdf', 'doc', 'docx') %}Unable to determine{% else %}Not available for this file type{% endif %}</span></p>
     <input type="hidden" name="file_id" value="{{ file.id }}">
     <input type="hidden" name="paper_size_{{ file.id }}" value="{{ choice.paper_size }}">
     <input type="hidden" name="color_mode_{{ file.id }}" value="{{ choice.color_mode }}">
@@ -16,7 +17,7 @@
       <tbody>{% for row in shop_details.price_rows %}<tr><th scope="row">{{ row.size.label }}</th>
         {% for mode, rate in [('GRAYSCALE', row.grayscale), ('COLOR', row.color)] %}
         <td>{% if rate %}<label class="price-cell">
-          <input type="radio" name="print_choice_{{ file.id }}" value="{{ row.size.value }}:{{ mode }}" data-price-choice {% if choice.paper_size == row.size.value and choice.color_mode == mode %}checked{% endif %} aria-label="{{ row.size.label }} {{ 'Grayscale' if mode == 'GRAYSCALE' else 'Color' }}, PHP {{ rate.price }}">
+          <input type="radio" name="print_choice_{{ file.id }}" value="{{ row.size.value }}:{{ mode }}" data-price-choice data-unit-price="{{ rate.price }}" {% if choice.paper_size == row.size.value and choice.color_mode == mode %}checked{% endif %} aria-label="{{ row.size.label }} {{ 'Grayscale' if mode == 'GRAYSCALE' else 'Color' }}, PHP {{ rate.price }}">
           <span>₱{{ '%.2f'|format(rate.price) }}</span><span class="price-check" aria-hidden="true">✓</span>
         </label>{% else %}<span class="price-unavailable" aria-label="{{ row.size.label }} {{ mode }} not offered">Not offered</span>{% endif %}</td>
         {% endfor %}</tr>{% endfor %}</tbody>
@@ -28,9 +29,12 @@
         <button type="button" data-count-step="-1" aria-label="Decrease print count for {{ file.original_filename }}">−</button>
         <input id="quantity-{{ file.id }}" name="quantity_{{ file.id }}" type="number" inputmode="numeric" min="1" max="{{ max_quantity }}" step="1" value="{{ choice.quantity }}" required>
         <button type="button" data-count-step="1" aria-label="Increase print count for {{ file.original_filename }}">+</button>
-      </div></div>
+      </div><p class="hint">Number of copies</p></div>
       <div><span class="workspace-file-label">Printing Priority</span><label class="workspace-rush"><input type="checkbox" name="is_rush_{{ file.id }}" value="1" {% if rush_available and choice.is_rush %}checked{% endif %} {% if not rush_available %}disabled{% endif %}> Rush printing</label></div>
     </div>
+    <p class="workspace-file-pages"><strong>Total Printed Pages</strong> <span data-total-printed-pages aria-live="polite">{% if file.pdf_page_count %}{{ file.pdf_page_count * choice.quantity }} pages{% elif file.file_extension in ('pdf', 'doc', 'docx') %}Unable to determine{% else %}Not available for this file type{% endif %}</span></p>
+    {% set selected_rate = shop_details.price_map.get((choice.paper_size, choice.color_mode)) if shop_details else none %}
+    {% if shop %}<p class="workspace-file-pages"><strong>Printing total</strong> <span data-file-print-total>{% if selected_rate %}PHP {{ '%.2f'|format(selected_rate.price * (file.pdf_page_count or 1) * choice.quantity) }}{% else %}Price unavailable{% endif %}</span></p>{% endif %}
   </fieldset>{% endfor %}
-  <p class="hint workspace-rate-note">Prices use your print count; document pages are not counted automatically.{% if rush_available %} Rush fees are included in the total.{% endif %}</p>
+  <p class="hint workspace-rate-note">PDF pages are counted directly. Word page counts use the layout saved by Word or another paginating editor; save recent edits before uploading. Counted documents are priced per page and multiplied by the number of copies. Other files use the existing copy-based estimate.{% if rush_available %} Rush fees are included in the order total.{% endif %}</p>
 </section>

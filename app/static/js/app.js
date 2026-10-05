@@ -14,6 +14,29 @@ if (fileInput && selectedFileName) {
   });
 }
 
+const checkoutFiles = document.querySelector('#checkout-files');
+const checkoutSelection = document.querySelector('[data-upload-selection]');
+if (checkoutFiles && checkoutSelection) {
+  checkoutFiles.addEventListener('change', () => {
+    const names = [...checkoutFiles.files].map(file => file.name);
+    checkoutSelection.textContent = names.length
+      ? `${names.length} ${names.length === 1 ? 'file' : 'files'} ready to upload: ${names.join(', ')}`
+      : 'Choose files from your device to add to this order.';
+  });
+}
+
+document.addEventListener('click', (event) => {
+  const toggle = event.target.closest('[data-password-toggle]');
+  if (!toggle) return;
+  const input = toggle.closest('.password-input')?.querySelector('input');
+  if (!input) return;
+  const showing = input.type === 'password';
+  input.type = showing ? 'text' : 'password';
+  toggle.textContent = showing ? 'Hide' : 'Show';
+  toggle.setAttribute('aria-pressed', String(showing));
+  toggle.setAttribute('aria-label', `${showing ? 'Hide' : 'Show'} ${input.id === 'confirm_password' ? 'password confirmation' : 'password'}`);
+});
+
 document.querySelectorAll(".quantity-stepper").forEach((stepper) => {
   const input = stepper.querySelector('input[type="number"]');
   if (!input) return;

@@ -38,8 +38,9 @@
             </div>
             <strong>{{ order.currency }} {{ item.line_total }}</strong>
           </div>
-          <p class="hint">{{ item.paper_size.label }} · {{ item.color_mode.label }} · Quantity {{ item.quantity }} · Rush: {{ 'Yes' if item.is_rush else 'No' }}</p>
-          <p class="hint">Unit price: {{ order.currency }} {{ item.unit_price }}</p>
+          <p class="hint">{{ item.paper_size.label }} · {{ item.color_mode.label }} · {{ item.quantity }} {{ 'copy' if item.quantity == 1 else 'copies' }} · Rush: {{ 'Yes' if item.is_rush else 'No' }}</p>
+          {% if item.pdf_page_count is not none %}<p class="hint">Document pages: {{ item.pdf_page_count }} · Total Printed Pages: {{ item.total_printed_pages }}</p>{% endif %}
+          <p class="hint">Price per page: {{ order.currency }} {{ item.unit_price }}</p>
           <a class="card-action" href="{{ url_for('staff_orders.download_file', order_reference=order.order_reference, item_id=item.id) }}">Download file <span aria-hidden="true">↓</span></a>
         </li>
       {% endfor %}
@@ -93,7 +94,7 @@
     {% if order.destination and order.destination.value == 'DELIVERY' %}<p class="hint">Delivery is requested; no courier is automatically booked.</p>{% endif %}
   </section>
 
-  <section class="section-card">
+  <section class="section-card processing-focus">
     <h2>Processing</h2>
     <p>Current status: {{ order_badge(order) }}</p>
     {% if order.processing_started_at or order.ready_at or order.delivered_at or order.completed_at %}

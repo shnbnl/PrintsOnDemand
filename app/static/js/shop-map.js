@@ -18,6 +18,8 @@
   const preview = document.querySelector("[data-pin-preview]");
   const workspacePanel = workspace?.querySelector('.workspace-panel');
   const markers = new Map();
+  let selectedWorkspaceShopId = canvas.dataset.selectedShopId ||
+    workspace?.querySelector('[data-current-shop]')?.dataset.currentShop || "";
   let map;
   let userMarker;
   let loadTimer;
@@ -41,15 +43,23 @@
   }
 
   function showPreview(shop) {
-    if (!preview || !window.matchMedia('(hover: hover)').matches) return;
+    if (!window.matchMedia('(hover: hover)').matches) return;
     clearTimeout(previewLeaveTimer);
     clearTimeout(previewFadeTimer);
-    preview.classList.remove('is-leaving');
-    const current = workspace.querySelector('[data-current-shop]')?.dataset.currentShop;
+    const current = workspace?.querySelector('[data-current-shop]')?.dataset.currentShop;
     if (String(current) === String(shop.id)) {
+      if (workspace) {
+        document.dispatchEvent(new CustomEvent("pod:shop-preview", { detail: { id: shop.id } }));
+      }
       hidePreview(true);
       return;
     }
+    if (workspace) {
+      document.dispatchEvent(new CustomEvent("pod:shop-preview", { detail: { id: shop.id } }));
+      return;
+    }
+    if (!preview) return;
+    preview.classList.remove('is-leaving');
     const avatar = document.createElement('span');
     avatar.className = 'shop-avatar';
     avatar.setAttribute('aria-hidden', 'true');
@@ -107,7 +117,10 @@
     if (shop && moveMap && map) map.panTo(shop.position);
   }
 
-  document.addEventListener("pod:shop-highlight", (event) => selectShop(event.detail.id));
+  document.addEventListener("pod:shop-highlight", (event) => {
+    if (workspace) selectedWorkspaceShopId = String(event.detail.id);
+    selectShop(event.detail.id);
+  });
 
   choices.forEach((choice) => {
     choice.addEventListener(choice.matches('input[type="radio"]') ? "change" : "click",
@@ -183,9 +196,10 @@
         marker.addEventListener("gmp-click", () => {
           hidePreview(true);
           if (workspace && workspace.querySelector('[data-workspace-content]')?.getAttribute('aria-busy') !== 'true'
-              && String(workspace.querySelector('[data-current-shop]')?.dataset.currentShop) === String(shop.id)) return;
+              && selectedWorkspaceShopId === String(shop.id)) return;
           selectShop(shop.id, false, true);
           if (workspace) {
+            selectedWorkspaceShopId = String(shop.id);
             document.dispatchEvent(new CustomEvent("pod:shop-selected", { detail: { id: shop.id } }));
           }
         });
@@ -193,7 +207,10 @@
           pin.addEventListener('pointerenter', () => showPreview(shop));
           pin.addEventListener('pointerleave', () => {
             clearTimeout(previewLeaveTimer);
-            previewLeaveTimer = window.setTimeout(hidePreview, 90);
+            previewLeaveTimer = window.setTimeout(() => {
+              hidePreview();
+              document.dispatchEvent(new CustomEvent("pod:shop-preview-end"));
+            }, 90);
           });
         }
         markers.set(shop.id, { pin, marker });

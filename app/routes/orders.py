@@ -105,7 +105,7 @@ def choices():
 
 
 def quote_for(file_ids: list[int], shop_id: int, options: dict[int, PrintOptions],
-              *, delivery_fee=None, delivery_fee_is_demo=False):
+              *, delivery_fee=None, delivery_fee_is_demo=False, verify_pdf=False):
     from decimal import Decimal
     return quote_cart(
         user_id=current_user.id,
@@ -117,6 +117,7 @@ def quote_for(file_ids: list[int], shop_id: int, options: dict[int, PrintOptions
         options=options,
         delivery_fee=delivery_fee if delivery_fee is not None else Decimal("0.00"),
         delivery_fee_is_demo=delivery_fee_is_demo,
+        verify_pdf=verify_pdf,
     )
 
 
@@ -380,9 +381,7 @@ def download_file(order_reference: str, item_id: int):
 def render_order_detail(order, *, payment_error=None, professor_error=None, status=200):
     online_details = online_payment_details(order.shop)
     method_form = None
-    if order.status == OrderStatus.PENDING_PAYMENT and (
-        order.payment is None or order.payment.payment_status == PaymentStatus.PENDING
-    ):
+    if order.status == OrderStatus.PENDING_PAYMENT and order.payment is None:
         method_form = PaymentMethodForm()
         method_form.payment_method.choices = ([] if order.destination == OrderDestination.PROFESSOR or not order.shop.cash_enabled
                                               else [(PaymentMethod.ONSITE.value, "Onsite payment")])

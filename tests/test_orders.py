@@ -2,6 +2,7 @@
 
 import hashlib
 import re
+from io import BytesIO
 from datetime import datetime, time, timedelta
 from zoneinfo import ZoneInfo
 from decimal import Decimal
@@ -11,6 +12,7 @@ import pytest
 from flask import g
 from sqlalchemy import select, text
 from sqlalchemy.exc import IntegrityError
+from pypdf import PdfWriter
 
 from app.extensions import db
 from app.models import (
@@ -24,7 +26,16 @@ from app.services.professors import ProfessorSelectionError
 from app.storage import LocalStorage
 
 
-PDF = b"%PDF-1.4\n1 0 obj\n<<>>\nendobj\n%%EOF\n"
+def pdf_bytes(page_count=1):
+    writer = PdfWriter()
+    for _ in range(page_count):
+        writer.add_blank_page(width=612, height=792)
+    output = BytesIO()
+    writer.write(output)
+    return output.getvalue()
+
+
+PDF = pdf_bytes()
 PASSWORD = "A-strong-password-123"
 
 
@@ -91,6 +102,7 @@ def file(app, user_id, *, name="notes.pdf", configured=True, quantity=3, rush=Fa
             user_id=user_id, original_filename=name, stored_filename=key,
             storage_key=key, mime_type="application/pdf", file_extension="pdf",
             file_size=len(PDF), sha256=hashlib.sha256(PDF).hexdigest(),
+            pdf_page_count=1,
         )
         db.session.add(record)
         db.session.flush()

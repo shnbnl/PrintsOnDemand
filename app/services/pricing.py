@@ -14,6 +14,7 @@ from app.models import (
     ShopFee, ShopService, UploadedFile,
 )
 from app.storage import StorageError, get_storage
+from app.storage.validation import UploadValidationError, count_pdf_pages, count_word_document_pages
 
 
 CENT = Decimal("0.01")
@@ -44,6 +45,8 @@ class OrderQuote:
     paper_size: PaperSize
     color_mode: ColorMode
     quantity: int
+    pdf_page_count: int | None
+    total_printed_pages: int | None
     is_rush: bool
     unit_price: Decimal
     line_total: Decimal
@@ -59,7 +62,8 @@ class OrderQuote:
         values = (
             self.user_id, self.shop.id, self.shop.name, self.uploaded_file.id,
             self.uploaded_file.sha256, self.paper_size.value, self.color_mode.value,
-            self.quantity, self.is_rush, self.unit_price, self.rush_fee, self.total,
+            self.quantity, self.pdf_page_count, self.total_printed_pages,
+            self.is_rush, self.unit_price, self.rush_fee, self.total,
             self.currency,
         )
         return hashlib.sha256("|".join(map(str, values)).encode()).hexdigest()
@@ -102,7 +106,7 @@ def money(value: Decimal | None, label: str) -> Decimal:
 
 def quote_order(
     *, user_id: int, file_id: int, shop_id: int, max_quantity: int,
-    currency: str = "PHP", options: PrintOptions | None = None,
+    currency: str = "PHP", options: PrintOptions | None = None, verify_pdf: bool = False,
 ) -> OrderQuote:
     """Rebuild a quote from owned file settings and current shop prices."""
     uploaded_file = db.session.scalar(
@@ -137,6 +141,21 @@ def quote_order(
         raise PricingError("The uploaded file is unavailable.", 409) from error
     if len(data) != uploaded_file.file_size or hashlib.sha256(data).hexdigest() != uploaded_file.sha256:
         raise PricingError("The uploaded file is unavailable.", 409)
+    pdf_page_count = uploaded_file.pdf_page_count
+    if uploaded_file.file_extension in {"pdf", "doc", "docx"}:
+        try:
+            actual_page_count = (
+                count_pdf_pages(data) if uploaded_file.file_extension == "pdf" else
+                count_word_document_pages(data, uploaded_file.file_extension)
+            ) if verify_pdf or pdf_page_count is None else pdf_page_count
+        except UploadValidationError as error:
+            raise PricingError(str(error), 400) from error
+        if verify_pdf and pdf_page_count is not None and actual_page_count != pdf_page_count:
+            raise PricingError("The document page count changed. Re-upload the file before placing this order.", 409)
+        if actual_page_count is not None:
+            pdf_page_count = actual_page_count
+            uploaded_file.pdf_page_count = actual_page_count
+    total_printed_pages = pdf_page_count * quantity if pdf_page_count is not None else None
 
     rate = db.session.scalar(
         select(PrintPrice).where(
@@ -148,7 +167,8 @@ def quote_order(
     if rate is None:
         raise PricingError("This shop has no price for the selected paper and color.")
     unit_price = money(rate.price, "Print price")
-    line_total = money(unit_price * quantity, "Line total")
+    billable_units = total_printed_pages if total_printed_pages is not None else quantity
+    line_total = money(unit_price * billable_units, "Line total")
 
     rush_fee = Decimal("0.00")
     fee_is_demo = False
@@ -178,6 +198,7 @@ def quote_order(
     return OrderQuote(
         user_id=user_id, shop=shop, uploaded_file=uploaded_file,
         paper_size=paper_size, color_mode=color_mode, quantity=quantity,
+        pdf_page_count=pdf_page_count, total_printed_pages=total_printed_pages,
         is_rush=is_rush, unit_price=unit_price, line_total=line_total,
         subtotal=subtotal, rush_fee=rush_fee, fees_total=fees_total, total=total,
         currency=currency, is_demo=shop.is_demo or rate.is_demo or fee_is_demo,
@@ -190,6 +211,7 @@ def quote_cart(
     options: dict[int, PrintOptions] | None = None,
     delivery_fee: Decimal = Decimal("0.00"),
     delivery_fee_is_demo: bool = False,
+    verify_pdf: bool = False,
 ) -> CartQuote:
     """Quote unique owned files; apply a shop's rush fee once per order."""
     if not file_ids:
@@ -202,6 +224,7 @@ def quote_cart(
         user_id=user_id, file_id=file_id, shop_id=shop_id,
         max_quantity=max_quantity, currency=currency,
         options=(options or {}).get(file_id),
+        verify_pdf=verify_pdf,
     ) for file_id in file_ids)
     subtotal = money(sum((item.line_total for item in items), Decimal("0.00")), "Order subtotal")
     rush_fee = next((item.rush_fee for item in items if item.is_rush), Decimal("0.00"))
@@ -214,3 +237,33 @@ def quote_cart(
         fees_total=fees_total, total=total,
         currency=currency, is_demo=any(item.is_demo for item in items) or delivery_fee_is_demo,
     )
+
+
+def verify_quote_page_counts(quote: CartQuote | OrderQuote) -> None:
+    """Recheck stored countable document bytes and page totals before placement."""
+    items = quote.items if isinstance(quote, CartQuote) else (quote,)
+    for item in items:
+        uploaded_file = item.uploaded_file
+        if uploaded_file.file_extension not in {"pdf", "doc", "docx"}:
+            continue
+        try:
+            data = get_storage().read(uploaded_file.storage_key)
+            if (len(data) != uploaded_file.file_size
+                    or hashlib.sha256(data).hexdigest() != uploaded_file.sha256):
+                raise PricingError("The uploaded file is unavailable.", 409)
+            actual_page_count = (
+                count_pdf_pages(data) if uploaded_file.file_extension == "pdf" else
+                count_word_document_pages(data, uploaded_file.file_extension)
+            )
+        except (StorageError, OSError) as error:
+            raise PricingError("The uploaded file is unavailable.", 409) from error
+        except UploadValidationError as error:
+            raise PricingError(str(error), 400) from error
+        if actual_page_count is None and item.pdf_page_count is None:
+            continue
+        if (actual_page_count != item.pdf_page_count
+                or (uploaded_file.pdf_page_count is not None
+                    and actual_page_count != uploaded_file.pdf_page_count)):
+            raise PricingError("The document page count changed. Re-upload the file before placing this order.", 409)
+        if item.total_printed_pages != actual_page_count * item.quantity:
+            raise PricingError("The total printed pages could not be verified.", 409)

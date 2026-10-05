@@ -287,6 +287,8 @@ button:disabled, input[type="submit"]:disabled { opacity: 0.52; cursor: not-allo
 .success-mark { display: grid; place-items: center; width: 2.7rem; height: 2.7rem; flex: none; border-radius: 50%; color: white; background: var(--success); font-size: 1.5rem; font-weight: 900; }
 .order-item-card, .destination-panel, .payment-instructions { margin-top: 1rem; padding: 1rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-muted); }
 .order-item-card h3 { overflow-wrap: anywhere; }
+.workspace-file-pages { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.4rem 1rem; margin: 0.55rem 0; color: var(--muted); font-size: 0.88rem; }
+.workspace-file-pages strong { color: var(--navy); }
 .order-item-list { display: grid; gap: 0.6rem; }
 .payment-instructions { border-color: #b9c8d7; background: #eaf0f6; }
 .payment-summary-context, .payment-summary-state { overflow-wrap: anywhere; }
@@ -642,6 +644,7 @@ form[aria-busy="true"] :is(button[type="submit"], input[type="submit"]) { box-sh
 
 /* Guided customer checkout */
 .checkout-progress { margin-bottom: var(--space-lg); overflow-x: auto; }
+.checkout-back-to-desk + .checkout-progress { margin-top: var(--space-md); }
 .checkout-progress ol { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .4rem; padding: 0; margin: 0; list-style: none; }
 .checkout-progress li > :is(a, span) { display: flex; align-items: center; gap: .4rem; min-height: 2.6rem; padding: .45rem .6rem; color: var(--muted); text-decoration: none; background: #fff; border: 1px solid var(--border); border-radius: var(--radius); font-size: .85rem; font-weight: 700; }
 .checkout-progress li > :is(a, span) > span { display: grid; place-items: center; width: 1.4rem; height: 1.4rem; flex: none; border-radius: 50%; background: #e8edf6; color: var(--navy); }
@@ -765,6 +768,17 @@ form[aria-busy="true"] :is(button[type="submit"], input[type="submit"]) { box-sh
 .workspace-panel.is-previewing .workspace-shop-summary { visibility: hidden; }
 .workspace-panel.is-minimized.is-previewing .workspace-pin-preview { position: static; }
 .workspace-map-viewport .map-message { right: auto; left: 1rem; width: min(24rem, 42%); }
+.map-discovery-workspace .shop-discovery-scroll { flex: 1; }
+.map-discovery-workspace .shop-discovery-panel[hidden] { display: none; }
+.map-discovery-workspace .shop-discovery-panel .page-eyebrow { margin: 0 0 .2rem; }
+.map-discovery-workspace .shop-discovery-panel .status-badge { display: inline-flex; margin-top: .3rem; }
+.map-discovery-workspace .shop-discovery-description { display: -webkit-box; overflow: hidden; margin: .65rem 0; color: var(--muted); -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
+.map-discovery-workspace .shop-discovery-details { margin: .55rem 0; }
+.map-discovery-workspace .shop-discovery-details .detail-row { display: grid; grid-template-columns: 4.2rem minmax(0, 1fr); gap: .5rem; padding-block: .25rem; }
+.map-discovery-workspace .shop-discovery-details dd { overflow-wrap: anywhere; }
+.map-discovery-workspace .map-panel-prices { margin-top: .75rem; }
+.map-discovery-workspace .map-panel-prices h3 { margin-bottom: .35rem; }
+.map-discovery-workspace .map-panel-proceed { min-height: 2.75rem; margin: .75rem 0 .25rem; }
 @media (max-width: 900px) {
   .workspace-map-viewport { height: max(56rem, 95svh); }
   .workspace-panel { top: auto; left: .5rem; right: .5rem; bottom: 1.5rem; width: auto; height: 72%; }

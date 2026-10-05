@@ -166,6 +166,7 @@ def upload_files():
                 user_id=current_user.id, original_filename=item.original_filename,
                 stored_filename=key, storage_key=key, mime_type=item.mime_type,
                 file_extension=item.extension, file_size=item.size, sha256=item.sha256,
+                pdf_page_count=item.pdf_page_count,
                 checkout_staged_at=utc_now(),
             )
             db.session.add(record)
@@ -291,7 +292,7 @@ def shop():
         if asynchronous:
             return jsonify(error="Select an available printing shop."), 400
         return render_shop(error="Select an available printing shop.", status=400)
-    if intent not in {"select", "quote", "proceed"}:
+    if intent not in {"select", "quote", "preview", "proceed"}:
         abort(400)
     try:
         options = submitted_options(files, request.form)
@@ -299,6 +300,13 @@ def shop():
         if asynchronous:
             return jsonify(error=str(issue)), 400
         return render_shop(error=str(issue), status=400)
+    if intent == "preview":
+        if not asynchronous:
+            abort(400)
+        return jsonify(
+            html=render_template("checkout/shop_workspace.html", **workspace_context(files, selected, options)),
+            shop_id=selected.id,
+        )
     changed_shop = saved.get("shop_id") != selected.id
     if intent == "select" and changed_shop and not service_available(selected.id, ServiceType.RUSH_PRINTING):
         options = {file_id: PrintOptions(choice.paper_size, choice.color_mode, choice.quantity, False)
@@ -379,16 +387,16 @@ def checkout_options(saved):
         raise PricingError("Print configuration is invalid.") from error
 
 
-def current_quote(saved):
+def current_quote(saved, *, verify_pdf=False):
     files = selected_files(saved)
     shop = selected_shop(saved)
     if files is None or shop is None or not saved.get("fulfillment"):
         raise FulfillmentError("Complete the Shop and Fulfillment steps first.")
     options = checkout_options(saved)
-    preliminary = quote_for(saved["file_ids"], shop.id, options)
+    preliminary = quote_for(saved["file_ids"], shop.id, options, verify_pdf=verify_pdf)
     fulfillment = validate_fulfillment(shop=shop, values=saved["fulfillment"], actor=current_user)
     quote = (quote_for(saved["file_ids"], shop.id, options, delivery_fee=fulfillment.delivery_fee,
-                       delivery_fee_is_demo=fulfillment.delivery_fee_is_demo)
+                       delivery_fee_is_demo=fulfillment.delivery_fee_is_demo, verify_pdf=verify_pdf)
              if fulfillment.destination == OrderDestination.DELIVERY else preliminary)
     return quote, fulfillment
 

@@ -37,7 +37,7 @@
         {% if payment.rejection_reason %}<p><strong>Rejection reason:</strong> {{ payment.rejection_reason }}</p>{% endif %}
       {% endif %}
     </section>
-    <section class="content-card">
+    <section class="content-card review-decision">
       <h2>Review action</h2>
       {% if payment.payment_status.value == 'SUBMITTED' and payment.payment_reference and payment.amount == payment.order.total and payment.currency == payment.order.currency and payment.order.status.value == 'PENDING_PAYMENT' %}
         <p>Check the submitted reference and independently confirm receipt of funds before verifying. The QR display and reference alone do not prove payment.</p>

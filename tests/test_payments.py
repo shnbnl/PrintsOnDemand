@@ -221,7 +221,7 @@ def test_payment_summary_and_normalized_reference_keep_stored_amount(client, tes
     _, url = created_order(client, test_app)
     assert choose(client, url, "ONLINE").status_code == 302
     pending = client.get(url)
-    for expected in (b"Payment summary", b"Order items", b"Printing Shop",
+    for expected in (b"Payment summary", b"Order items", b"Campus Prints",
                      b"Fulfillment:", b"Subtotal: PHP 6.75", b"Total: PHP 6.75"):
         assert expected in pending.data
     assert submit(client, url, "  DEMO   REF-123  ", amount="0.01", payment_status="PAID").status_code == 302

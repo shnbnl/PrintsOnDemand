@@ -4,11 +4,16 @@ from __future__ import annotations
 
 import hashlib
 import io
+import xml.etree.ElementTree as ET
 import zipfile
 from dataclasses import dataclass
 
 from werkzeug.datastructures import FileStorage
 from werkzeug.utils import secure_filename
+
+from pypdf import PdfReader
+import olefile
+from olefile.olefile import OleFileError
 
 
 # This is the sole allowlist for uploads. Configuration may restrict size, not add types.
@@ -43,6 +48,7 @@ class ValidatedUpload:
     mime_type: str
     data: bytes
     sha256: str
+    pdf_page_count: int | None = None
 
     @property
     def size(self) -> int:
@@ -76,6 +82,64 @@ def _matches_signature(data: bytes, extension: str) -> bool:
     return False
 
 
+def count_pdf_pages(data: bytes) -> int:
+    """Read the actual page tree, rejecting encrypted, malformed, or empty PDFs."""
+    try:
+        reader = PdfReader(io.BytesIO(data), strict=True)
+        if reader.is_encrypted:
+            raise UploadValidationError("Unable to read this PDF. Please upload an unencrypted, valid PDF.")
+        pages = len(reader.pages)
+        if pages < 1:
+            raise UploadValidationError("Unable to read this PDF. Please upload a valid PDF.")
+        return pages
+    except UploadValidationError:
+        raise
+    except Exception as error:
+        raise UploadValidationError("Unable to read this PDF. Please upload a valid PDF.") from error
+
+
+def count_word_document_pages(data: bytes, extension: str) -> int | None:
+    """Read a Word document's last saved pagination count when available.
+
+    Word pagination depends on fonts, layout settings, and the renderer. DOCX
+    and legacy DOC store a cached count when a paginating editor last saved
+    them; unknown counts remain unset rather than being guessed from text.
+    """
+    try:
+        if extension == "doc":
+            document = olefile.OleFileIO(io.BytesIO(data))
+            try:
+                count = document.get_metadata().num_pages
+            finally:
+                document.close()
+            return count if type(count) is int and count > 0 else None
+        if extension != "docx":
+            return None
+        with zipfile.ZipFile(io.BytesIO(data)) as archive:
+            try:
+                properties = archive.getinfo("docProps/app.xml")
+                if properties.file_size > 256 * 1024:
+                    return None
+                root = ET.fromstring(archive.read(properties))
+                pages = next((node.text for node in root.iter()
+                              if node.tag.rsplit("}", 1)[-1] == "Pages"), None)
+                pages = (pages or "").strip()
+                if pages.isdecimal() and int(pages) > 0:
+                    return int(pages)
+            except KeyError:
+                pass
+            document_xml = archive.getinfo("word/document.xml")
+            if document_xml.file_size > 4 * 1024 * 1024:
+                return None
+            root = ET.fromstring(archive.read(document_xml))
+            rendered_breaks = sum(node.tag.rsplit("}", 1)[-1] == "lastRenderedPageBreak"
+                                  for node in root.iter())
+            return rendered_breaks + 1 if rendered_breaks else None
+    except (OSError, ValueError, RuntimeError, EOFError, NotImplementedError,
+            zipfile.BadZipFile, ET.ParseError, OleFileError):
+        return None
+
+
 def validate_upload(upload: FileStorage | None, max_size: int) -> ValidatedUpload:
     if upload is None or not upload.filename:
         raise UploadValidationError("Select a file to upload.")
@@ -95,10 +159,13 @@ def validate_upload(upload: FileStorage | None, max_size: int) -> ValidatedUploa
         raise UploadValidationError("File is too large.", 413)
     if not data or not _matches_signature(data, extension):
         raise UploadValidationError("File content does not match its extension.")
+    page_count = (count_pdf_pages(data) if extension == "pdf" else
+                  count_word_document_pages(data, extension) if extension in {"doc", "docx"} else None)
     return ValidatedUpload(
         original_filename=filename,
         extension=extension,
         mime_type=MIME_TYPES[extension],
         data=data,
         sha256=hashlib.sha256(data).hexdigest(),
+        pdf_page_count=page_count,
     )

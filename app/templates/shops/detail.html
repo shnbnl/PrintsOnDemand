@@ -15,7 +15,17 @@
       <p><strong>Hours:</strong> {{ shop.opening_time.strftime('%I:%M %p') }} - {{ shop.closing_time.strftime('%I:%M %p') }}</p>
     </div>
   </header>
-  {% if staff_view %}<p class="form-actions"><a class="button button-primary" href="{{ url_for('staff_orders.index') }}">View this shop's orders</a><a class="button button-secondary" href="{{ url_for('shop_staff.index') }}">Edit shop details</a></p>{% endif %}
+  {% if staff_view %}
+    <section class="staff-workspace" aria-labelledby="staff-workspace-heading">
+      <div class="section-heading"><div><p class="page-eyebrow">Your operations</p><h2 id="staff-workspace-heading">Run this shop</h2></div></div>
+      <div class="card-grid">
+        <a class="action-card" href="{{ url_for('staff_orders.index') }}"><span class="eyebrow">01 / Production</span><h3>Shop orders</h3><p>Review incoming jobs and record printing progress.</p><span class="card-action">Open orders →</span></a>
+        <a class="action-card" href="{{ url_for('payment_verification.index') }}"><span class="eyebrow">02 / Payments</span><h3>Payment verification</h3><p>Check submitted references before recording payment.</p><span class="card-action">Review payments →</span></a>
+        <a class="action-card" href="{{ url_for('shop_staff.index') }}"><span class="eyebrow">03 / Shop profile</span><h3>Edit shop details</h3><p>Update your services, prices, photo, fees, and payment settings.</p><span class="card-action">Manage shop →</span></a>
+        {% if shop.name == 'Blue and Silver Bookstore' %}<a class="action-card" href="{{ url_for('admin_management.professors') }}"><span class="eyebrow">04 / Recipients</span><h3>Professor management</h3><p>Review verified accounts and managed delivery profiles.</p><span class="card-action">Manage professors →</span></a>{% endif %}
+      </div>
+    </section>
+  {% endif %}
 
   <div class="shop-detail-grid">
     <section class="content-card">

@@ -13,6 +13,12 @@
     <a class="button" href="{{ url_for('admin_management.new_professor') }}">Add professor <span aria-hidden="true">→</span></a>
   </header>
 
+  <div class="operations-overview" aria-label="Professor management overview">
+    <div><strong>{{ pending|length }}</strong><span>Pending verification</span></div>
+    <div><strong>{{ verified|length }}</strong><span>Verified accounts</span></div>
+    <div><strong>{{ professors|length }}</strong><span>Managed profiles</span></div>
+  </div>
+
   <section class="content-card">
     <h2>Pending Verification <span class="status-badge status-badge--warning">{{ pending|length }}</span></h2>
     {% if pending %}

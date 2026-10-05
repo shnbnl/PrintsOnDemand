@@ -4,6 +4,7 @@ import hashlib
 import io
 import re
 import zipfile
+from types import SimpleNamespace
 from pathlib import Path
 
 import pytest
@@ -16,9 +17,10 @@ from sqlalchemy.orm import Session
 from app.extensions import db
 from app.models import ColorMode, PaperSize, PrintConfiguration, UploadedFile, User, UserRole
 from app.storage import LocalStorage, StorageError
+from app.storage.validation import count_word_document_pages
 
 
-PDF = b"%PDF-1.4\n1 0 obj\n<<>>\nendobj\n%%EOF\n"
+from test_orders import PDF
 PASSWORD = "A-strong-password-123"
 
 
@@ -91,6 +93,7 @@ def test_upload_metadata_listing_detail_and_download(client, test_app):
         assert record.file_extension == "pdf"
         assert record.mime_type == "application/pdf"
         assert record.sha256 == hashlib.sha256(PDF).hexdigest()
+        assert record.pdf_page_count == 1
         assert re.fullmatch(r"[0-9a-f]{32}\.pdf", record.storage_key)
         assert record.stored_filename == record.storage_key
         assert record.created_at and record.updated_at
@@ -436,6 +439,51 @@ def test_ooxml_content_checked(client, test_app, extension, path):
         archive.writestr(path, "<root/>")
     assert post_upload(client, buffer.getvalue(), f"slides.{extension}", "application/octet-stream").status_code == 302
     assert post_upload(client, b"PK fake zip", f"bad.{extension}", "application/octet-stream").status_code == 400
+
+
+def test_docx_upload_counts_last_saved_word_pages(client, test_app):
+    sign_in(client, make_user(test_app))
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        archive.writestr(
+            "[Content_Types].xml",
+            '<Types><Override ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>',
+        )
+        archive.writestr("word/document.xml", "<document/>")
+        archive.writestr("docProps/app.xml", "<Properties><Pages>4</Pages></Properties>")
+    response = post_upload(client, buffer.getvalue(), "handout.docx",
+                           "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+    assert response.status_code == 302
+    with test_app.app_context():
+        record = db.session.scalar(select(UploadedFile))
+        assert record.pdf_page_count == 4
+
+
+def test_docx_uses_saved_rendered_page_breaks_when_page_property_is_missing():
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        archive.writestr(
+            "[Content_Types].xml",
+            '<Types><Override ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>',
+        )
+        archive.writestr(
+            "word/document.xml",
+            '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+            '<w:lastRenderedPageBreak/><w:lastRenderedPageBreak/></w:document>',
+        )
+    assert count_word_document_pages(buffer.getvalue(), "docx") == 3
+
+
+def test_doc_page_count_uses_legacy_word_saved_metadata(monkeypatch):
+    class LegacyDocument:
+        def get_metadata(self):
+            return SimpleNamespace(num_pages=6)
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr("app.storage.validation.olefile.OleFileIO", lambda data: LegacyDocument())
+    assert count_word_document_pages(bytes.fromhex("d0cf11e0a1b11ae1"), "doc") == 6
 
 
 def test_ooxml_wrong_main_type_and_macro_entry_rejected(client, test_app):

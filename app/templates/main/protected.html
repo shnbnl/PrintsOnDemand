@@ -5,10 +5,19 @@
 {% block content %}
   {% if orders_url %}
     <header class="page-intro home-intro">
-      <p class="page-eyebrow">Your printing desk</p>
+      <p class="page-eyebrow">{{ 'Professor workspace' if current_user.role.value == 'PROFESSOR' else 'Student workspace' }}</p>
       <h1>Ready to print?</h1>
-      <p class="page-lead">Choose a shop, prepare a file, and keep track of what happens next.</p>
+      <p class="page-lead">Choose a shop, prepare your files, and follow every order from one place.</p>
     </header>
+    <div class="desk-strip" aria-label="Your workspace">
+      <div><span class="desk-strip-label">Signed in as</span><strong>{{ current_user.name }}</strong><span>{{ current_user.role.value.title() }}</span></div>
+      {% if current_user.role.value == 'PROFESSOR' %}
+        <div><span class="desk-strip-label">Professor verification</span><strong>{{ current_user.professor_verification_status.value.title() }}</strong><span>Manage your details in Account</span></div>
+      {% else %}
+        <div><span class="desk-strip-label">Your orders</span><strong>History &amp; tracking</strong><span>Review payment and printing progress</span></div>
+      {% endif %}
+      <a class="button button-secondary" href="{{ url_for('account.settings') }}">Account settings</a>
+    </div>
     <div class="card-grid action-grid">
       <article class="content-card action-card action-card-primary">
         <span class="action-icon" aria-hidden="true">01</span>
@@ -26,7 +35,6 @@
         <a class="button button-secondary" href="{{ orders_url }}">Order History</a>
       </article>
     </div>
-    <p class="form-actions"><a href="{{ next_url }}">Browse printing shops and map</a></p>
   {% else %}
     <header class="page-intro"><h1>{{ title }}</h1></header>
     <section class="content-card empty-state">

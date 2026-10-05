@@ -10,6 +10,10 @@
     <h1>Shop orders</h1>
     <p class="page-lead">Review orders placed with your assigned shop and open one to see its print job.</p>
   </header>
+  <div class="operations-overview operations-overview--compact" aria-label="Shop order queue overview">
+    <div><strong>{{ orders|length }}</strong><span>Orders in this shop queue</span></div>
+    <p>Open an order to review its files and fulfillment request. Payment review is a separate step before processing.</p>
+  </div>
   <p><a class="button button-secondary" href="{{ url_for('payment_verification.index') }}">Review submitted payments</a></p>
 
   {% if orders %}

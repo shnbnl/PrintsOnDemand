@@ -3,121 +3,110 @@
 {% block title %}Shop map | Prints On Demand{% endblock %}
 
 {% block content %}
-  <a class="back-link" href="{{ url_for('shops.index', q=query) }}">← Printing shops</a>
-  <header class="page-intro page-intro--with-action">
-    <div>
-      <p class="page-eyebrow">Find your place to print</p>
-      <h1>Shop map</h1>
-      <p class="page-lead">Explore registered printing shops near Mapúa Malayan Colleges Laguna. Select a pin or a shop card to see its current details.</p>
-    </div>
-    <nav class="shop-view-switch" aria-label="Shop discovery view">
-      <a href="{{ url_for('shops.index', q=query) }}">List view</a>
-      <span aria-current="page">Map view</span>
-    </nav>
+  {% if current_user.role.value == 'PROFESSOR' %}
+    {% set back_url = url_for('access.professor') %}
+  {% elif current_user.role.value == 'STUDENT' %}
+    {% set back_url = url_for('access.student') %}
+  {% else %}
+    {% set back_url = url_for('main.index') %}
+  {% endif %}
+  {% set back_label = 'Back to Printing Desk' %}
+  {% include "_vector_back.html" %}
+  <header class="page-intro">
+    <p class="page-eyebrow">Find your place to print</p>
+    <h1>Explore printing shops</h1>
+    <p class="page-lead">Select a shop pin to view its hours, services, and current rates.</p>
   </header>
 
-  <form class="search-form content-card map-search" method="get" action="{{ url_for('shops.map_view') }}" role="search">
-    <div class="field search-field">
-      <label for="map-shop-search">Search Printing Shop</label>
-      <input id="map-shop-search" name="q" type="search" value="{{ query }}" maxlength="100" placeholder="Search by shop name">
-    </div>
-    <button class="button button-primary" type="submit">Search</button>
-  </form>
+  <div class="shop-workspace-layout map-discovery-workspace" data-shop-workspace data-map-discovery-workspace>
+    <section class="workspace-map" aria-label="Printing shop map workspace">
+      <div class="map-stage">
+        <div class="workspace-map-viewport">
+          <div id="shop-map" class="map-canvas" role="region" aria-label="Explore printing shops on the map"
+               data-api-key="{{ maps_api_key }}" data-map-id="{{ maps_map_id }}"
+               data-center-lat="{{ center.lat }}" data-center-lng="{{ center.lng }}"
+               data-selected-shop-id="{{ markers[0].id if markers else '' }}"></div>
+          <div id="map-message" class="map-message" role="status">
+            {% if not maps_api_key or not maps_map_id %}
+              <h2>Map unavailable</h2>
+              {% if show_config_hint %}<p>Configure GOOGLE_MAPS_API_KEY{% if not maps_map_id %} and GOOGLE_MAPS_MAP_ID{% endif %} to show the interactive map.</p>
+              {% else %}<p>The interactive map is unavailable right now. Shop details remain available below.</p>{% endif %}
+            {% else %}
+              <h2>Loading the interactive map…</h2>
+              <p>Shop details remain available while the map loads.</p>
+            {% endif %}
+            <a class="button button-secondary" href="{{ url_for('shops.index', q=query) }}">View all shops</a>
+          </div>
 
-  <div class="map-layout">
-    <div class="map-stage">
-      <div id="shop-map" class="map-canvas" role="region" aria-label="Interactive map of registered printing shops near Mapúa Malayan Colleges Laguna"
-           data-api-key="{{ maps_api_key }}" data-map-id="{{ maps_map_id }}"
-           data-center-lat="{{ center.lat }}" data-center-lng="{{ center.lng }}"></div>
-      <div id="map-message" class="map-message" role="status">
-        {% if not maps_api_key or not maps_map_id %}
-          <h2>Map unavailable</h2>
-          {% if show_config_hint %}<p>Configure GOOGLE_MAPS_API_KEY{% if not maps_map_id %} and GOOGLE_MAPS_MAP_ID{% endif %} to show the interactive map.</p>
-          {% else %}<p>The interactive map is unavailable right now.</p>{% endif %}
-        {% else %}
-          <p>Loading the interactive map…</p>
-        {% endif %}
-        <a class="button button-secondary" href="{{ url_for('shops.index', q=query) }}">View shops as a list</a>
-      </div>
-      <div class="map-toolbar">
-        <button id="locate-me" type="button" class="button button-secondary" disabled aria-label="Show my current location on the map">Use my location</button>
-        <p id="location-status" class="map-location-status" role="status">Location is off until you choose to share it.</p>
-      </div>
-    </div>
-
-    <aside class="map-sidebar" aria-label="Shop selection and details">
-      {% if markers %}
-        <div class="map-panels" aria-live="polite">
-          {% for marker in markers %}
-            <section class="map-shop-panel" data-shop-panel="{{ marker.id }}" {% if not loop.first %}hidden{% endif %}>
-              <div class="map-panel-heading">
-                <span class="shop-avatar" aria-hidden="true">{% if marker.photo_url %}<img src="{{ marker.photo_url }}" alt="">{% else %}P{% endif %}</span>
-                <div>
-                  <p class="page-eyebrow">Selected printing shop</p>
-                  <h2>{{ marker.name }}</h2>
-                  <span class="status-badge status-success">Available</span>
-                </div>
+          <aside class="workspace-panel{% if not markers %} is-minimized{% endif %}" aria-label="Selected shop details">
+            <button class="workspace-toggle" type="button" data-panel-toggle aria-expanded="{{ 'true' if markers else 'false' }}">{{ 'Minimize details' if markers else 'Browse shops' }}</button>
+            <div class="workspace-pin-preview" data-pin-preview role="status" aria-live="polite" hidden></div>
+            <div data-workspace-content data-current-shop="{{ markers[0].id if markers else '' }}" aria-live="polite">
+              <div class="workspace-scroll shop-discovery-scroll">
+                {% for marker in markers %}
+                  <article class="workspace-shop-summary shop-discovery-panel" data-discovery-panel="{{ marker.id }}" aria-label="{{ marker.name }} details" {% if not loop.first %}hidden{% endif %}>
+                    <div class="map-panel-heading">
+                      <span class="shop-avatar" aria-hidden="true">{% if marker.photo_url %}<img src="{{ marker.photo_url }}" alt="">{% else %}P{% endif %}</span>
+                      <div>
+                        <p class="page-eyebrow">Selected printing shop</p>
+                        <h2>{{ marker.name }}</h2>
+                        <span class="status-badge status-success">Available</span>
+                      </div>
+                    </div>
+                    {% if marker.description %}<p class="shop-discovery-description">{{ marker.description }}</p>{% endif %}
+                    <dl class="detail-list shop-discovery-details">
+                      <div class="detail-row"><dt>Address</dt><dd>{{ marker.address }}</dd></div>
+                      <div class="detail-row"><dt>Hours</dt><dd>{{ marker.hours }}</dd></div>
+                    </dl>
+                    <div class="map-panel-services">
+                      <span class="detail-label">Offers</span>
+                      {% if marker.services %}<ul class="chip-list">{% for service in marker.services %}<li>{{ service }}</li>{% endfor %}</ul>
+                      {% else %}<p class="hint">No services listed</p>{% endif %}
+                    </div>
+                    <div class="map-panel-fulfillment">
+                      <span class="detail-label">Fulfillment</span>
+                      {% if marker.fulfillment %}<ul class="chip-list">{% for method in marker.fulfillment %}<li>{{ method }}</li>{% endfor %}</ul>
+                      {% else %}<p class="hint">No fulfillment methods configured.</p>{% endif %}
+                    </div>
+                    {% if marker.fees %}
+                      <div class="map-panel-fees">
+                        <h3>Applicable fees</h3>
+                        <ul class="summary-list">{% for fee in marker.fees %}<li class="summary-row"><span>{{ fee.label }}{% if fee.is_sample %} (sample){% endif %}</span><strong>{{ fee.amount }}</strong></li>{% endfor %}</ul>
+                      </div>
+                    {% endif %}
+                    <div class="map-panel-prices">
+                      <h3>Current pricelist</h3>
+                      <div class="table-scroll" role="region" aria-label="{{ marker.name }} print prices" tabindex="0">
+                        <table class="data-table pricing-table">
+                          <thead><tr><th scope="col">Paper size</th><th scope="col">Grayscale/page</th><th scope="col">Colored/page</th></tr></thead>
+                          <tbody>{% for row in marker.prices %}<tr><th scope="row">{{ row.size }}</th><td data-label="Grayscale/page">{{ row.grayscale }}</td><td data-label="Colored/page">{{ row.color }}</td></tr>{% endfor %}</tbody>
+                        </table>
+                      </div>
+                      <p class="hint">Rates use this shop’s current saved prices.</p>
+                    </div>
+                    <a class="button button-primary button-block map-panel-proceed" href="{{ marker.detail_url }}">Proceed <span aria-hidden="true">→</span></a>
+                  </article>
+                {% else %}
+                  <section class="workspace-shop-summary map-empty">
+                    <h2>No shops have map pins yet</h2>
+                    <p class="hint">Browse the full shop list to see registered shops and their details.</p>
+                    <a class="button button-secondary" href="{{ url_for('shops.index') }}">View all shops</a>
+                  </section>
+                {% endfor %}
               </div>
-              {% if marker.is_sample %}<p class="sample-label">Sample shop information; confirm details before placing an order.</p>{% endif %}
-              {% if marker.description %}<p>{{ marker.description }}</p>{% endif %}
-              <p><strong>Address:</strong> {{ marker.address }}</p>
-              <p><strong>Hours:</strong> {{ marker.hours }}</p>
-              <a class="button button-primary button-block map-panel-proceed" href="{{ marker.detail_url }}">Proceed <span aria-hidden="true">→</span></a>
-              {% if marker.services %}
-                <div class="map-panel-services">
-                  <span class="detail-label">Offers</span>
-                  <ul class="chip-list">{% for service in marker.services %}<li>{{ service }}</li>{% endfor %}</ul>
-                </div>
-              {% endif %}
-              <div class="map-panel-fulfillment">
-                <span class="detail-label">Fulfillment</span>
-                {% if marker.fulfillment %}
-                  <ul class="chip-list">{% for method in marker.fulfillment %}<li>{{ method }}</li>{% endfor %}</ul>
-                {% else %}<p class="hint">No fulfillment methods configured yet.</p>{% endif %}
-              </div>
-              {% if marker.fees %}
-                <div class="map-panel-fees">
-                  <h3>Applicable fees</h3>
-                  <ul class="summary-list">{% for fee in marker.fees %}<li class="summary-row"><span>{{ fee.label }}{% if fee.is_sample %} (sample){% endif %}</span><strong>{{ fee.amount }}</strong></li>{% endfor %}</ul>
-                </div>
-              {% endif %}
-              <div class="map-panel-prices">
-                <h3>Pricelist</h3>
-                <div class="table-scroll" role="region" aria-label="{{ marker.name }} print prices" tabindex="0">
-                  <table class="data-table pricing-table">
-                    <thead><tr><th scope="col">Paper Size</th><th scope="col">Grayscale/page</th><th scope="col">Colored/page</th></tr></thead>
-                    <tbody>{% for row in marker.prices %}<tr><th scope="row">{{ row.size }}</th><td data-label="Grayscale/page">{{ row.grayscale }}</td><td data-label="Colored/page">{{ row.color }}</td></tr>{% endfor %}</tbody>
-                  </table>
-                </div>
-                <p class="hint">Current listed rates. Checkout calculates and confirms the order total on the server.</p>
-              </div>
-            </section>
-          {% endfor %}
+            </div>
+          </aside>
         </div>
-        <section class="map-shop-choices" aria-label="Shops with map locations">
-          <h2>Shops on this map</h2>
-          <ul>
-            {% for marker in markers %}
-              <li>
-                <button type="button" class="map-shop-choice" data-shop-id="{{ marker.id }}" aria-pressed="{{ 'true' if loop.first else 'false' }}">
-                  <strong>{{ marker.name }}</strong>
-                  <span>{{ marker.hours }}</span>
-                  {% if marker.is_sample %}<small>Sample shop</small>{% endif %}
-                </button>
-                <a href="{{ marker.detail_url }}">Shop details</a>
-              </li>
-            {% endfor %}
-          </ul>
-        </section>
-      {% else %}
-        <section class="map-shop-panel map-empty">
-          <h2>No shops on this map</h2>
-          <p>No active shop with a map location matches this search. The full list may include shops that have not added coordinates yet.</p>
-          <a class="button button-secondary" href="{{ url_for('shops.index', q=query) }}">View shops as a list</a>
-        </section>
-      {% endif %}
-    </aside>
+        <div class="map-toolbar">
+          <button id="locate-me" type="button" class="button button-secondary" disabled aria-label="Show my current location on the map">Use my location</button>
+          <p id="location-status" class="map-location-status" role="status">Location is off until you choose to share it.</p>
+        </div>
+      </div>
+      <p class="hint">Select a photo pin to view that shop. Use the map controls to explore nearby locations.</p>
+    </section>
   </div>
+
   <script id="map-shop-data" type="application/json">{{ markers|tojson }}</script>
   <script src="{{ url_for('static', filename='js/shop-map.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/shop-discovery-workspace.js') }}" defer></script>
 {% endblock %}

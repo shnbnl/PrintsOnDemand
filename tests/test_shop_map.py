@@ -71,8 +71,14 @@ def test_student_map_search_and_existing_shop_flow(client, test_app):
     assert response.status_code == 200
     assert b"Map unavailable" in response.data  # No local API key is required to browse.
     assert response.headers["Referrer-Policy"] == "strict-origin-when-cross-origin"
-    assert b"View shops as a list" in response.data
+    assert b"View all shops" in response.data
     assert b"Proceed" in response.data
+    assert b"List view" not in response.data
+    assert b"Map view" not in response.data
+    assert b"map-search" not in response.data
+    assert b'class="workspace-panel' in response.data
+    assert b'data-discovery-panel=' in response.data
+    assert b'class="map-sidebar"' not in response.data
     shops = map_data(response)
     assert len(shops) == 1
     assert shops[0]["id"] == mapped

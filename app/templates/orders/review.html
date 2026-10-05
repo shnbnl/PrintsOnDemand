@@ -28,9 +28,10 @@
               <dl class="detail-list">
                 <div class="detail-row"><dt>Paper</dt><dd>{{ item.paper_size.label }}</dd></div>
                 <div class="detail-row"><dt>Output</dt><dd>{{ item.color_mode.label }}</dd></div>
-                <div class="detail-row"><dt>Print count</dt><dd>{{ item.quantity }}</dd></div>
+                {% if item.pdf_page_count is not none %}<div class="detail-row"><dt>Document pages</dt><dd>{{ item.pdf_page_count }}</dd></div><div class="detail-row"><dt>Total Printed Pages</dt><dd>{{ item.total_printed_pages }}</dd></div>{% endif %}
+                <div class="detail-row"><dt>Print count</dt><dd>{{ item.quantity }} {{ 'copy' if item.quantity == 1 else 'copies' }}</dd></div>
                 <div class="detail-row"><dt>Rush printing</dt><dd>{{ 'Yes' if item.is_rush else 'No' }}</dd></div>
-                <div class="detail-row"><dt>Unit price</dt><dd>{{ quote.currency }} {{ item.unit_price }}</dd></div>
+                <div class="detail-row"><dt>Price per page</dt><dd>{{ quote.currency }} {{ item.unit_price }}</dd></div>
                 <div class="detail-row"><dt>Line total</dt><dd>{{ quote.currency }} {{ item.line_total }}</dd></div>
               </dl>
               <p class="form-actions"><a href="{{ selection_url }}">Edit settings</a><a href="{{ remove_urls[item.uploaded_file.id] }}">Remove from order</a></p>

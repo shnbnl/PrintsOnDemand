@@ -9,6 +9,10 @@
     <h1>Payment verification</h1>
     <p class="page-lead">Review submitted online references against payment records before marking a payment paid or rejected.</p>
   </header>
+  <div class="operations-overview operations-overview--compact" aria-label="Payments awaiting review">
+    <div><strong>{{ payments|length }}</strong><span>Submitted references to review</span></div>
+    <p>Match each reference with the shop's payment records before recording a decision.</p>
+  </div>
   {% if payments %}
     <ul class="order-list">
       {% for payment in payments %}

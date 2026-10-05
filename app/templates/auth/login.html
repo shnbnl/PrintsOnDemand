@@ -27,7 +27,7 @@
         </div>
         <div class="field">
           {{ form.password.label }}
-          {{ form.password(autocomplete="current-password", placeholder="Enter your password") }}
+          <div class="password-input">{{ form.password(autocomplete="current-password", placeholder="Enter your password") }}<button type="button" class="password-toggle" data-password-toggle aria-label="Show password" aria-pressed="false">Show</button></div>
           {% for error in form.password.errors %}<p class="field-error" role="alert">{{ error }}</p>{% endfor %}
         </div>
         {% if not blue_login %}<div class="checkbox-field">

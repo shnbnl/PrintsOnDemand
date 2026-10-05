@@ -74,8 +74,9 @@
           <dl class="detail-list">
             <div class="detail-row"><dt>Paper</dt><dd>{{ item.paper_size.label }}</dd></div>
             <div class="detail-row"><dt>Output</dt><dd>{{ item.color_mode.label }}</dd></div>
-            <div class="detail-row"><dt>Print count</dt><dd>{{ item.quantity }}</dd></div>
-            <div class="detail-row"><dt>Unit price</dt><dd>{{ order.currency }} {{ item.unit_price }}</dd></div>
+            {% if item.pdf_page_count is not none %}<div class="detail-row"><dt>Document pages</dt><dd>{{ item.pdf_page_count }}</dd></div><div class="detail-row"><dt>Total Printed Pages</dt><dd>{{ item.total_printed_pages }}</dd></div>{% endif %}
+            <div class="detail-row"><dt>Print count</dt><dd>{{ item.quantity }} {{ 'copy' if item.quantity == 1 else 'copies' }}</dd></div>
+            <div class="detail-row"><dt>Price per page</dt><dd>{{ order.currency }} {{ item.unit_price }}</dd></div>
             <div class="detail-row"><dt>Line total</dt><dd>{{ order.currency }} {{ item.line_total }}</dd></div>
           </dl>
           <a class="button button-secondary" href="{{ url_for('orders.download_file', order_reference=order.order_reference, item_id=item.id) }}">Download order file</a>
@@ -102,7 +103,6 @@
     <div class="payment-summary-state"><p>Payment method: <strong>{{ tracking.payment_method }}</strong></p><p>Payment status: {{ payment_badge(order.payment) }}</p></div>
   </section>
   <section class="content-card payment-panel">
-    <p class="page-eyebrow">Choose or review your method</p>
     <h2>Payment</h2>
     {% if order.destination and order.destination.value == 'PROFESSOR' %}<p class="notice notice-warning">Professor delivery requires online payment.{% if not online_details and not order.payment %} Online payment is currently unavailable; contact the shop before placing another order.{% endif %}</p>{% endif %}
     {% if payment_error %}<p class="notice notice-error" role="alert">{{ payment_error }}</p>{% endif %}
@@ -170,7 +170,7 @@
     <h2 id="tracking-heading">Order tracking</h2>
     <ol class="tracking-list">
       {% for step in tracking.steps %}
-        <li class="tracking-step {{ 'tracking-step-done' if step.timestamp else 'tracking-step-pending' }}">
+        <li class="tracking-step {{ 'tracking-step-done' if step.timestamp else 'tracking-step-pending' }}{% if step.timestamp and (loop.last or not loop.nextitem.timestamp) %} tracking-step-current{% endif %}"{% if step.timestamp and (loop.last or not loop.nextitem.timestamp) %} aria-current="step"{% endif %}>
           <span class="tracking-marker" aria-hidden="true"></span>
           <div><strong>{{ step.title }}</strong>: {{ step.detail }}
           {% if step.timestamp %}

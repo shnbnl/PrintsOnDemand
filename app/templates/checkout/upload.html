@@ -1,6 +1,11 @@
 {% extends "base.html" %}
 {% block title %}Upload your files | Prints On Demand{% endblock %}
 {% block content %}
+  {% set desk_endpoint = 'access.professor' if current_user.role.value == 'PROFESSOR' else 'access.student' %}
+  {% set back_url = url_for(desk_endpoint) %}
+  {% set back_label = 'Back to Printing Desk' %}
+  {% set back_class = 'checkout-back-to-desk' %}
+  {% include "_vector_back.html" %}
   {% include "checkout/progress.html" %}
   <header class="page-intro"><p class="page-eyebrow">Step 1 · Upload</p><h1>Upload Your File</h1>
     <p class="page-lead">Upload up to {{ max_files }} documents for this order. They are staged privately until you place the order.</p></header>
@@ -10,7 +15,7 @@
       <p class="hint">Supported: {{ extensions|sort|join(', ')|upper }}. Each file may be up to {{ (config.UPLOAD_MAX_SIZE / 1048576)|round(1) }} MiB. Add fewer files at a time if the combined upload is too large.</p>
       <form class="form-stack" action="{{ url_for('checkout.upload_files') }}" method="post" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <div class="field"><label for="checkout-files">Files to upload</label><input id="checkout-files" name="files" type="file" accept="{{ accept_types }}" multiple required></div>
+        <div class="field upload-picker"><label for="checkout-files">Files to upload</label><input id="checkout-files" name="files" type="file" accept="{{ accept_types }}" multiple required><p class="hint upload-selection" data-upload-selection role="status" aria-live="polite">Choose files from your device to add to this order.</p></div>
         <button class="button button-secondary" type="submit">Upload selected files</button>
       </form>
       <p class="hint">Only the selected shop can access these files after you place the order. Unused staged uploads are cleaned up after {{ config.CHECKOUT_STAGED_RETENTION_HOURS }} hours.</p>
@@ -19,7 +24,7 @@
       {% if records %}<form class="form-stack" method="post" action="{{ url_for('checkout.upload') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <ul class="checkout-file-list">{% for record in records %}
-          <li class="checkout-staged-file"><input type="hidden" name="file_id" value="{{ record.id }}"><span><strong>{{ record.original_filename }}</strong><small>{{ record.file_extension|upper }} · {{ record.file_size }} bytes</small></span><button class="button button-secondary" type="submit" name="remove_file_id" value="{{ record.id }}" aria-label="Remove {{ record.original_filename }} from this order">Remove</button></li>
+          <li class="checkout-staged-file"><input type="hidden" name="file_id" value="{{ record.id }}"><span><strong>{{ record.original_filename }}</strong><small>{{ record.file_extension|upper }} · {{ record.file_size }} bytes{% if record.pdf_page_count %} · {{ record.pdf_page_count }} {{ 'page' if record.pdf_page_count == 1 else 'pages' }}{% endif %}</small></span><button class="button button-secondary" type="submit" name="remove_file_id" value="{{ record.id }}" aria-label="Remove {{ record.original_filename }} from this order">Remove</button></li>
         {% endfor %}</ul>
         <p class="hint">Removing a file takes it out of this checkout. Unused staged copies expire automatically.</p>
         <button class="button button-primary" type="submit">Next: Pick a Shop →</button>

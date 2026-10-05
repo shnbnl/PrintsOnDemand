@@ -1,6 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Account settings | Prints On Demand{% endblock %}
 {% block content %}
+  {% set desk_endpoint = 'access.professor' if current_user.role.value == 'PROFESSOR' else 'access.student' %}
+  {% set back_url = url_for(desk_endpoint) %}
+  {% set back_label = 'Back to Printing Desk' %}
+  {% include "_vector_back.html" %}
   <header class="page-intro">
     <p class="page-eyebrow">Your account</p>
     <h1>Account settings</h1>
@@ -8,13 +12,11 @@
   </header>
   <section class="content-card account-settings-card" id="account-identity">
     <p class="page-eyebrow">Account</p>
-    <h2>{{ current_user.name }}</h2>
-    <p>{{ current_user.email }}</p>
-    <p class="hint">{{ 'Professor' if current_user.role.value == 'PROFESSOR' else 'Student' }}</p>
+    <div class="account-identity-head"><span class="account-avatar" aria-hidden="true">{{ current_user.name[:1]|upper }}</span><div><h2>{{ current_user.name }}</h2><p>{{ current_user.email }}</p><span class="status-badge">{{ 'Professor' if current_user.role.value == 'PROFESSOR' else 'Student' }}</span></div></div>
     {% if current_user.role.value == 'PROFESSOR' %}
       <dl class="detail-list account-professor-details">
         <div class="detail-row"><dt>Department</dt><dd>{{ department or 'Not provided' }}</dd></div>
-        <div class="detail-row"><dt>Verification</dt><dd>{{ current_user.professor_verification_status.value.title() }}</dd></div>
+        <div class="detail-row"><dt>Verification</dt><dd><span class="status-badge status-badge--{{ 'success' if current_user.professor_verification_status.value == 'VERIFIED' else 'danger' if current_user.professor_verification_status.value == 'REJECTED' else 'warning' }}">{{ current_user.professor_verification_status.value.title() }}</span></dd></div>
         {% if current_user.professor and current_user.professor.faculty %}<div class="detail-row"><dt>Managed Faculty</dt><dd>{{ current_user.professor.faculty }}</dd></div>{% endif %}
       </dl>
     {% endif %}

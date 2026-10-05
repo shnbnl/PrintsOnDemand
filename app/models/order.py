@@ -134,6 +134,8 @@ class OrderItem(db.Model):
         db.Enum(ColorMode, name="color_mode", native_enum=False, create_constraint=True), nullable=False
     )
     quantity: Mapped[int] = mapped_column(db.Integer, nullable=False)
+    pdf_page_count: Mapped[int | None] = mapped_column(db.Integer, nullable=True)
+    total_printed_pages: Mapped[int | None] = mapped_column(db.Integer, nullable=True)
     is_rush: Mapped[bool] = mapped_column(db.Boolean, nullable=False)
     unit_price: Mapped[Decimal] = mapped_column(db.Numeric(14, 2), nullable=False)
     line_total: Mapped[Decimal] = mapped_column(db.Numeric(14, 2), nullable=False)
