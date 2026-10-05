@@ -63,9 +63,12 @@ def test_admin_queue_verify_audit_and_processing_gate(client, test_app):
         assert payment.reviewed_by_id == admin and payment.reviewed_at is not None
         assert payment.rejection_reason is None
         assert (order.total, order.currency, order.items[0].line_total, payment.submitted_at) == before
-        assert order.status == OrderStatus.PENDING_PAYMENT
-        assert order.processing_started_at is None
-        assert available_action(order) == "start_processing"
+        assert order.status == OrderStatus.PROCESSING
+        assert order.processing_started_at == payment.reviewed_at
+        assert available_action(order) == "mark_ready"
+        other_order = db.session.scalar(select(Order).where(Order.order_reference == url_b.rsplit("/", 1)[1]))
+        assert other_order.status == OrderStatus.PENDING_PAYMENT
+        assert other_order.processing_started_at is None
     assert b"Verified by" in client.get(review_a).data
     assert review_a.encode() not in client.get(QUEUE).data
     assert post_action(client, review_a, "verify").status_code == 409
@@ -203,6 +206,8 @@ def test_ineligible_payment_cannot_be_reviewed(client, test_app, state, method, 
         }).status_code == 404
     with test_app.app_context():
         assert db.session.scalar(select(Payment)).payment_status == state
+        assert db.session.scalar(select(Payment)).order.status == OrderStatus.PENDING_PAYMENT
+        assert db.session.scalar(select(Payment)).order.processing_started_at is None
 
 
 @pytest.mark.parametrize("first,second,expected", [
@@ -249,9 +254,10 @@ def test_submitted_payment_still_blocks_processing_until_verified(client, test_a
     sign_in(client, staff_a)
     assert client.post(staff_order + "/advance", data={
         "csrf_token": token(client.get(staff_order)), "action": "start_processing",
-    }).status_code == 302
+    }).status_code == 409
     with test_app.app_context():
         assert db.session.scalar(select(Payment)).amount == Decimal("6.75")
+        assert db.session.scalar(select(Payment)).order.status == OrderStatus.PROCESSING
 
 
 def test_rejected_payment_cannot_start_processing(client, test_app):

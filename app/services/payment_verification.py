@@ -94,5 +94,17 @@ def decide_payment(actor, payment_id: int, *, reject: bool, reason: str = "") ->
     if result.rowcount != 1:
         db.session.rollback()
         raise VerificationError("This payment changed during review. Reload the page.", 409)
+    if not reject:
+        # Keep verification and the start of printing in the same transaction.
+        # A stale order must roll back the payment decision as well.
+        started = db.session.execute(update(Order).where(
+            Order.id == order.id, Order.status == OrderStatus.PENDING_PAYMENT,
+            Order.total == payment.amount, Order.currency == payment.currency,
+            *((Order.shop_id == actor.shop_id,) if actor.role == UserRole.SHOP_STAFF else ()),
+        ).values(status=OrderStatus.PROCESSING, processing_started_at=now, updated_at=now)
+            .execution_options(synchronize_session=False))
+        if started.rowcount != 1:
+            db.session.rollback()
+            raise VerificationError("The order changed during review. Reload the page.", 409)
     db.session.commit()
     return db.session.get(Payment, payment_id, populate_existing=True)

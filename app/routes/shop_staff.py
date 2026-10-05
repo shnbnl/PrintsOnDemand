@@ -35,19 +35,30 @@ def editor(*, details_form=None, service_form=None, price_form=None, fee_form=No
             choice for choice in service_form.service_type.choices
             if choice[0] != ServiceType.DIRECT_TO_PROFESSOR.value
         ]
+    delivery_fee = next((fee for fee in shop.fees if fee.fee_type == FeeType.DELIVERY), None)
+    delivery_fee_form = FeeForm(formdata=None, fee_type=FeeType.DELIVERY.value,
+                               amount=delivery_fee.amount if delivery_fee else None)
+    if fee_form is not None and fee_form.fee_type.data == FeeType.DELIVERY.value:
+        delivery_fee_form, fee_form = fee_form, None
+    fee_form = fee_form or FeeForm(formdata=None)
+    fee_form.fee_type.choices = [choice for choice in fee_form.fee_type.choices
+                               if choice[0] != FeeType.DELIVERY.value]
     return render_template(
         "shops/manage.html", shop=shop,
         details_form=details_form or ShopStaffDetailsForm(formdata=None, obj=shop),
         service_form=service_form,
         price_form=price_form or PriceForm(formdata=None),
-        fee_form=fee_form or FeeForm(formdata=None),
+        fee_form=fee_form, delivery_fee_form=delivery_fee_form,
+        delivery_enabled=any(service.service_type == ServiceType.DELIVERY and service.enabled
+                             for service in shop.services),
         photo_form=photo_form or ShopPhotoForm(formdata=None),
         remove_photo_form=FlaskForm(), photo_error=photo_error,
         payment_form=payment_form or ShopPaymentForm(formdata=None, obj=shop),
         payment_error=payment_error,
         services=sorted(shop.services, key=lambda item: item.service_type.value),
         prices=sorted(shop.prices, key=lambda item: (item.paper_size.value, item.color_mode.value)),
-        fees=sorted(shop.fees, key=lambda item: item.fee_type.value),
+        fees=sorted((fee for fee in shop.fees if fee.fee_type != FeeType.DELIVERY),
+                    key=lambda item: item.fee_type.value),
     ), status
 
 
@@ -148,7 +159,9 @@ def save_fee():
         fee.is_demo = False
         if commit_or_error(form, "amount"):
             flash("Fee updated.", "success")
-            return redirect(url_for("shop_staff.index"))
+            return redirect(url_for("shop_staff.index", _anchor=(
+                "delivery-settings" if fee.fee_type == FeeType.DELIVERY else "shop-fees"
+            )))
     return editor(fee_form=form, status=400)
 
 

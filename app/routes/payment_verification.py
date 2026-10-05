@@ -53,7 +53,7 @@ def decide(payment_id, *, reject):
             return render_template("payment_verification/detail.html", payment=payment,
                                    error=str(error)), error.status_code
         abort(error.status_code, description=str(error))
-    flash("Payment rejected." if reject else "Payment manually verified as paid.", "success")
+    flash("Payment rejected." if reject else "Payment verified. The order is now Printing.", "success")
     return redirect(url_for("payment_verification.detail", payment_id=decided.id))
 
 

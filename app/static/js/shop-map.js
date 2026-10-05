@@ -13,10 +13,14 @@
   const locationStatus = document.querySelector("#location-status");
   const choices = [...document.querySelectorAll("[data-shop-id]")];
   const panels = [...document.querySelectorAll("[data-shop-panel]")];
+  const checkoutForm = canvas.closest("[data-checkout-shop-form]");
+  const fallback = document.querySelector("[data-shop-fallback]");
   const markers = new Map();
   let map;
   let userMarker;
   let loadTimer;
+  let previewTimer;
+  let pinnedShopId = canvas.dataset.selectedShopId || null;
 
   function selectShop(id, moveMap = false, revealPanel = false) {
     const shop = shops.find((item) => String(item.id) === String(id));
@@ -29,7 +33,7 @@
     panels.forEach((panel) => {
       panel.hidden = panel.dataset.shopPanel !== String(id);
     });
-    if (shop && revealPanel && window.matchMedia("(max-width: 48rem)").matches) {
+    if (!checkoutForm && shop && revealPanel && window.matchMedia("(max-width: 48rem)").matches) {
       document.querySelector(`[data-shop-panel="${shop.id}"]`)?.scrollIntoView({
         behavior: "smooth", block: "start",
       });
@@ -40,6 +44,39 @@
       marker.zIndex = selected ? 100 : 1;
     });
     if (shop && moveMap && map) map.panTo(shop.position);
+  }
+
+  function restorePinnedShop() {
+    clearTimeout(previewTimer);
+    if (pinnedShopId) selectShop(pinnedShopId);
+    else {
+      panels.forEach((panel) => { panel.hidden = true; });
+      markers.forEach(({ pin, marker }) => {
+        pin.classList.remove("is-selected");
+        marker.zIndex = 1;
+      });
+    }
+  }
+
+  function schedulePreviewEnd() {
+    previewTimer = window.setTimeout(restorePinnedShop, 200);
+  }
+
+  if (checkoutForm) {
+    panels.forEach((panel) => {
+      panel.addEventListener("pointerenter", () => clearTimeout(previewTimer));
+      panel.addEventListener("pointerleave", schedulePreviewEnd);
+      panel.querySelector("[data-close-shop-panel]").addEventListener("click", () => {
+        pinnedShopId = null;
+        restorePinnedShop();
+      });
+    });
+    checkoutForm.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        pinnedShopId = null;
+        restorePinnedShop();
+      }
+    });
   }
 
   choices.forEach((choice) => {
@@ -57,6 +94,7 @@
     detail.textContent = "The interactive map could not load. You can still choose a shop below.";
     message.replaceChildren(title, detail, link);
     message.hidden = false;
+    if (fallback) fallback.open = true;
   }
 
   const apiKey = canvas.dataset.apiKey;
@@ -102,13 +140,27 @@
           gmpClickable: true,
         });
         marker.append(pin);
-        marker.addEventListener("gmp-click", () => selectShop(shop.id, false, true));
+        marker.addEventListener("gmp-click", () => {
+          clearTimeout(previewTimer);
+          pinnedShopId = shop.id;
+          selectShop(shop.id, false, true);
+        });
+        if (checkoutForm) {
+          pin.addEventListener("pointerenter", () => {
+            if (!window.matchMedia("(hover: hover)").matches) return;
+            clearTimeout(previewTimer);
+            selectShop(shop.id);
+          });
+          pin.addEventListener("pointerleave", schedulePreviewEnd);
+        }
         markers.set(shop.id, { pin, marker });
       });
       const selectedRadio = choices.find((choice) => choice.matches('input[type="radio"]:checked'));
       if (selectedRadio) selectShop(selectedRadio.dataset.shopId);
-      else if (!choices.some((choice) => choice.matches('input[type="radio"]')) && shops.length) selectShop(shops[0].id);
+      else if (checkoutForm && pinnedShopId) selectShop(pinnedShopId);
+      else if (!checkoutForm && !choices.some((choice) => choice.matches('input[type="radio"]')) && shops.length) selectShop(shops[0].id);
       message.hidden = true;
+      if (fallback) fallback.open = false;
       locateButton.disabled = false;
       clearTimeout(loadTimer);
 

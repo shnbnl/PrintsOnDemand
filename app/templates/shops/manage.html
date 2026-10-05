@@ -94,6 +94,20 @@
       </form>
     </section>
 
+    <section class="section-card" id="delivery-settings">
+      <h2>Delivery Fee</h2>
+      <p class="summary-row"><span>Delivery service</span><strong>{{ 'Enabled' if delivery_enabled else 'Disabled' }}</strong></p>
+      <p class="hint">Set the fee for normal Delivery. Change service availability separately under Services offered.</p>
+      <form class="account-form form-grid" method="post" action="{{ url_for('shop_staff.save_fee') }}" novalidate>
+        {{ delivery_fee_form.csrf_token(id='delivery_csrf_token') }}
+        <input type="hidden" name="fee_type" value="DELIVERY">
+        <div class="field field-wide"><label for="delivery_fee_amount">Delivery Fee (₱)</label>
+          {{ delivery_fee_form.amount(id='delivery_fee_amount', min='0', max='99999999.99', step='0.01', inputmode='decimal') }}{{ errors(delivery_fee_form.amount) }}{{ errors(delivery_fee_form.fee_type) }}
+        </div>
+        <div class="form-actions"><button class="button" type="submit">Save delivery fee</button></div>
+      </form>
+    </section>
+
     <section class="section-card" id="shop-fees">
       <h2>Additional fees</h2>
       {% if fees %}<ul class="summary-list">{% for fee in fees %}<li class="summary-row"><span>{{ fee.fee_type.label }}</span><strong>₱{{ '%.2f'|format(fee.amount) }}</strong></li>{% endfor %}</ul>
