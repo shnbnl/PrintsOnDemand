@@ -78,6 +78,7 @@
             <div class="detail-row"><dt>Unit price</dt><dd>{{ order.currency }} {{ item.unit_price }}</dd></div>
             <div class="detail-row"><dt>Line total</dt><dd>{{ order.currency }} {{ item.line_total }}</dd></div>
           </dl>
+          <a class="button button-secondary" href="{{ url_for('orders.download_file', order_reference=order.order_reference, item_id=item.id) }}">Download order file</a>
         </article>
       {% endfor %}
     </div>

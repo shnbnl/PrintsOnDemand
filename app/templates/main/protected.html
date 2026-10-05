@@ -3,7 +3,7 @@
 {% block title %}{{ title }} | Prints On Demand{% endblock %}
 
 {% block content %}
-  {% if files_url and orders_url %}
+  {% if orders_url %}
     <header class="page-intro home-intro">
       <p class="page-eyebrow">Your printing desk</p>
       <h1>Ready to print?</h1>
@@ -17,8 +17,8 @@
       </article>
       <article class="content-card action-card">
         <span class="action-icon" aria-hidden="true">02</span>
-        <div><h2>My Files</h2><p>Manage the files stored in your private library.</p></div>
-        <a class="button button-secondary" href="{{ files_url }}">My uploaded files</a>
+        <div><h2>Pick a shop</h2><p>Compare locations, services, hours, and prices on the shop map.</p></div>
+        <a class="button button-secondary" href="{{ url_for('shops.map_view') }}">Explore shop map</a>
       </article>
       <article class="content-card action-card">
         <span class="action-icon" aria-hidden="true">03</span>

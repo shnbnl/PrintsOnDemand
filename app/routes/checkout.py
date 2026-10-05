@@ -13,11 +13,12 @@ from app.authorization import roles_required
 from app.extensions import db
 from app.models import (
     ColorMode, Faculty, Order, OrderDestination, PaperSize, PrintConfiguration,
-    PrintingShop, UploadedFile, UserRole,
+    PrintingShop, ServiceType, UploadedFile, UserRole,
 )
+from app.models.user import utc_now
 from app.routes.orders import parse_files, positive_id, quote_for, review_state
 from app.services.fulfillment import (
-    FIELDS, FulfillmentError, availability, slot_options, today, validate_fulfillment,
+    FulfillmentError, availability, service_available, slot_options, today, validate_fulfillment,
 )
 from app.services.orders import create_order
 from app.services.payments import (
@@ -49,8 +50,10 @@ def save(saved: dict) -> None:
 def owned_files(file_ids: list[int]) -> list[UploadedFile] | None:
     if not file_ids or len(file_ids) > current_app.config["ORDER_MAX_FILES"] or len(set(file_ids)) != len(file_ids):
         return None
+    cutoff = utc_now() - timedelta(hours=current_app.config["CHECKOUT_STAGED_RETENTION_HOURS"])
     records = db.session.scalars(select(UploadedFile).where(
         UploadedFile.user_id == current_user.id, UploadedFile.id.in_(file_ids),
+        UploadedFile.checkout_staged_at > cutoff, ~UploadedFile.order_items.any(),
     )).all()
     by_id = {record.id: record for record in records}
     return [by_id[file_id] for file_id in file_ids] if len(by_id) == len(file_ids) else None
@@ -67,11 +70,15 @@ def selected_shop(saved: dict):
 
 
 def render_upload(*, error=None, status=200):
-    records = db.session.scalars(select(UploadedFile).where(
-        UploadedFile.user_id == current_user.id,
-    ).order_by(UploadedFile.created_at.desc(), UploadedFile.id.desc())).all()
+    saved = draft().copy()
+    records = owned_files(saved.get("file_ids", [])) or []
+    if len(records) != len(saved.get("file_ids", [])):
+        saved["file_ids"] = [record.id for record in records]
+        for key in ("options", "fulfillment", "payment_method", "payment_reference", "review"):
+            saved.pop(key, None)
+        save(saved)
     return render_template(
-        "checkout/upload.html", records=records, selected=set(draft().get("file_ids", [])),
+        "checkout/upload.html", records=records,
         error=error, max_files=current_app.config["ORDER_MAX_FILES"],
         extensions=ALLOWED_EXTENSIONS,
         accept_types=",".join(f".{ext}" for ext in sorted(ALLOWED_EXTENSIONS)),
@@ -82,11 +89,16 @@ def render_upload(*, error=None, status=200):
 @checkout_bp.route("/upload", methods=["GET", "POST"])
 @roles_required(*ROLES)
 def upload():
+    if request.method == "GET":
+        from app.services.staged_uploads import cleanup_staged_uploads
+
+        try:
+            cleanup_staged_uploads(retention_hours=current_app.config["CHECKOUT_STAGED_RETENTION_HOURS"])
+        except (OSError, StorageError, SQLAlchemyError):
+            db.session.rollback()
+            current_app.logger.exception("Could not clean up expired checkout uploads")
     saved = draft().copy()
     if request.method == "GET":
-        file_id = positive_id(request.args.get("file_id"))
-        if file_id and owned_files([file_id]) and file_id not in saved["file_ids"]:
-            saved["file_ids"] = [*saved["file_ids"], file_id]
         shop_id = positive_id(request.args.get("shop_id"))
         shop = db.session.get(PrintingShop, shop_id) if shop_id else None
         if shop is not None and shop.is_active:
@@ -95,9 +107,20 @@ def upload():
         return render_upload()
     if not FlaskForm().validate_on_submit():
         abort(400)
+    if "remove_file_id" in request.form:
+        remove_id = positive_id(request.form.get("remove_file_id"))
+        if remove_id not in saved.get("file_ids", []):
+            abort(400)
+        saved["file_ids"] = [value for value in saved["file_ids"] if value != remove_id]
+        for key in ("options", "fulfillment", "payment_method", "payment_reference", "review"):
+            saved.pop(key, None)
+        save(saved)
+        return redirect(url_for("checkout.upload"))
     raw_ids = request.form.getlist("file_id")
     file_ids = [positive_id(raw) for raw in raw_ids]
-    if any(file_id is None for file_id in file_ids) or owned_files(file_ids) is None:
+    if (any(file_id is None for file_id in file_ids)
+            or not set(file_ids).issubset(set(saved.get("file_ids", [])))
+            or (file_ids and owned_files(file_ids) is None)):
         return render_upload(error="Select one or more of your own files to continue.", status=400)
     if file_ids != saved.get("file_ids"):
         saved["file_ids"] = file_ids
@@ -107,6 +130,8 @@ def upload():
         saved.pop("payment_reference", None)
         saved.pop("review", None)
     save(saved)
+    if not file_ids:
+        return render_upload(error="Upload at least one file to continue.", status=400)
     return redirect(url_for("checkout.shop"))
 
 
@@ -137,6 +162,7 @@ def upload_files():
                 user_id=current_user.id, original_filename=item.original_filename,
                 stored_filename=key, storage_key=key, mime_type=item.mime_type,
                 file_extension=item.extension, file_size=item.size, sha256=item.sha256,
+                checkout_staged_at=utc_now(),
             )
             db.session.add(record)
             records.append(record)
@@ -167,10 +193,15 @@ def upload_too_large(error):
 
 
 def render_shop(*, error=None, status=200):
+    from app.routes.shops import SCHOOL_AREA_CENTER, map_markers
+
     shops = db.session.scalars(select(PrintingShop).where(
         PrintingShop.is_active.is_(True),
     ).order_by(PrintingShop.name)).all()
     return render_template("checkout/shop.html", shops=shops, selected_shop_id=draft().get("shop_id"),
+                           markers=map_markers(), center=SCHOOL_AREA_CENTER,
+                           maps_api_key=current_app.config["GOOGLE_MAPS_API_KEY"],
+                           maps_map_id=current_app.config["GOOGLE_MAPS_MAP_ID"],
                            error=error, step=2), status
 
 
@@ -219,6 +250,7 @@ def render_config(files, shop, *, options=None, fields=None, error=None, status=
     return render_template(
         "checkout/configure.html", files=files, shop=shop, options=options,
         fields=fields, error=error, offered=offered, preview_quote=preview_quote,
+        rush_available=service_available(shop.id, ServiceType.RUSH_PRINTING),
         professors=professors, own_professor=own_professor, faculties=list(Faculty),
         paper_sizes=list(PaperSize), color_modes=list(ColorMode),
         pickup_slots=slot_options(OrderDestination.PICKUP),

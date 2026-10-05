@@ -3,13 +3,12 @@
 from io import BytesIO
 
 from flask import Blueprint, abort, current_app, render_template, request, send_file, url_for
-from flask_login import current_user
 from sqlalchemy import Numeric, cast, select
 from sqlalchemy.orm import selectinload
 
 from app.authorization import roles_required
 from app.extensions import db
-from app.models import ColorMode, PaperSize, PrintConfiguration, PrintingShop, UploadedFile, UserRole
+from app.models import ColorMode, PaperSize, PrintingShop, UserRole
 from app.services.fulfillment import availability
 from app.services.professors import shop_supports_professor_delivery
 from app.models import ServiceType
@@ -60,11 +59,8 @@ def index():
     return render_template("shops/index.html", shops=shops, query=query)
 
 
-@shops_bp.get("/map")
-@roles_required(UserRole.STUDENT, UserRole.PROFESSOR)
-def map_view():
-    """Discover only active shops with stored, valid coordinates."""
-    query = request.args.get("q", "").strip()[:100]
+def map_markers(query: str = "") -> list[dict]:
+    """Use one authoritative map payload for discovery and checkout."""
     statement = active_shop_statement(query).where(
         PrintingShop.latitude.is_not(None), PrintingShop.longitude.is_not(None),
         cast(PrintingShop.latitude, Numeric).between(-90, 90),
@@ -114,8 +110,16 @@ def map_view():
             "photo_url": (url_for("shops.photo", shop_id=shop.id, v=shop.photo_digest[:12])
                           if shop.photo_digest else None),
         })
+    return markers
+
+
+@shops_bp.get("/map")
+@roles_required(UserRole.STUDENT, UserRole.PROFESSOR)
+def map_view():
+    """Discover only active shops with stored, valid coordinates."""
+    query = request.args.get("q", "").strip()[:100]
     return render_template(
-        "shops/map.html", markers=markers, query=query,
+        "shops/map.html", markers=map_markers(query), query=query,
         center=SCHOOL_AREA_CENTER,
         maps_api_key=current_app.config["GOOGLE_MAPS_API_KEY"],
         maps_map_id=current_app.config["GOOGLE_MAPS_MAP_ID"],
@@ -129,13 +133,7 @@ def detail(shop_id: int):
     shop = db.session.get(PrintingShop, shop_id)
     if shop is None or not shop.is_active:
         abort(404)
-    has_configured_file = db.session.scalar(
-        select(UploadedFile.id)
-        .join(PrintConfiguration, PrintConfiguration.file_id == UploadedFile.id)
-        .where(UploadedFile.user_id == current_user.id)
-        .limit(1)
-    ) is not None
-    return render_template("shops/detail.html", **detail_context(shop), can_order=has_configured_file)
+    return render_template("shops/detail.html", **detail_context(shop))
 
 
 @shops_bp.get("/<int:shop_id>/photo")

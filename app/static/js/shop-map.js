@@ -20,14 +20,16 @@
 
   function selectShop(id, moveMap = false, revealPanel = false) {
     const shop = shops.find((item) => String(item.id) === String(id));
-    if (!shop) return;
+    if (!shop && !choices.some((choice) => choice.dataset.shopId === String(id))) return;
     choices.forEach((choice) => {
-      choice.setAttribute("aria-pressed", String(choice.dataset.shopId === String(id)));
+      const selected = choice.dataset.shopId === String(id);
+      if (choice.matches('input[type="radio"]')) choice.checked = selected;
+      else choice.setAttribute("aria-pressed", String(selected));
     });
     panels.forEach((panel) => {
       panel.hidden = panel.dataset.shopPanel !== String(id);
     });
-    if (revealPanel && window.matchMedia("(max-width: 48rem)").matches) {
+    if (shop && revealPanel && window.matchMedia("(max-width: 48rem)").matches) {
       document.querySelector(`[data-shop-panel="${shop.id}"]`)?.scrollIntoView({
         behavior: "smooth", block: "start",
       });
@@ -37,11 +39,12 @@
       pin.classList.toggle("is-selected", selected);
       marker.zIndex = selected ? 100 : 1;
     });
-    if (moveMap && map) map.panTo(shop.position);
+    if (shop && moveMap && map) map.panTo(shop.position);
   }
 
   choices.forEach((choice) => {
-    choice.addEventListener("click", () => selectShop(choice.dataset.shopId, true));
+    choice.addEventListener(choice.matches('input[type="radio"]') ? "change" : "click",
+      () => selectShop(choice.dataset.shopId, true));
   });
 
   function showMapFailure() {
@@ -102,7 +105,9 @@
         marker.addEventListener("gmp-click", () => selectShop(shop.id, false, true));
         markers.set(shop.id, { pin, marker });
       });
-      if (shops.length) selectShop(shops[0].id);
+      const selectedRadio = choices.find((choice) => choice.matches('input[type="radio"]:checked'));
+      if (selectedRadio) selectShop(selectedRadio.dataset.shopId);
+      else if (!choices.some((choice) => choice.matches('input[type="radio"]')) && shops.length) selectShop(shops[0].id);
       message.hidden = true;
       locateButton.disabled = false;
       clearTimeout(loadTimer);

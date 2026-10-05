@@ -27,6 +27,9 @@ class UploadedFile(db.Model):
     file_extension: Mapped[str] = mapped_column(db.String(8), nullable=False)
     file_size: Mapped[int] = mapped_column(db.BigInteger, nullable=False)
     sha256: Mapped[str] = mapped_column(db.String(64), nullable=False)
+    # Set only for uploads made in guided checkout. Legacy library rows remain
+    # NULL, so a cleanup job can never mistake them for abandoned drafts.
+    checkout_staged_at: Mapped[datetime | None] = mapped_column(db.DateTime(timezone=True), nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(
         db.DateTime(timezone=True), nullable=False, default=utc_now
     )

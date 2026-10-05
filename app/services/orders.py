@@ -73,6 +73,8 @@ def create_order(
             order.delivery_date = fulfillment.delivery_date
             order.delivery_slot = fulfillment.delivery_slot
         for item in quote.items if isinstance(quote, CartQuote) else (quote,):
+            if item.uploaded_file.checkout_staged_at is not None:
+                item.uploaded_file.checkout_staged_at = None
             order.items.append(OrderItem(
                 uploaded_file_id=item.uploaded_file.id,
                 original_filename=item.uploaded_file.original_filename,

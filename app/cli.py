@@ -5,7 +5,7 @@ from uuid import uuid4
 from email_validator import EmailNotValidError, validate_email
 from flask import Flask, current_app
 from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from app.extensions import db
 from app.models import PrintingShop, Professor, UploadedFile, User, UserRole
@@ -15,6 +15,19 @@ from app.services.professors import PROFESSOR_DELIVERY_SHOP
 
 
 def register_commands(app: Flask) -> None:
+    @app.cli.command("cleanup-staged-uploads")
+    def cleanup_checkout_uploads() -> None:
+        """Remove expired, unattached checkout files without touching legacy or order files."""
+        from app.services.staged_uploads import cleanup_staged_uploads
+
+        try:
+            count = cleanup_staged_uploads(
+                retention_hours=current_app.config["CHECKOUT_STAGED_RETENTION_HOURS"]
+            )
+        except (OSError, StorageError, SQLAlchemyError, ValueError) as error:
+            raise click.ClickException("Checkout upload cleanup failed. Check private storage and retry.") from error
+        click.echo(f"Removed {count} expired staged checkout files.")
+
     @app.cli.command("recover-account-deletions")
     def recover_account_deletions() -> None:
         """Resolve interrupted private-file cleanup while the app is offline."""

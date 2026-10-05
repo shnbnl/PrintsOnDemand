@@ -20,7 +20,6 @@ def post(client, path, data=None):
 def setup(client, app, *, professor=False, online=False):
     owner = student(app, role=UserRole.PROFESSOR if professor else UserRole.STUDENT)
     shop_id = shop(app)
-    file_id = file(app, owner, configured=False)
     if online:
         app.config.update(
             ONLINE_PAYMENT_ENABLED=True,
@@ -29,7 +28,20 @@ def setup(client, app, *, professor=False, online=False):
             ONLINE_PAYMENT_DESTINATION="Sample account 12345",
         )
     sign_in(client, owner)
+    file_id = upload_checkout_file(client, app, owner)
     return owner, shop_id, file_id
+
+
+def upload_checkout_file(client, app, owner, name="notes.pdf"):
+    response = client.post("/checkout/upload/files", data={
+        "csrf_token": token(client.get("/checkout/upload")),
+        "files": (BytesIO(PDF), name),
+    }, content_type="multipart/form-data")
+    assert response.status_code == 302
+    with app.app_context():
+        return db.session.scalar(select(UploadedFile.id).where(
+            UploadedFile.user_id == owner, UploadedFile.original_filename == name,
+        ).order_by(UploadedFile.id.desc()))
 
 
 def start(client, shop_id, file_id, *, quantity="2", destination=None):
@@ -167,8 +179,8 @@ def test_student_professor_delivery_and_professor_normal_order(client, test_app)
         assert order.payment.payment_method == PaymentMethod.ONLINE
 
     professor_user = student(test_app, "unverified@example.edu", UserRole.PROFESSOR)
-    professor_file = file(test_app, professor_user, configured=False)
     sign_in(client, professor_user)
+    professor_file = upload_checkout_file(client, test_app, professor_user, "professor.pdf")
     assert start(client, shop_id, professor_file).status_code == 302
     assert post(client, "/checkout/payment", {"payment_method": "ONSITE"}).status_code == 302
     assert post(client, "/checkout/place").status_code == 302
@@ -197,12 +209,10 @@ def test_review_rechecks_database_price_before_placement(client, test_app):
         assert db.session.scalar(select(Order)).total == Decimal("18.00")
 
 
-def test_checkout_settings_do_not_overwrite_saved_library_defaults(client, test_app):
+def test_legacy_library_file_cannot_enter_new_checkout(client, test_app):
     owner, shop_id, _ = setup(client, test_app)
     existing = file(test_app, owner, name="Saved.pdf", configured=True, quantity=3)
-    assert start(client, shop_id, existing, quantity="2").status_code == 302
-    assert post(client, "/checkout/payment", {"payment_method": "ONSITE"}).status_code == 302
-    assert post(client, "/checkout/place").status_code == 302
+    assert post(client, "/checkout/upload", {"file_id": str(existing)}).status_code == 400
     with test_app.app_context():
         assert db.session.get(UploadedFile, existing).configuration.quantity == 3
-        assert db.session.scalar(select(Order)).items[0].quantity == 2
+        assert db.session.scalar(select(Order)) is None

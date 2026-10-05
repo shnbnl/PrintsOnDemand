@@ -10,7 +10,7 @@ from sqlalchemy.orm import selectinload
 from app.authorization import roles_required
 from app.extensions import db
 from app.models import (
-    Order, OrderDestination, OrderStatus, Payment, PaymentMethod, PaymentStatus,
+    Order, OrderDestination, OrderItem, OrderStatus, Payment, PaymentMethod, PaymentStatus,
     ColorMode, Faculty, PaperSize, PrintConfiguration, PrintingShop, UploadedFile, UserRole,
 )
 from app.order_forms import PlaceOrderForm, SelectProfessorForm
@@ -361,6 +361,21 @@ def detail(order_reference: str):
     if order is None:
         abort(404)
     return render_order_detail(order)
+
+
+@orders_bp.get("/<order_reference>/files/<int:item_id>/download")
+@roles_required(*ORDERING_ROLES)
+def download_file(order_reference: str, item_id: int):
+    """Read a private attachment only through its owner's actual order."""
+    from app.routes.files import send_private_file
+
+    item = db.session.scalar(select(OrderItem).join(Order).where(
+        Order.order_reference == order_reference, Order.user_id == current_user.id,
+        OrderItem.id == item_id,
+    ))
+    if item is None:
+        abort(404)
+    return send_private_file(item.uploaded_file)
 
 
 def render_order_detail(order, *, payment_error=None, professor_error=None, status=200):

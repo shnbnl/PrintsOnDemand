@@ -634,6 +634,10 @@ form[aria-busy="true"] :is(button[type="submit"], input[type="submit"]) { box-sh
 .checkout-file-choice { display: flex; align-items: start; gap: .7rem; padding: .75rem 0; cursor: pointer; overflow-wrap: anywhere; }
 .checkout-file-choice input { flex: none; margin-top: .3rem; }
 .checkout-file-choice small { display: block; color: var(--muted); }
+.checkout-staged-file { display: flex; align-items: center; justify-content: space-between; gap: .7rem; padding: .65rem 0; }
+.checkout-staged-file > span { min-width: 0; overflow-wrap: anywhere; }
+.checkout-staged-file small { display: block; color: var(--muted); }
+.checkout-staged-file .button { flex: none; }
 .checkout-shop-card { display: grid; gap: .65rem; overflow-wrap: anywhere; }
 .checkout-shop-card:has(input:checked) { border-color: var(--cobalt); box-shadow: 0 0 0 2px rgb(29 58 138 / 16%); }
 .checkout-shop-top { display: flex; gap: .6rem; align-items: center; cursor: pointer; }
@@ -656,3 +660,26 @@ form[aria-busy="true"] :is(button[type="submit"], input[type="submit"]) { box-sh
   .checkout-online-details { flex-direction: column; }
   .checkout-online-details img { max-width: 180px; }
 }
+
+/* Checkout map and per-file print cards */
+.checkout-configure-form { width: 100%; max-width: 72rem; }
+.checkout-map { margin-bottom: var(--space-lg); }
+.checkout-map .map-canvas { height: clamp(20rem, 47vh, 30rem); }
+.checkout-map > .hint { margin: .6rem .2rem 0; }
+.checkout-file-group { min-width: 0; margin: 0; padding: var(--space-lg); border: 1px solid var(--border); border-radius: var(--radius); background: #f9fafc; }
+.checkout-file-group > legend { padding-inline: .45rem; color: var(--navy); font-size: 1.15rem; font-weight: 800; overflow-wrap: anywhere; }
+.print-option-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-md); }
+.print-option-card { min-width: 0; margin: 0; padding: var(--space-md); border: 1px solid var(--border); border-radius: var(--radius); background: #fff; }
+.print-option-card legend { padding-inline: .35rem; color: var(--navy); font-size: .85rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.print-radio-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .55rem; }
+.print-option-choice { display: flex; align-items: center; gap: .5rem; min-width: 0; padding: .7rem .8rem; border: 1px solid var(--border); border-radius: .7rem; cursor: pointer; font-weight: 700; }
+.print-option-choice:has(input:checked) { color: var(--navy); border-color: var(--cobalt); background: #edf2ff; box-shadow: 0 0 0 2px rgb(29 58 138 / 10%); }
+.print-option-choice:has(input:disabled) { opacity: .55; cursor: not-allowed; }
+.print-option-choice input { flex: none; margin: 0; accent-color: var(--cobalt); }
+.print-count-control { display: flex; align-items: center; gap: .5rem; max-width: 17rem; }
+.print-count-control button { width: 2.8rem; height: 2.8rem; flex: none; border: 1px solid var(--border); border-radius: .7rem; background: #edf2ff; color: var(--navy); font-size: 1.4rem; font-weight: 700; cursor: pointer; }
+.print-count-control button:hover { border-color: var(--cobalt); background: #dce6fc; }
+.print-count-control input { min-width: 0; width: 100%; height: 2.8rem; text-align: center; }
+.print-option-card .hint { margin: .6rem 0 0; }
+@media (max-width: 48rem) { .print-option-grid { grid-template-columns: 1fr; } }
+@media (max-width: 24rem) { .print-radio-grid { grid-template-columns: 1fr; } }
