@@ -14,7 +14,7 @@
     <div><strong>{{ orders|length }}</strong><span>Orders in this shop queue</span></div>
     <p>Open an order to review its files and fulfillment request. Payment review is a separate step before processing.</p>
   </div>
-  <p><a class="button button-secondary" href="{{ url_for('payment_verification.index') }}">Review submitted payments</a></p>
+  <p><a class="button button-secondary" href="{{ url_for('payment_verification.index') }}">Review payments and onsite cash</a></p>
 
   {% if orders %}
     <ul class="order-list">

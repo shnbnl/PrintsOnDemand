@@ -1,4 +1,4 @@
-"""Role-protected manual online payment review pages."""
+"""Role-protected online review and onsite cash confirmation pages."""
 
 from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
 from flask_login import current_user
@@ -7,7 +7,7 @@ from app.authorization import roles_required
 from app.extensions import db
 from app.models import UserRole
 from app.services.payment_verification import (
-    VerificationError, decide_payment, review_payment, review_queue,
+    VerificationError, confirm_onsite_cash, decide_payment, review_payment, review_queue,
 )
 
 
@@ -67,3 +67,23 @@ def verify(payment_id):
 @roles_required(*REVIEW_ROLES)
 def reject(payment_id):
     return decide(payment_id, reject=True)
+
+
+@payment_verification_bp.post("/<int:payment_id>/confirm-onsite")
+@roles_required(*REVIEW_ROLES)
+def confirm_onsite(payment_id):
+    if request.form.get("cash_received") != "yes":
+        payment = payment_or_abort(payment_id)
+        return render_template("payment_verification/detail.html", payment=payment,
+                               error="Confirm that the full cash amount was received."), 400
+    try:
+        decided = confirm_onsite_cash(current_user, payment_id)
+    except VerificationError as error:
+        if error.status_code in (400, 409):
+            db.session.expire_all()
+            payment = payment_or_abort(payment_id)
+            return render_template("payment_verification/detail.html", payment=payment,
+                                   error=str(error)), error.status_code
+        abort(error.status_code, description=str(error))
+    flash("Onsite cash payment recorded. The order is now Printing.", "success")
+    return redirect(url_for("payment_verification.detail", payment_id=decided.id))

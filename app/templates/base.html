@@ -16,11 +16,7 @@
     <a class="skip-link" href="#main-content">Skip to main content</a>
     {% macro navigation() %}
       {% if current_user.is_authenticated %}
-        {% if current_user.role.value == 'STUDENT' %}
-          <a href="{{ url_for('checkout.upload') }}" {% if request.blueprint == 'checkout' %}aria-current="page"{% endif %}>Start Order</a>
-          <a href="{{ url_for('orders.index') }}" {% if request.blueprint == 'orders' %}aria-current="page"{% endif %}>Order History</a>
-        {% elif current_user.role.value == 'PROFESSOR' %}
-          <a href="{{ url_for('shops.index') }}" {% if request.blueprint == 'shops' %}aria-current="page"{% endif %}>Printing Shops</a>
+        {% if current_user.role.value in ('STUDENT', 'PROFESSOR') %}
           <a href="{{ url_for('checkout.upload') }}" {% if request.blueprint == 'checkout' %}aria-current="page"{% endif %}>Start Order</a>
           <a href="{{ url_for('orders.index') }}" {% if request.blueprint == 'orders' %}aria-current="page"{% endif %}>Order History</a>
         {% elif current_user.role.value == 'SHOP_STAFF' %}
@@ -36,7 +32,7 @@
           <a href="{{ url_for('admin_management.payment') }}" {% if request.endpoint == 'admin_management.payment' %}aria-current="page"{% endif %}>Payment settings</a>
           <a href="{{ url_for('payment_verification.index') }}" {% if request.blueprint == 'payment_verification' %}aria-current="page"{% endif %}>Payment verification</a>
         {% endif %}
-        {% if current_user.role.value == 'PROFESSOR' %}
+        {% if current_user.role.value in ('STUDENT', 'PROFESSOR') %}
           <div class="nav-identity" aria-label="{{ current_user.role.value.title() }} account">
             <span class="nav-identity-name" title="{{ current_user.name }}">{{ current_user.name }}<small>{{ current_user.role.value.title() }}</small></span>
             <a class="nav-identity-action" href="{{ url_for('account.settings') }}" {% if request.blueprint == 'account' %}aria-current="page"{% endif %}>Account</a>

@@ -1,15 +1,16 @@
 """Authorized, shop-scoped manual review of online payment claims."""
 
 from decimal import Decimal
+from types import SimpleNamespace
 
 import pytest
 from flask import g
 from sqlalchemy import select
 
 from app.extensions import db
-from app.models import Order, OrderStatus, Payment, PaymentStatus, User, UserRole
+from app.models import Order, OrderStatus, Payment, PaymentMethod, PaymentStatus, User, UserRole
 from app.services.order_processing import available_action
-from test_orders import sign_in, student, token
+from test_orders import file, place, review, shop, sign_in, student, token
 from test_payments import choose, submit
 from test_staff_orders import setup_orders
 
@@ -179,7 +180,7 @@ def test_assigned_staff_can_decide_only_assigned_submitted_payment(client, test_
 
 
 @pytest.mark.parametrize("state,method", [
-    (PaymentStatus.PENDING, "ONLINE"), (PaymentStatus.PENDING, "ONSITE"),
+    (PaymentStatus.PENDING, "ONLINE"),
     (PaymentStatus.PAID, "ONLINE"), (PaymentStatus.REJECTED, "ONLINE"),
 ])
 @pytest.mark.parametrize("action", ["verify", "reject"])
@@ -197,13 +198,7 @@ def test_ineligible_payment_cannot_be_reviewed(client, test_app, state, method, 
         db.session.commit()
     sign_in(client, admin)
     assert review_a.encode() not in client.get(QUEUE).data
-    if method == "ONLINE":
-        assert post_action(client, review_a, action, reason="No payment found").status_code == 409
-    else:
-        assert client.get(review_a).status_code == 404
-        assert client.post(review_a + "/" + action, data={
-            "csrf_token": token(client.get(QUEUE)), "reason": "No payment found",
-        }).status_code == 404
+    assert post_action(client, review_a, action, reason="No payment found").status_code == 409
     with test_app.app_context():
         assert db.session.scalar(select(Payment)).payment_status == state
         assert db.session.scalar(select(Payment)).order.status == OrderStatus.PENDING_PAYMENT
@@ -274,3 +269,98 @@ def test_rejected_payment_cannot_start_processing(client, test_app):
     with test_app.app_context():
         order = db.session.scalar(select(Order).where(Order.order_reference == url_a.rsplit("/", 1)[1]))
         assert order.status == OrderStatus.PENDING_PAYMENT
+
+
+@pytest.mark.parametrize("shop_name", [
+    "Blue and Silver Bookstore", "CHALECOSPOT", "Iced Design and Prints", "Pixels Print and Press",
+])
+def test_each_shop_staff_can_confirm_collected_onsite_cash(client, test_app, shop_name):
+    owner = student(test_app, f"cash-owner-{shop_name.replace(' ', '')}@example.edu")
+    shop_id = shop(test_app, name=shop_name)
+    staff = student(test_app, f"cash-staff-{shop_id}@example.edu", role=UserRole.SHOP_STAFF)
+    with test_app.app_context():
+        db.session.get(User, staff).shop_id = shop_id
+        db.session.commit()
+    uploaded = file(test_app, owner)
+    sign_in(client, owner)
+    assert review(client, uploaded, shop_id).status_code == 200
+    order_url = place(client, uploaded, shop_id).headers["Location"]
+    assert choose(client, order_url, "ONSITE").status_code == 302
+    payment_url = review_url(test_app, order_url)
+    with test_app.app_context():
+        order = db.session.scalar(select(Order).where(Order.order_reference == order_url.rsplit("/", 1)[1]))
+        before = (order.total, order.currency, order.items[0].line_total)
+    sign_in(client, staff)
+    dashboard = client.get("/shop")
+    assert b"<strong>1</strong><span>Payment actions</span>" in dashboard.data
+    assert b"Confirm onsite cash" in dashboard.data
+    queue = client.get(QUEUE)
+    assert payment_url.encode() in queue.data
+    assert shop_name.encode() in queue.data
+    assert b"Confirm onsite cash" in queue.data
+    detail = client.get(payment_url)
+    assert b"Confirm cash received and start printing" in detail.data
+    assert b"Payment reference</dt>" not in detail.data
+    assert b"Confirm onsite cash after collection" in client.get(
+        order_url.replace("/orders/", "/staff/orders/", 1)
+    ).data
+    assert client.post(payment_url + "/confirm-onsite").status_code == 400  # CSRF
+    assert post_action(client, payment_url, "confirm-onsite").status_code == 400  # no cash received
+    assert post_action(client, payment_url, "verify").status_code == 409  # online action is separate
+    assert post_action(client, payment_url, "reject", reason="No transfer").status_code == 409
+    assert post_action(client, payment_url, "confirm-onsite", cash_received="yes",
+                       amount="0.01", currency="USD", shop_id="999").status_code == 302
+    with test_app.app_context():
+        order = db.session.scalar(select(Order).where(Order.order_reference == order_url.rsplit("/", 1)[1]))
+        assert (order.total, order.currency, order.items[0].line_total) == before
+        assert order.payment.payment_method == PaymentMethod.ONSITE
+        assert order.payment.payment_status == PaymentStatus.PAID
+        assert order.payment.reviewed_by_id == staff
+        assert order.payment.reviewed_at == order.processing_started_at
+        assert order.status == OrderStatus.PROCESSING
+    assert payment_url.encode() not in client.get(QUEUE).data
+    assert b"Cash confirmed by" in client.get(payment_url).data
+    assert post_action(client, payment_url, "confirm-onsite", cash_received="yes").status_code == 409
+    sign_in(client, owner)
+    assert b"shop confirmed receipt" in client.get(order_url).data
+
+
+def test_onsite_cash_confirmation_is_shop_scoped(client, test_app):
+    owner, staff_a, staff_b, _, url_b, *_ = setup_orders(client, test_app)
+    sign_in(client, owner)
+    assert choose(client, url_b, "ONSITE").status_code == 302
+    payment_url = review_url(test_app, url_b)
+    assert client.get(payment_url).status_code == 403
+    sign_in(client, staff_a)
+    assert payment_url.encode() not in client.get(QUEUE).data
+    assert client.get(payment_url).status_code == 404
+    assert client.post(payment_url + "/confirm-onsite", data={
+        "csrf_token": token(client.get(QUEUE)), "cash_received": "yes",
+    }).status_code == 404
+    sign_in(client, staff_b)
+    assert payment_url.encode() in client.get(QUEUE).data
+    assert post_action(client, payment_url, "confirm-onsite", cash_received="yes").status_code == 302
+
+
+def test_onsite_confirmation_rolls_back_if_printing_cannot_start(client, test_app, monkeypatch):
+    owner, _, _, _, url_b, *_ = setup_orders(client, test_app)
+    sign_in(client, owner)
+    assert choose(client, url_b, "ONSITE").status_code == 302
+    payment_url = review_url(test_app, url_b)
+    admin = student(test_app, "onsite-admin@example.edu", role=UserRole.ADMIN)
+    sign_in(client, admin)
+    execute = db.session.execute
+
+    def conflict(statement, *args, **kwargs):
+        if getattr(statement, "is_update", False) and statement.table.name == "orders":
+            return SimpleNamespace(rowcount=0)
+        return execute(statement, *args, **kwargs)
+
+    monkeypatch.setattr(db.session, "execute", conflict)
+    assert post_action(client, payment_url, "confirm-onsite", cash_received="yes").status_code == 409
+    with test_app.app_context():
+        payment = db.session.scalar(select(Payment).where(Payment.id == int(payment_url.rsplit("/", 1)[1])))
+        assert payment.payment_status == PaymentStatus.PENDING
+        assert payment.reviewed_at is None and payment.reviewed_by_id is None
+        assert payment.order.status == OrderStatus.PENDING_PAYMENT
+        assert payment.order.processing_started_at is None

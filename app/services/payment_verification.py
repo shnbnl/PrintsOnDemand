@@ -1,12 +1,12 @@
-"""Manual review of submitted online references by authorized users."""
+"""Shop-scoped review of online claims and confirmation of onsite cash."""
 
 from __future__ import annotations
 
-from sqlalchemy import exists, select, update
+from sqlalchemy import and_, exists, or_, select, update
 from sqlalchemy.orm import selectinload
 
 from app.extensions import db
-from app.models import Order, OrderStatus, Payment, PaymentMethod, PaymentStatus, UserRole
+from app.models import Order, OrderDestination, OrderStatus, Payment, PaymentMethod, PaymentStatus, UserRole
 from app.models.user import utc_now
 
 
@@ -31,13 +31,19 @@ def review_scope(actor) -> int | None:
 def review_queue(actor) -> list[Payment]:
     shop_id = review_scope(actor)
     statement = (select(Payment).join(Order).where(
-        Payment.payment_method == PaymentMethod.ONLINE,
-        Payment.payment_status == PaymentStatus.SUBMITTED,
-        Payment.payment_reference.is_not(None),
+        or_(
+            and_(Payment.payment_method == PaymentMethod.ONLINE,
+                 Payment.payment_status == PaymentStatus.SUBMITTED,
+                 Payment.payment_reference.is_not(None)),
+            and_(Payment.payment_method == PaymentMethod.ONSITE,
+                 Payment.payment_status == PaymentStatus.PENDING,
+                 Payment.payment_reference.is_(None),
+                 Order.destination != OrderDestination.PROFESSOR),
+        ),
         Payment.amount == Order.total, Payment.currency == Order.currency,
         Order.status == OrderStatus.PENDING_PAYMENT,
     ).options(selectinload(Payment.order).selectinload(Order.user))
-        .order_by(Payment.submitted_at.asc(), Payment.id.asc()))
+        .order_by(Payment.created_at.asc(), Payment.id.asc()))
     if shop_id is not None:
         statement = statement.where(Order.shop_id == shop_id)
     return db.session.scalars(statement).all()
@@ -46,7 +52,7 @@ def review_queue(actor) -> list[Payment]:
 def review_payment(actor, payment_id: int) -> Payment:
     shop_id = review_scope(actor)
     statement = (select(Payment).join(Order).where(
-        Payment.id == payment_id, Payment.payment_method == PaymentMethod.ONLINE,
+        Payment.id == payment_id,
     ).options(selectinload(Payment.order).selectinload(Order.user),
               selectinload(Payment.reviewer)).execution_options(populate_existing=True))
     if shop_id is not None:
@@ -60,6 +66,8 @@ def review_payment(actor, payment_id: int) -> Payment:
 def decide_payment(actor, payment_id: int, *, reject: bool, reason: str = "") -> Payment:
     payment = review_payment(actor, payment_id)
     order = payment.order
+    if payment.payment_method != PaymentMethod.ONLINE:
+        raise VerificationError("Online review is unavailable for this payment.", 409)
     if payment.payment_status != PaymentStatus.SUBMITTED:
         raise VerificationError("This payment is no longer awaiting review. Reload the page.", 409)
     if (order.status != OrderStatus.PENDING_PAYMENT or not payment.payment_reference
@@ -106,5 +114,49 @@ def decide_payment(actor, payment_id: int, *, reject: bool, reason: str = "") ->
         if started.rowcount != 1:
             db.session.rollback()
             raise VerificationError("The order changed during review. Reload the page.", 409)
+    db.session.commit()
+    return db.session.get(Payment, payment_id, populate_existing=True)
+
+
+def confirm_onsite_cash(actor, payment_id: int) -> Payment:
+    """Record cash actually received, then start the paid order atomically."""
+    payment = review_payment(actor, payment_id)
+    order = payment.order
+    if payment.payment_method != PaymentMethod.ONSITE or payment.payment_status != PaymentStatus.PENDING:
+        raise VerificationError("This onsite payment is no longer awaiting cash. Reload the page.", 409)
+    if (order.status != OrderStatus.PENDING_PAYMENT or order.destination == OrderDestination.PROFESSOR
+            or payment.payment_reference is not None
+            or payment.amount != order.total or payment.currency != order.currency):
+        raise VerificationError("Payment details do not match a pending order.", 409)
+
+    now = utc_now()
+    eligible_order = exists(select(Order.id).where(
+        Order.id == Payment.order_id,
+        Order.status == OrderStatus.PENDING_PAYMENT,
+        Order.destination != OrderDestination.PROFESSOR,
+        Order.total == Payment.amount, Order.currency == Payment.currency,
+        *((Order.shop_id == actor.shop_id,) if actor.role == UserRole.SHOP_STAFF else ()),
+    ))
+    recorded = db.session.execute(update(Payment).where(
+        Payment.id == payment_id,
+        Payment.payment_method == PaymentMethod.ONSITE,
+        Payment.payment_status == PaymentStatus.PENDING,
+        Payment.payment_reference.is_(None),
+        eligible_order,
+    ).values(payment_status=PaymentStatus.PAID, reviewed_at=now,
+             reviewed_by_id=actor.id, updated_at=now)
+        .execution_options(synchronize_session=False))
+    if recorded.rowcount != 1:
+        db.session.rollback()
+        raise VerificationError("This payment changed during review. Reload the page.", 409)
+    started = db.session.execute(update(Order).where(
+        Order.id == order.id, Order.status == OrderStatus.PENDING_PAYMENT,
+        Order.total == payment.amount, Order.currency == payment.currency,
+        *((Order.shop_id == actor.shop_id,) if actor.role == UserRole.SHOP_STAFF else ()),
+    ).values(status=OrderStatus.PROCESSING, processing_started_at=now, updated_at=now)
+        .execution_options(synchronize_session=False))
+    if started.rowcount != 1:
+        db.session.rollback()
+        raise VerificationError("The order changed during review. Reload the page.", 409)
     db.session.commit()
     return db.session.get(Payment, payment_id, populate_existing=True)

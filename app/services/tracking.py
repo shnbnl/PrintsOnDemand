@@ -34,7 +34,8 @@ def build_tracking(order: Order) -> OrderTracking:
         method = payment.payment_method.value.title()
         status = PaymentStatus.PAID.value
         payment_step = TrackingStep(
-            "Payment", "Online payment manually verified." if payment.reviewed_at else "Payment recorded as paid.",
+            "Payment", ("Onsite cash confirmed by the shop." if payment.payment_method == PaymentMethod.ONSITE
+                        else "Online payment manually verified.") if payment.reviewed_at else "Payment recorded as paid.",
             payment.reviewed_at or payment.updated_at,
         )
         next_step = {

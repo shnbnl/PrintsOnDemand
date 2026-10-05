@@ -20,7 +20,7 @@
     <section class="staff-queue" aria-labelledby="staff-queue-heading">
       <div class="section-heading"><div><p class="page-eyebrow">Live shop queue</p><h2 id="staff-queue-heading">What needs attention</h2><p class="hint">Counts reflect orders assigned to your shop.</p></div><a class="button button-secondary" href="{{ url_for('staff_orders.index') }}">View all orders</a></div>
       <div class="staff-metrics" aria-label="Order status overview">
-        <a class="staff-metric staff-metric--attention" href="{{ url_for('payment_verification.index') }}"><strong>{{ queue.payment_review }}</strong><span>Payment reviews</span><small>Submitted online references</small></a>
+        <a class="staff-metric staff-metric--attention" href="{{ url_for('payment_verification.index') }}"><strong>{{ queue.payment_review }}</strong><span>Payment actions</span><small>Online review or onsite cash</small></a>
         <a class="staff-metric staff-metric--attention" href="{{ url_for('staff_orders.index') }}"><strong>{{ queue.ready_to_print }}</strong><span>Ready to print</span><small>Paid orders awaiting processing</small></a>
         <a class="staff-metric" href="{{ url_for('staff_orders.index') }}"><strong>{{ queue.printing }}</strong><span>Printing</span><small>In progress</small></a>
         <a class="staff-metric" href="{{ url_for('staff_orders.index') }}"><strong>{{ queue.ready }}</strong><span>Ready</span><small>Pickup or delivery action</small></a>
@@ -29,15 +29,15 @@
       </div>
       {% if attention_orders %}
         <div class="staff-attention"><h3>Next actions</h3><ul class="staff-attention-list">
-          {% for order in attention_orders %}<li><div><strong>{{ order.order_reference }}</strong><span>{{ order.user.name }} · {{ order.destination.label if order.destination else 'Fulfillment not selected' }}</span></div><a class="button button-secondary" href="{{ url_for('payment_verification.detail', payment_id=order.payment.id) if order.payment and order.payment.payment_status.value == 'SUBMITTED' else url_for('staff_orders.detail', order_reference=order.order_reference) }}">{{ 'Review payment' if order.payment and order.payment.payment_status.value == 'SUBMITTED' else 'Start printing' }}</a></li>{% endfor %}
+          {% for order in attention_orders %}{% set payment_action = order.payment and order.payment.payment_status.value in ('SUBMITTED', 'PENDING') %}<li><div><strong>{{ order.order_reference }}</strong><span>{{ order.user.name }} · {{ order.destination.label if order.destination else 'Fulfillment not selected' }}</span></div><a class="button button-secondary" href="{{ url_for('payment_verification.detail', payment_id=order.payment.id) if payment_action else url_for('staff_orders.detail', order_reference=order.order_reference) }}">{{ 'Confirm onsite cash' if payment_action and order.payment.payment_method.value == 'ONSITE' else ('Review online payment' if payment_action else 'Start printing') }}</a></li>{% endfor %}
         </ul></div>
-      {% else %}<div class="staff-queue-empty"><strong>Queue is clear</strong><p>New payment reviews and paid orders will appear here.</p></div>{% endif %}
+      {% else %}<div class="staff-queue-empty"><strong>Queue is clear</strong><p>New online reviews, onsite cash orders, and paid jobs will appear here.</p></div>{% endif %}
     </section>
     <section class="staff-workspace" aria-labelledby="staff-workspace-heading">
       <div class="section-heading"><div><p class="page-eyebrow">Your operations</p><h2 id="staff-workspace-heading">Run this shop</h2></div></div>
       <div class="card-grid">
         <a class="action-card" href="{{ url_for('staff_orders.index') }}"><span class="eyebrow">01 / Production</span><h3>Shop orders</h3><p>Review incoming jobs and record printing progress.</p><span class="card-action">Open orders →</span></a>
-        <a class="action-card" href="{{ url_for('payment_verification.index') }}"><span class="eyebrow">02 / Payments</span><h3>Payment verification</h3><p>Check submitted references before recording payment.</p><span class="card-action">Review payments →</span></a>
+        <a class="action-card" href="{{ url_for('payment_verification.index') }}"><span class="eyebrow">02 / Payments</span><h3>Payment verification</h3><p>Review online references and confirm onsite cash once collected.</p><span class="card-action">Review payments →</span></a>
         <a class="action-card" href="{{ url_for('shop_staff.index') }}"><span class="eyebrow">03 / Shop profile</span><h3>Edit shop details</h3><p>Update your services, prices, photo, fees, and payment settings.</p><span class="card-action">Manage shop →</span></a>
         {% if shop.name == 'Blue and Silver Bookstore' %}<a class="action-card" href="{{ url_for('admin_management.professors') }}"><span class="eyebrow">04 / Recipients</span><h3>Professor management</h3><p>Review verified accounts and managed delivery profiles.</p><span class="card-action">Manage professors →</span></a>{% endif %}
       </div>

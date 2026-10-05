@@ -113,7 +113,7 @@
         {% if order.payment.payment_status.value == 'PENDING' %}
           <div class="payment-instructions"><h3>Pay onsite</h3><p>Order created. Payment will be made onsite. Your payment remains pending.</p><p>{{ onsite_instructions }}</p></div>
         {% elif order.payment.payment_status.value == 'PAID' %}
-          <p>Onsite payment was recorded as paid.</p>
+          <p>The shop confirmed receipt of your onsite cash payment.</p>
         {% endif %}
       {% elif order.payment.payment_method.value == 'ONLINE' %}
         {% if order.payment.payment_status.value == 'PAID' %}

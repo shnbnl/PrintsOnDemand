@@ -283,6 +283,9 @@ tbody tr:hover { background: #f1f5fa; }
 .page-staff_orders .operations-grid > .processing-focus { grid-column: 1 / -1; }
 .page-staff_orders .operations-grid > section:last-child { grid-column: auto; }
 .processing-focus .button { min-height: 3.1rem; }
+.cash-confirmation { display: flex; align-items: flex-start; gap: .65rem; padding: .9rem 1rem; border: 1px solid #b9cbe4; border-radius: .6rem; color: var(--navy); background: #f3f7fc; font-weight: 700; line-height: 1.45; }
+.cash-confirmation input { flex: none; width: 1.2rem; height: 1.2rem; margin-top: .1rem; accent-color: var(--cobalt); }
+.cash-confirmation:focus-within { outline: 3px solid rgb(29 58 138 / 17%); outline-offset: 2px; }
 .management-grid .section-card { scroll-margin-top: 6.5rem; }
 .management-grid .page-eyebrow { margin-bottom: .35rem; }
 .form-subheading { grid-column: 1 / -1; margin: .65rem 0 0; padding-top: .85rem; border-top: 1px solid var(--line); font-size: 1rem; }

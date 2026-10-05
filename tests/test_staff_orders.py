@@ -110,7 +110,7 @@ def test_staff_dashboard_counts_only_assigned_shop_work(client, test_app):
     assert dashboard.status_code == 200
     assert reference_a.encode() in dashboard.data
     assert reference_b.encode() not in dashboard.data
-    assert b"<strong>1</strong><span>Payment reviews</span>" in dashboard.data
+    assert b"<strong>1</strong><span>Payment actions</span>" in dashboard.data
     assert b"<strong>0</strong><span>Ready to print</span>" in dashboard.data
     with test_app.app_context():
         order = db.session.scalar(select(Order).where(Order.order_reference == reference_a))
@@ -120,7 +120,7 @@ def test_staff_dashboard_counts_only_assigned_shop_work(client, test_app):
     # identity map so the next request sees the committed payment update.
     db.session.expire_all()
     dashboard = client.get("/shop")
-    assert b"<strong>0</strong><span>Payment reviews</span>" in dashboard.data
+    assert b"<strong>0</strong><span>Payment actions</span>" in dashboard.data
     assert b"<strong>1</strong><span>Ready to print</span>" in dashboard.data
     sign_in(client, staff_b)
     dashboard = client.get("/shop")

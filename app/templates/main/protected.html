@@ -11,11 +11,8 @@
     </header>
     <div class="desk-strip" aria-label="Your workspace">
       <div><span class="desk-strip-label">Signed in as</span><strong>{{ current_user.name }}</strong><span>{{ current_user.role.value.title() }}</span></div>
-      {% if current_user.role.value == 'PROFESSOR' %}
-        <div><span class="desk-strip-label">Professor verification</span><strong>{{ current_user.professor_verification_status.value.title() }}</strong><span>Manage your details in Account</span></div>
-      {% else %}
-        <div><span class="desk-strip-label">Your orders</span><strong>History &amp; tracking</strong><span>Review payment and printing progress</span></div>
-      {% endif %}
+      <div><span class="desk-strip-label">Your orders</span><strong>History &amp; tracking</strong><span>Review payment and printing progress</span></div>
+      {% if current_user.role.value == 'PROFESSOR' %}<div><span class="desk-strip-label">Professor verification</span><strong>{{ current_user.professor_verification_status.value.title() }}</strong><span>Manage your details in Account</span></div>{% endif %}
       <a class="button button-secondary" href="{{ url_for('account.settings') }}">Account settings</a>
     </div>
     <div class="card-grid action-grid">
