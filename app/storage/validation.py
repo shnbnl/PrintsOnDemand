@@ -4,16 +4,17 @@ from __future__ import annotations
 
 import hashlib
 import io
-import xml.etree.ElementTree as ET
+import shutil
+import subprocess
+import tempfile
 import zipfile
 from dataclasses import dataclass
+from pathlib import Path
 
 from werkzeug.datastructures import FileStorage
 from werkzeug.utils import secure_filename
 
 from pypdf import PdfReader
-import olefile
-from olefile.olefile import OleFileError
 
 
 # This is the sole allowlist for uploads. Configuration may restrict size, not add types.
@@ -98,46 +99,48 @@ def count_pdf_pages(data: bytes) -> int:
         raise UploadValidationError("Unable to read this PDF. Please upload a valid PDF.") from error
 
 
-def count_word_document_pages(data: bytes, extension: str) -> int | None:
-    """Read a Word document's last saved pagination count when available.
-
-    Word pagination depends on fonts, layout settings, and the renderer. DOCX
-    and legacy DOC store a cached count when a paginating editor last saved
-    them; unknown counts remain unset rather than being guessed from text.
-    """
-    try:
-        if extension == "doc":
-            document = olefile.OleFileIO(io.BytesIO(data))
-            try:
-                count = document.get_metadata().num_pages
-            finally:
-                document.close()
-            return count if type(count) is int and count > 0 else None
-        if extension != "docx":
-            return None
-        with zipfile.ZipFile(io.BytesIO(data)) as archive:
-            try:
-                properties = archive.getinfo("docProps/app.xml")
-                if properties.file_size > 256 * 1024:
-                    return None
-                root = ET.fromstring(archive.read(properties))
-                pages = next((node.text for node in root.iter()
-                              if node.tag.rsplit("}", 1)[-1] == "Pages"), None)
-                pages = (pages or "").strip()
-                if pages.isdecimal() and int(pages) > 0:
-                    return int(pages)
-            except KeyError:
-                pass
-            document_xml = archive.getinfo("word/document.xml")
-            if document_xml.file_size > 4 * 1024 * 1024:
-                return None
-            root = ET.fromstring(archive.read(document_xml))
-            rendered_breaks = sum(node.tag.rsplit("}", 1)[-1] == "lastRenderedPageBreak"
-                                  for node in root.iter())
-            return rendered_breaks + 1 if rendered_breaks else None
-    except (OSError, ValueError, RuntimeError, EOFError, NotImplementedError,
-            zipfile.BadZipFile, ET.ParseError, OleFileError):
+def _render_word_document_pages(data: bytes, extension: str) -> int | None:
+    """Count the pages a local office renderer would print, when available."""
+    if extension not in {"doc", "docx"}:
         return None
+    converters = []
+    seen_executables = set()
+    for name in ("soffice", "libreoffice", "abiword"):
+        executable = shutil.which(name)
+        if executable and executable not in seen_executables:
+            converters.append((name, executable))
+            seen_executables.add(executable)
+    if not converters:
+        return None
+    try:
+        with tempfile.TemporaryDirectory(prefix="pod-pages-") as directory:
+            root = Path(directory)
+            source = root / f"document.{extension}"
+            target = root / "document.pdf"
+            source.write_bytes(data)
+            for name, executable in converters:
+                target.unlink(missing_ok=True)
+                if name == "abiword":
+                    command = [executable, "--to=pdf", str(source)]
+                else:
+                    profile = (root / f"profile-{name}").as_uri()
+                    command = [executable, f"-env:UserInstallation={profile}", "--headless",
+                               "--nodefault", "--norestore", "--convert-to", "pdf:writer_pdf_Export",
+                               "--outdir", str(root), str(source)]
+                try:
+                    subprocess.run(command, cwd=root, capture_output=True, timeout=15, check=False)
+                    if target.is_file() and target.stat().st_size <= 64 * 1024 * 1024:
+                        return count_pdf_pages(target.read_bytes())
+                except (OSError, subprocess.TimeoutExpired, UploadValidationError):
+                    continue
+    except OSError:
+        return None
+    return None
+
+
+def count_word_document_pages(data: bytes, extension: str) -> int | None:
+    """Use rendered output, never Word's potentially stale saved page count."""
+    return _render_word_document_pages(data, extension)
 
 
 def validate_upload(upload: FileStorage | None, max_size: int) -> ValidatedUpload:

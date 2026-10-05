@@ -12,7 +12,7 @@ from sqlalchemy import select
 from app.extensions import db
 from app.models import ColorMode, Order, PaperSize, PaymentMethod, PaymentStatus, PrintConfiguration, PrintPrice, PrintingShop, UploadedFile, UserRole
 from app.services.fulfillment import FulfillmentError
-from app.services.pricing import quote_cart
+from app.services.pricing import PricingError, quote_cart
 from app.storage import LocalStorage
 from test_orders import (
     PDF, pdf_bytes, approved_professor, file, offer_professor_service, pickup_fields,
@@ -285,6 +285,28 @@ def test_pdf_upload_counts_pages_and_rejects_malformed_pdf(client, test_app):
         assert db.session.scalar(select(UploadedFile).where(UploadedFile.original_filename == "broken.pdf")) is None
 
 
+def test_quote_refreshes_stale_staged_pdf_page_count(test_app):
+    owner = student(test_app)
+    shop_id = shop(test_app)
+    data = pdf_bytes(2)
+    with test_app.app_context():
+        key = LocalStorage(test_app.config["UPLOAD_STORAGE_ROOT"], test_app.static_folder).save(data, "pdf")
+        record = UploadedFile(
+            user_id=owner, original_filename="two-pages.pdf", stored_filename=key,
+            storage_key=key, mime_type="application/pdf", file_extension="pdf",
+            file_size=len(data), sha256=hashlib.sha256(data).hexdigest(), pdf_page_count=1,
+        )
+        db.session.add(record)
+        db.session.flush()
+        db.session.add(PrintConfiguration(file_id=record.id, paper_size=PaperSize.A4,
+                                          color_mode=ColorMode.GRAYSCALE, quantity=1, is_rush=False))
+        db.session.commit()
+        quote = quote_cart(user_id=owner, file_ids=[record.id], shop_id=shop_id,
+                           max_quantity=999, max_files=20)
+        assert quote.items[0].pdf_page_count == 2
+        assert record.pdf_page_count == 2
+
+
 def test_order_service_rechecks_stored_pdf_page_count(client, test_app):
     owner = student(test_app)
     shop_id = shop(test_app)
@@ -300,7 +322,7 @@ def test_order_service_rechecks_stored_pdf_page_count(client, test_app):
         assert db.session.scalar(select(Order)) is None
 
 
-def test_legacy_doc_without_saved_page_count_keeps_copy_based_pricing(test_app):
+def test_legacy_doc_without_page_count_cannot_be_underpriced(test_app):
     owner = student(test_app)
     shop_id = shop(test_app)
     data = bytes.fromhex("d0cf11e0a1b11ae1") + b"legacy document"
@@ -316,12 +338,33 @@ def test_legacy_doc_without_saved_page_count_keeps_copy_based_pricing(test_app):
         db.session.add(PrintConfiguration(file_id=record.id, paper_size=PaperSize.A4,
                                           color_mode=ColorMode.GRAYSCALE, quantity=3, is_rush=False))
         db.session.commit()
-        quote = quote_cart(user_id=owner, file_ids=[record.id], shop_id=shop_id,
-                           max_quantity=999, max_files=20)
-        item = quote.items[0]
-        assert (item.pdf_page_count, item.total_printed_pages, item.quantity, item.line_total) == (
-            None, None, 3, Decimal("6.75"),
-        )
+        with pytest.raises(PricingError, match="Export it as a PDF"):
+            quote_cart(user_id=owner, file_ids=[record.id], shop_id=shop_id,
+                       max_quantity=999, max_files=20)
+
+
+def test_word_without_renderer_shows_unavailable_count_and_blocks_checkout(monkeypatch, client, test_app):
+    monkeypatch.setattr("app.storage.validation.shutil.which", lambda name: None)
+    owner = student(test_app)
+    shop_id = shop(test_app)
+    sign_in(client, owner)
+    client.get(f"/checkout/upload?shop_id={shop_id}")
+    buffer = BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        archive.writestr("[Content_Types].xml", '<Types><Override ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>')
+        archive.writestr("word/document.xml", "<document/>")
+        archive.writestr("docProps/app.xml", "<Properties><Pages>1</Pages></Properties>")
+    response = client.post("/checkout/upload/files", data={
+        "csrf_token": token(client.get("/checkout/upload")),
+        "files": (BytesIO(buffer.getvalue()), "two-pages.docx"),
+    }, content_type="multipart/form-data")
+    assert response.status_code == 302
+    page = client.get("/checkout/shop")
+    assert page.status_code == 200
+    assert b"Unable to determine" in page.data
+    assert b"Page count unavailable" in page.data
+    assert b' data-quote-valid="false"' in page.data
+    assert b"Export it as a PDF" in page.data
 
 
 def test_docx_page_count_is_used_for_page_based_pricing(test_app):

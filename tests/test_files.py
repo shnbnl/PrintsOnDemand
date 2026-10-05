@@ -4,7 +4,6 @@ import hashlib
 import io
 import re
 import zipfile
-from types import SimpleNamespace
 from pathlib import Path
 
 import pytest
@@ -20,7 +19,7 @@ from app.storage import LocalStorage, StorageError
 from app.storage.validation import count_word_document_pages
 
 
-from test_orders import PDF
+from test_orders import PDF, pdf_bytes
 PASSWORD = "A-strong-password-123"
 
 
@@ -441,7 +440,8 @@ def test_ooxml_content_checked(client, test_app, extension, path):
     assert post_upload(client, b"PK fake zip", f"bad.{extension}", "application/octet-stream").status_code == 400
 
 
-def test_docx_upload_counts_last_saved_word_pages(client, test_app):
+def test_docx_upload_does_not_trust_saved_word_pages_without_renderer(monkeypatch, client, test_app):
+    monkeypatch.setattr("app.storage.validation.shutil.which", lambda name: None)
     sign_in(client, make_user(test_app))
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w") as archive:
@@ -456,10 +456,11 @@ def test_docx_upload_counts_last_saved_word_pages(client, test_app):
     assert response.status_code == 302
     with test_app.app_context():
         record = db.session.scalar(select(UploadedFile))
-        assert record.pdf_page_count == 4
+        assert record.pdf_page_count is None
 
 
-def test_docx_uses_saved_rendered_page_breaks_when_page_property_is_missing():
+def test_docx_does_not_trust_saved_rendered_page_breaks_without_renderer(monkeypatch):
+    monkeypatch.setattr("app.storage.validation.shutil.which", lambda name: None)
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w") as archive:
         archive.writestr(
@@ -471,19 +472,60 @@ def test_docx_uses_saved_rendered_page_breaks_when_page_property_is_missing():
             '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
             '<w:lastRenderedPageBreak/><w:lastRenderedPageBreak/></w:document>',
         )
-    assert count_word_document_pages(buffer.getvalue(), "docx") == 3
+    assert count_word_document_pages(buffer.getvalue(), "docx") is None
 
 
-def test_doc_page_count_uses_legacy_word_saved_metadata(monkeypatch):
-    class LegacyDocument:
-        def get_metadata(self):
-            return SimpleNamespace(num_pages=6)
+def test_docx_renderer_overrides_stale_one_page_metadata(monkeypatch, client, test_app):
+    sign_in(client, make_user(test_app))
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        archive.writestr("[Content_Types].xml", '<Types><Override ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>')
+        archive.writestr("word/document.xml", "<document/>")
+        archive.writestr("docProps/app.xml", "<Properties><Pages>1</Pages></Properties>")
 
-        def close(self):
-            pass
+    monkeypatch.setattr("app.storage.validation.shutil.which",
+                        lambda name: "/usr/bin/soffice" if name == "soffice" else None)
 
-    monkeypatch.setattr("app.storage.validation.olefile.OleFileIO", lambda data: LegacyDocument())
+    def convert(command, *, cwd, capture_output, timeout, check):
+        assert command[0] == "/usr/bin/soffice"
+        assert command[command.index("--convert-to") + 1] == "pdf:writer_pdf_Export"
+        (cwd / "document.pdf").write_bytes(pdf_bytes(2))
+
+    monkeypatch.setattr("app.storage.validation.subprocess.run", convert)
+    response = post_upload(client, buffer.getvalue(), "two-pages.docx",
+                           "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+    assert response.status_code == 302
+    with test_app.app_context():
+        assert db.session.scalar(select(UploadedFile)).pdf_page_count == 2
+
+
+def test_docx_does_not_treat_stale_one_page_metadata_as_verified(monkeypatch):
+    monkeypatch.setattr("app.storage.validation.shutil.which", lambda name: None)
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        archive.writestr("word/document.xml", "<document/>")
+        archive.writestr("docProps/app.xml", "<Properties><Pages>1</Pages></Properties>")
+    assert count_word_document_pages(buffer.getvalue(), "docx") is None
+
+
+def test_doc_uses_abiword_rendered_pdf_when_available(monkeypatch):
+    monkeypatch.setattr("app.storage.validation.shutil.which",
+                        lambda name: "/usr/bin/abiword" if name == "abiword" else None)
+
+    def convert(command, *, cwd, capture_output, timeout, check):
+        assert command[:2] == ["/usr/bin/abiword", "--to=pdf"]
+        (cwd / "document.pdf").write_bytes(pdf_bytes(6))
+
+    monkeypatch.setattr("app.storage.validation.subprocess.run", convert)
     assert count_word_document_pages(bytes.fromhex("d0cf11e0a1b11ae1"), "doc") == 6
+
+
+def test_page_count_cli_reports_pdf_pages(test_app, tmp_path):
+    document = tmp_path / "two.pdf"
+    document.write_bytes(pdf_bytes(2))
+    result = test_app.test_cli_runner().invoke(args=["check-page-count", str(document)])
+    assert result.exit_code == 0
+    assert "Document pages: 2" in result.output
 
 
 def test_ooxml_wrong_main_type_and_macro_entry_rejected(client, test_app):

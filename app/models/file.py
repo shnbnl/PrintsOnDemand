@@ -27,7 +27,7 @@ class UploadedFile(db.Model):
     file_extension: Mapped[str] = mapped_column(db.String(8), nullable=False)
     file_size: Mapped[int] = mapped_column(db.BigInteger, nullable=False)
     sha256: Mapped[str] = mapped_column(db.String(64), nullable=False)
-    # Cached page count when the file contains readable pagination metadata.
+    # Counted PDF pages or rendered Word pages; never trust Word's saved metadata.
     # Values are derived only from the private stored bytes.
     pdf_page_count: Mapped[int | None] = mapped_column(db.Integer, nullable=True)
     # Set only for uploads made in guided checkout. Legacy library rows remain

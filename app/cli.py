@@ -1,6 +1,7 @@
 """Controlled account provisioning for staff and administrators."""
 
 import click
+from pathlib import Path
 from uuid import uuid4
 from email_validator import EmailNotValidError, validate_email
 from flask import Flask, current_app
@@ -15,6 +16,25 @@ from app.services.professors import PROFESSOR_DELIVERY_SHOP
 
 
 def register_commands(app: Flask) -> None:
+    @app.cli.command("check-page-count")
+    @click.argument("document", type=click.Path(exists=True, dir_okay=False, path_type=Path))
+    def check_page_count(document: Path) -> None:
+        """Check a PDF or Word file with the same parser used by checkout."""
+        from app.storage.validation import UploadValidationError, count_pdf_pages, count_word_document_pages
+
+        extension = document.suffix.lower().lstrip(".")
+        if extension not in {"pdf", "doc", "docx"}:
+            raise click.ClickException("Choose a PDF, DOC, or DOCX file.")
+        try:
+            data = document.read_bytes()
+            pages = (count_pdf_pages(data) if extension == "pdf"
+                     else count_word_document_pages(data, extension))
+        except (OSError, UploadValidationError) as error:
+            raise click.ClickException(f"Could not count pages: {error}") from error
+        if pages is None:
+            raise click.ClickException("Word pages could not be rendered. Check for soffice, libreoffice, or abiword; or export the file as PDF.")
+        click.echo(f"Document pages: {pages}")
+
     @app.cli.command("cleanup-staged-uploads")
     def cleanup_checkout_uploads() -> None:
         """Remove expired, unattached checkout files without touching legacy or order files."""

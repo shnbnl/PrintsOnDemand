@@ -142,7 +142,8 @@
           if (version !== revision) content.classList.remove('is-switching');
           content.removeAttribute("aria-busy");
           content.inert = false;
-          form.querySelector("[data-workspace-proceed]").disabled = !select.value;
+          form.querySelector("[data-workspace-proceed]").disabled =
+            !select.value || content.querySelector('[data-quote-valid]')?.dataset.quoteValid !== 'true';
         }
       }
     });
@@ -159,11 +160,15 @@
         const result = await send(data);
         if (version !== revision) return;
         total.textContent = `${result.currency} ${result.total}`;
+        content.querySelector('[data-quote-valid]').dataset.quoteValid = 'true';
+        content.querySelector('[data-workspace-proceed]').disabled = false;
         content.querySelector("[data-quote-error]").hidden = true;
         report("");
       } catch (issue) {
         if (version !== revision) return;
         total.textContent = "Check print settings";
+        content.querySelector('[data-quote-valid]').dataset.quoteValid = 'false';
+        content.querySelector('[data-workspace-proceed]').disabled = true;
         report(issue.message);
       }
     });

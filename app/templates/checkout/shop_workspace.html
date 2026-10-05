@@ -8,9 +8,9 @@
 {% else %}<section class="workspace-shop-summary"><h2>Choose your printing shop</h2><p>Tap a map pin to see its services and prices.</p></section>{% endif %}
 {% include "checkout/print_settings.html" %}
 </div>
-<footer class="workspace-total">
+<footer class="workspace-total" data-quote-valid="{{ 'true' if preview_quote else 'false' }}">
   <p class="notice notice-error" data-quote-error role="alert" {% if not error %}hidden{% endif %}>{{ error or '' }}</p>
   <div class="summary-row"><span>Printing total</span><strong data-print-total aria-live="polite">{{ (preview_quote.currency ~ ' ' ~ preview_quote.total) if preview_quote else 'Select valid settings' }}</strong></div>
   <p class="hint">Delivery fees are added at Fulfillment when applicable.</p>
-  <button class="button button-primary button-block" name="intent" value="proceed" type="submit" data-workspace-proceed {% if not shop %}disabled{% endif %}>Proceed to Fulfillment →</button>
+  <button class="button button-primary button-block" name="intent" value="proceed" type="submit" data-workspace-proceed {% if not shop or not preview_quote %}disabled{% endif %}>Proceed to Fulfillment →</button>
 </footer>

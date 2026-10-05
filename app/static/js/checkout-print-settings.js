@@ -19,7 +19,12 @@ function updatePrintedPageSummary(group) {
   if (group.dataset.pageCountCapable !== "true" || !group.dataset.documentPages) {
     output.textContent = group.dataset.pageCountCapable === "true"
       ? "Unable to determine" : "Not available for this file type";
-    updateFileEstimate(group, count, 1);
+    if (group.dataset.pageCountCapable === "true") {
+      const estimate = group.querySelector('[data-file-print-total]');
+      if (estimate) estimate.textContent = "Page count unavailable";
+    } else {
+      updateFileEstimate(group, count, 1);
+    }
     return;
   }
   const pages = Number(group.dataset.documentPages);
@@ -31,6 +36,10 @@ function updatePrintedPageSummary(group) {
 function updateFileEstimate(group, count, pages) {
   const output = group.querySelector('[data-file-print-total]');
   if (!output) return;
+  if (group.dataset.pageCountCapable === "true" && !group.dataset.documentPages) {
+    output.textContent = "Page count unavailable";
+    return;
+  }
   const selected = group.querySelector('[data-price-choice]:checked');
   const price = Number(selected?.dataset.unitPrice);
   const multiplier = group.dataset.pageCountCapable === "true" ? pages : 1;

@@ -144,10 +144,13 @@ def quote_order(
     pdf_page_count = uploaded_file.pdf_page_count
     if uploaded_file.file_extension in {"pdf", "doc", "docx"}:
         try:
-            actual_page_count = (
-                count_pdf_pages(data) if uploaded_file.file_extension == "pdf" else
-                count_word_document_pages(data, uploaded_file.file_extension)
-            ) if verify_pdf or pdf_page_count is None else pdf_page_count
+            if uploaded_file.file_extension == "pdf":
+                # PDFs have an exact page tree; refresh older staged counts too.
+                actual_page_count = count_pdf_pages(data)
+            elif pdf_page_count is None or pdf_page_count == 1:
+                actual_page_count = count_word_document_pages(data, uploaded_file.file_extension)
+            else:
+                actual_page_count = pdf_page_count
         except UploadValidationError as error:
             raise PricingError(str(error), 400) from error
         if verify_pdf and pdf_page_count is not None and actual_page_count != pdf_page_count:
@@ -155,6 +158,9 @@ def quote_order(
         if actual_page_count is not None:
             pdf_page_count = actual_page_count
             uploaded_file.pdf_page_count = actual_page_count
+        elif uploaded_file.file_extension in {"doc", "docx"}:
+            uploaded_file.pdf_page_count = None
+            raise PricingError("Unable to count this Word file's pages. Export it as a PDF and upload that file for accurate pricing.")
     total_printed_pages = pdf_page_count * quantity if pdf_page_count is not None else None
 
     rate = db.session.scalar(
@@ -251,10 +257,8 @@ def verify_quote_page_counts(quote: CartQuote | OrderQuote) -> None:
             if (len(data) != uploaded_file.file_size
                     or hashlib.sha256(data).hexdigest() != uploaded_file.sha256):
                 raise PricingError("The uploaded file is unavailable.", 409)
-            actual_page_count = (
-                count_pdf_pages(data) if uploaded_file.file_extension == "pdf" else
-                count_word_document_pages(data, uploaded_file.file_extension)
-            )
+            actual_page_count = (count_pdf_pages(data) if uploaded_file.file_extension == "pdf"
+                                 else uploaded_file.pdf_page_count)
         except (StorageError, OSError) as error:
             raise PricingError("The uploaded file is unavailable.", 409) from error
         except UploadValidationError as error:
