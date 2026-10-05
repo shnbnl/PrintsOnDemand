@@ -87,7 +87,17 @@
         clickableIcons: false,
         mapTypeControl: false,
         streetViewControl: false,
+        ...(workspace && google.maps.ControlPosition ? {
+          fullscreenControlOptions: { position: google.maps.ControlPosition.LEFT_TOP },
+          zoomControlOptions: { position: google.maps.ControlPosition.LEFT_TOP },
+        } : {}),
       });
+      if (workspace && map.panBy) {
+        const panel = workspace.querySelector('.workspace-panel');
+        const offset = panel.getBoundingClientRect();
+        if (window.matchMedia('(max-width: 900px)').matches) map.panBy(0, offset.height / 2 + 60);
+        else map.panBy(offset.width / 2, 0);
+      }
 
       shops.forEach((shop) => {
         const pin = document.createElement("span");

@@ -215,6 +215,16 @@ def options_state(options):
 
 
 def submitted_options(files, values):
+    values = values.copy()
+    for file in files:
+        key = f"print_choice_{file.id}"
+        if key in values:
+            choices = values.getlist(key)
+            if len(choices) != 1 or len(choices[0].split(":")) != 2:
+                raise PricingError("Select one valid price cell for each file.")
+            paper, mode = choices[0].split(":")
+            values.setlist(f"paper_size_{file.id}", [paper])
+            values.setlist(f"color_mode_{file.id}", [mode])
     posted_ids, options = parse_files(values)
     if posted_ids != [file.id for file in files] or len(options) != len(files):
         raise PricingError("Complete the print settings for each selected file.")

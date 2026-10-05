@@ -131,7 +131,7 @@ def test_configure_each_supported_size_color_count_and_rush_rule(client, test_ap
     page = client.get("/checkout/shop")
     assert b"Print settings" in page.data
     for size in PaperSize:
-        assert f'value="{size.value}"'.encode() in page.data
+        assert f'value="{size.value}:GRAYSCALE"'.encode() in page.data
         assert configure(size=size.value).status_code == 302
     for mode in ColorMode:
         assert configure(mode=mode.value).status_code == 302

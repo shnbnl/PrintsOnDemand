@@ -12,6 +12,11 @@
           <div class="workspace-map-viewport">
             <div id="shop-map" class="map-canvas" role="region" aria-label="Select a printing shop on the map" data-api-key="{{ maps_api_key }}" data-map-id="{{ maps_map_id }}" data-center-lat="{{ center.lat }}" data-center-lng="{{ center.lng }}" data-selected-shop-id="{{ selected_shop_id or '' }}"></div>
             <div id="map-message" class="map-message" role="status"><h2>{{ 'Loading map…' if maps_api_key and maps_map_id else 'Map unavailable' }}</h2><p>Use the shop selector to keep preparing your order.</p></div>
+            <aside class="workspace-panel" aria-label="Shop information and print settings">
+              <button class="workspace-toggle" type="button" data-panel-toggle aria-expanded="true">Minimize panel</button>
+              <p class="notice notice-error" data-workspace-error role="alert" hidden></p>
+              <div data-workspace-content>{% include "checkout/shop_workspace.html" %}</div>
+            </aside>
             <div class="workspace-pin-preview" data-pin-preview hidden aria-live="polite"></div>
           </div>
           <div class="workspace-shop-picker" data-workspace-picker>
@@ -24,10 +29,7 @@
         <p class="hint">Tap a pin to select a shop. Your files stay with you when you switch.</p>
         <a class="back-link" href="{{ url_for('checkout.upload') }}">← Back to files</a>
       </section>
-      <aside class="workspace-panel" aria-label="Shop information and print settings">
-        <p class="notice notice-error" data-workspace-error role="alert" hidden></p>
-        <div data-workspace-content>{% include "checkout/shop_workspace.html" %}</div>
-      </aside>
+
     </div>
   </form>
   {% else %}<section class="content-card empty-state"><p>No active shops are available right now.</p></section>{% endif %}

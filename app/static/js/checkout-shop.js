@@ -9,6 +9,36 @@
   let revision = 0;
   let timer;
   let pendingSelections = 0;
+  let activeFile;
+  const panel = form.querySelector('.workspace-panel');
+  const toggle = form.querySelector('[data-panel-toggle]');
+  function expandPanel() {
+    panel.classList.remove('is-minimized');
+    toggle.textContent = 'Minimize panel';
+    toggle.setAttribute('aria-expanded', 'true');
+  }
+  toggle.addEventListener('click', () => {
+    const minimized = panel.classList.toggle('is-minimized');
+    toggle.textContent = minimized ? 'Open print settings' : 'Minimize panel';
+    toggle.setAttribute('aria-expanded', String(!minimized));
+  });
+  function activateFile(id) {
+    const selector = content.querySelector('[data-file-selector]');
+    if (![...selector.options].some(option => option.value === String(id))) id = selector.value;
+    activeFile = String(id);
+    selector.value = activeFile;
+    content.querySelectorAll('[data-file-settings]').forEach(group => {
+      group.hidden = group.dataset.fileSettings !== activeFile;
+    });
+  }
+  activateFile(content.querySelector('[data-file-selector]').value);
+  content.addEventListener('change', event => {
+    if (event.target.matches('[data-file-selector]')) activateFile(event.target.value);
+  });
+  form.addEventListener('invalid', event => {
+    const group = event.target.closest('[data-file-settings]');
+    if (group) { expandPanel(); activateFile(group.dataset.fileSettings); }
+  }, true);
 
   function report(message) {
     error.textContent = message || "";
@@ -26,6 +56,7 @@
   }
   function selectShop(id) {
     if (![...select.options].some((option) => option.value === String(id))) return;
+    expandPanel();
     clearTimeout(timer);
     const version = ++revision;
     select.value = String(id);
@@ -40,6 +71,8 @@
         const result = await send(data);
         if (version !== revision) return;
         content.innerHTML = result.html;
+        activateFile(activeFile);
+        expandPanel();
         document.dispatchEvent(new CustomEvent("pod:shop-highlight", { detail: { id: result.shop_id } }));
         report("");
       } catch (issue) {
@@ -84,8 +117,17 @@
   form.querySelector("[data-load-shop]").hidden = true;
   form.addEventListener("input", (event) => {
     if (!event.target.closest("[data-workspace-content]")) return;
+    if (event.target.matches('[data-file-selector]')) return;
+    if (event.target.matches('[data-price-choice]')) {
+      const group = event.target.closest('[data-file-settings]');
+      const [paper, mode] = event.target.value.split(':');
+      group.querySelector('[name^="paper_size_"]').value = paper;
+      group.querySelector('[name^="color_mode_"]').value = mode;
+      group.querySelector('[data-selection-summary]').textContent = `${paper} · ${mode === 'COLOR' ? 'Color' : 'Grayscale'}`;
+    }
     revision += 1;
     clearTimeout(timer);
+    content.querySelector('[data-print-total]').textContent = 'Updating…';
     timer = setTimeout(updateQuote, 300);
   });
   form.addEventListener("submit", (event) => {

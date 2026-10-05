@@ -1,22 +1,36 @@
-    <section class="content-card checkout-customize"><p class="page-eyebrow">Customize print</p><h2>Print settings</h2><p class="hint">Each file has its own settings. The shop's current rates determine the final price.</p>
-      <div class="checkout-config-list">{% for file in files %}{% set choice = options.get(file.id) %}{% set saved = file.configuration %}
-        <fieldset class="checkout-file-group"><legend>{{ loop.index }}. {{ file.original_filename }}</legend>
-          <p class="hint">Choose how this file should be printed.</p><input type="hidden" name="file_id" value="{{ file.id }}">
-          <div class="print-option-grid">
-            <fieldset class="print-option-card"><legend>Paper Size</legend><div class="print-radio-grid">
-              {% for size in paper_sizes %}<label class="print-option-choice"><input type="radio" name="paper_size_{{ file.id }}" value="{{ size.value }}" {% if size.value == (choice.paper_size if choice else saved.paper_size.value if saved else 'A4') %}checked{% endif %} required><span>{{ size.label }}</span></label>{% endfor %}
-            </div></fieldset>
-            <fieldset class="print-option-card"><legend>Print Color Output</legend><div class="print-radio-grid">
-              {% for mode in color_modes %}<label class="print-option-choice"><input type="radio" name="color_mode_{{ file.id }}" value="{{ mode.value }}" {% if mode.value == (choice.color_mode if choice else saved.color_mode.value if saved else 'GRAYSCALE') %}checked{% endif %} required><span>{{ mode.label }}</span></label>{% endfor %}
-            </div></fieldset>
-            <fieldset class="print-option-card"><legend>Print Count</legend><div class="print-count-control" data-print-count>
-              <button type="button" data-count-step="-1" aria-label="Decrease print count for {{ file.original_filename }}">−</button>
-              <input id="quantity-{{ file.id }}" name="quantity_{{ file.id }}" type="number" inputmode="numeric" min="1" max="{{ max_quantity }}" step="1" value="{{ choice.quantity if choice else saved.quantity if saved else 1 }}" aria-label="Print count for {{ file.original_filename }}" aria-describedby="count-hint-{{ file.id }}" required>
-              <button type="button" data-count-step="1" aria-label="Increase print count for {{ file.original_filename }}">+</button>
-            </div><p class="hint" id="count-hint-{{ file.id }}">Print count must be between 1 and {{ max_quantity }}.</p></fieldset>
-            <fieldset class="print-option-card"><legend>Printing Priority</legend><label class="print-option-choice print-rush-choice"><input type="checkbox" name="is_rush_{{ file.id }}" value="1" {% if rush_available and (choice.is_rush if choice else saved.is_rush if saved else false) %}checked{% endif %} {% if not rush_available %}disabled{% endif %}><span>Rush printing</span></label>
-              <p class="hint">{% if rush_available %}Request priority handling. Any fee appears in the price summary.{% else %}This shop does not offer rush printing.{% endif %}</p></fieldset>
-          </div>
-        </fieldset>{% endfor %}</div>
-      <p class="hint">The current price model charges per print count; it does not inspect document page counts or offer page ranges or duplex printing.</p>
-    </section>
+<section class="checkout-customize">
+  <h2>Print settings</h2>
+  <label class="sr-only" for="workspace-file">Active file</label>
+  <select id="workspace-file" data-file-selector>{% for file in files %}<option value="{{ file.id }}">{{ loop.index }}. {{ file.original_filename }}</option>{% endfor %}</select>
+  <p class="hint">Click a price to choose paper and output for this file.</p>
+  {% for file in files %}{% set choice = options[file.id] %}
+  <fieldset class="workspace-file" data-file-settings="{{ file.id }}">
+    <legend class="sr-only">{{ file.original_filename }}</legend>
+    <input type="hidden" name="file_id" value="{{ file.id }}">
+    <input type="hidden" name="paper_size_{{ file.id }}" value="{{ choice.paper_size }}">
+    <input type="hidden" name="color_mode_{{ file.id }}" value="{{ choice.color_mode }}">
+    {% if shop %}
+    <table class="print-price-selector">
+      <caption class="sr-only">Choose a print setup for {{ file.original_filename }}</caption>
+      <thead><tr><th scope="col">Paper</th><th scope="col">Grayscale / page</th><th scope="col">Color / page</th></tr></thead>
+      <tbody>{% for row in shop_details.price_rows %}<tr><th scope="row">{{ row.size.label }}</th>
+        {% for mode, rate in [('GRAYSCALE', row.grayscale), ('COLOR', row.color)] %}
+        <td>{% if rate %}<label class="price-cell">
+          <input type="radio" name="print_choice_{{ file.id }}" value="{{ row.size.value }}:{{ mode }}" data-price-choice {% if choice.paper_size == row.size.value and choice.color_mode == mode %}checked{% endif %} aria-label="{{ row.size.label }} {{ 'Grayscale' if mode == 'GRAYSCALE' else 'Color' }}, PHP {{ rate.price }}">
+          <span>₱{{ '%.2f'|format(rate.price) }}</span><span class="price-check" aria-hidden="true">✓</span>
+        </label>{% else %}<span class="price-unavailable" aria-label="{{ row.size.label }} {{ mode }} not offered">Not offered</span>{% endif %}</td>
+        {% endfor %}</tr>{% endfor %}</tbody>
+    </table>
+    <p class="workspace-selection" data-selection-summary aria-live="polite">{{ choice.paper_size }} · {{ 'Color' if choice.color_mode == 'COLOR' else 'Grayscale' }}</p>
+    {% else %}<p class="hint">Select a shop pin to see its available prices.</p>{% endif %}
+    <div class="workspace-file-controls">
+      <div><label for="quantity-{{ file.id }}">Print Count</label><div class="print-count-control" data-print-count>
+        <button type="button" data-count-step="-1" aria-label="Decrease print count for {{ file.original_filename }}">−</button>
+        <input id="quantity-{{ file.id }}" name="quantity_{{ file.id }}" type="number" inputmode="numeric" min="1" max="{{ max_quantity }}" step="1" value="{{ choice.quantity }}" required>
+        <button type="button" data-count-step="1" aria-label="Increase print count for {{ file.original_filename }}">+</button>
+      </div></div>
+      <div><span class="workspace-file-label">Printing Priority</span><label class="workspace-rush"><input type="checkbox" name="is_rush_{{ file.id }}" value="1" {% if rush_available and choice.is_rush %}checked{% endif %} {% if not rush_available %}disabled{% endif %}> Rush printing</label></div>
+    </div>
+  </fieldset>{% endfor %}
+  <p class="hint workspace-rate-note">Prices use your print count; document pages are not counted automatically.{% if rush_available %} Rush fees are included in the total.{% endif %}</p>
+</section>
