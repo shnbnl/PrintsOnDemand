@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Printing shop log-in | Prints On Demand{% endblock %}
+
+{% block content %}
+  <div class="auth-shell">
+    <img class="auth-brand" src="{{ url_for('static', filename='img/prints-on-demand-logo.png') }}" alt="" width="88" height="88">
+    <header class="auth-heading">
+      <p class="page-eyebrow">Prints On Demand</p>
+      <h1>Printing shop sign-in</h1>
+      <p class="page-lead">Choose your assigned shop and enter your staff credentials.</p>
+    </header>
+    <section class="content-card auth-card" aria-labelledby="shop-login-heading">
+      <h2 id="shop-login-heading">Shop staff</h2>
+      <form class="account-form form-stack" method="post" novalidate>
+        {{ form.hidden_tag() }}
+        <div class="field">
+          {{ form.shop_id.label }}
+          {{ form.shop_id() }}
+          {% for error in form.shop_id.errors %}<p class="field-error" role="alert">{{ error }}</p>{% endfor %}
+        </div>
+        <div class="field">
+          {{ form.identifier.label }}
+          {{ form.identifier(autocomplete="username", placeholder="Your staff email or name") }}
+          {% for error in form.identifier.errors %}<p class="field-error" role="alert">{{ error }}</p>{% endfor %}
+        </div>
+        <div class="field">
+          {{ form.password.label }}
+          {{ form.password(autocomplete="current-password", placeholder="Enter your password") }}
+          {% for error in form.password.errors %}<p class="field-error" role="alert">{{ error }}</p>{% endfor %}
+        </div>
+        {{ form.submit(class_="button button-primary button-block") }}
+      </form>
+      <p class="hint">Ask your system administrator for a staff account if your shop has not been set up yet.</p>
+    </section>
+  </div>
+{% endblock %}

@@ -45,3 +45,13 @@ class BlueStaffLoginForm(FlaskForm):
     name = StringField("Name", filters=[strip_text], validators=[DataRequired()])
     password = PasswordField("Password", validators=[DataRequired()])
     submit = SubmitField("Log-in")
+
+
+class ShopStaffLoginForm(FlaskForm):
+    shop_id = SelectField("Printing shop", coerce=int, validators=[DataRequired()])
+    identifier = StringField(
+        "Staff email or name", filters=[strip_text],
+        validators=[DataRequired(), Length(max=254)],
+    )
+    password = PasswordField("Password", validators=[DataRequired()])
+    submit = SubmitField("Log in to shop")

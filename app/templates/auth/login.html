@@ -39,7 +39,6 @@
     {% if blue_login %}
       <p class="auth-switch"><a href="{{ url_for('auth.login') }}">Student, professor, or other staff log-in</a></p>
     {% else %}
-      <p class="auth-switch">Blue and Silver staff? <a href="{{ url_for('auth.login', blue='1', next=request.args.get('next')) }}">Log in with your name</a></p>
       <p class="auth-switch">Need an account? <a href="{{ url_for('auth.register') }}">Register as a student or professor</a></p>
     {% endif %}
   </div>

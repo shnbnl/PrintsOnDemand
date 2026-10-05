@@ -2,13 +2,13 @@
 
 from urllib.parse import urlsplit
 
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, flash, make_response, redirect, render_template, request, url_for
 from flask_login import current_user, login_user, logout_user
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
-from app.forms import BlueStaffLoginForm, LoginForm, RegistrationForm
+from app.forms import BlueStaffLoginForm, LoginForm, RegistrationForm, ShopStaffLoginForm
 from app.models import PrintingShop, User, UserRole
 from app.services.professors import PROFESSOR_DELIVERY_SHOP
 
@@ -103,6 +103,38 @@ def login():
         form.password.errors.append("Invalid name or password." if blue_login else "Invalid email or password.")
 
     return render_template("auth/login.html", form=form, blue_login=blue_login)
+
+
+@auth_bp.route("/shop-login", methods=["GET", "POST"])
+def shop_login():
+    """Staff-only credential entry, separate from student/professor sign-in."""
+    if current_user.is_authenticated:
+        return redirect(role_home(current_user.role))
+
+    form = ShopStaffLoginForm()
+    shops = db.session.execute(
+        select(PrintingShop.id, PrintingShop.name).order_by(PrintingShop.name)
+    ).all()
+    form.shop_id.choices = [(0, "Select your shop")] + [(id, name) for id, name in shops]
+    if form.validate_on_submit():
+        identifier = form.identifier.data.casefold()
+        candidates = db.session.scalars(select(User).where(
+            User.role == UserRole.SHOP_STAFF,
+            User.shop_id == form.shop_id.data,
+            User.is_active.is_(True),
+        )).all()
+        if "@" in identifier:
+            matches = [user for user in candidates if user.email == identifier]
+        else:
+            matches = [user for user in candidates if user.name.casefold() == identifier]
+        user = matches[0] if len(matches) == 1 else None
+        if user and user.check_password(form.password.data):
+            login_user(user, remember=False)
+            return redirect(safe_next_url(request.args.get("next")) or role_home(user.role))
+        form.password.errors.append("Invalid shop, staff email or name, or password.")
+    response = make_response(render_template("auth/shop_login.html", form=form))
+    response.headers["X-Robots-Tag"] = "noindex, nofollow"
+    return response
 
 
 @auth_bp.post("/logout")
