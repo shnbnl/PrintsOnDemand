@@ -24,10 +24,10 @@
           <a href="{{ url_for('checkout.upload') }}" {% if request.blueprint == 'checkout' %}aria-current="page"{% endif %}>Start Order</a>
           <a href="{{ url_for('orders.index') }}" {% if request.blueprint == 'orders' %}aria-current="page"{% endif %}>Order History</a>
         {% elif current_user.role.value == 'SHOP_STAFF' %}
-          <a href="{{ url_for('access.shop') }}" {% if request.endpoint == 'access.shop' %}aria-current="page"{% endif %}>Assigned Shop</a>
-          {% if current_user.shop %}<a href="{{ url_for('shop_staff.index') }}" {% if request.blueprint == 'shop_staff' %}aria-current="page"{% endif %}>Edit Shop</a>{% endif %}
-          <a href="{{ url_for('staff_orders.index') }}" {% if request.blueprint == 'staff_orders' %}aria-current="page"{% endif %}>Shop Orders</a>
-          <a href="{{ url_for('payment_verification.index') }}" {% if request.blueprint == 'payment_verification' %}aria-current="page"{% endif %}>Payment verification</a>
+          <a href="{{ url_for('access.shop') }}" {% if request.endpoint == 'access.shop' %}aria-current="page"{% endif %}>Dashboard</a>
+          <a href="{{ url_for('staff_orders.index') }}" {% if request.blueprint == 'staff_orders' %}aria-current="page"{% endif %}>Orders</a>
+          <a href="{{ url_for('payment_verification.index') }}" {% if request.blueprint == 'payment_verification' %}aria-current="page"{% endif %}>Payments</a>
+          {% if current_user.shop %}<a href="{{ url_for('shop_staff.index') }}" {% if request.blueprint == 'shop_staff' %}aria-current="page"{% endif %}>Shop settings</a>{% endif %}
           {% if current_user.shop and current_user.shop.name == 'Blue and Silver Bookstore' %}<a href="{{ url_for('admin_management.professors') }}" {% if request.blueprint == 'admin_management' %}aria-current="page"{% endif %}>Professor Management</a>{% endif %}
         {% elif current_user.role.value == 'ADMIN' %}
           <a href="{{ url_for('access.admin') }}" {% if request.endpoint == 'access.admin' %}aria-current="page"{% endif %}>Admin management</a>

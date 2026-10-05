@@ -3,7 +3,7 @@
 {% block title %}Assign {{ user.name }} | Prints On Demand{% endblock %}
 
 {% block content %}
-  <a class="back-link" href="{{ url_for('admin_management.staff_index') }}">← Staff assignments</a>
+  {% set back_url = url_for('admin_management.staff_index') %}{% set back_label = 'Back to staff assignments' %}{% include '_vector_back.html' %}
   <header class="page-intro">
     <p class="eyebrow">Administration / Team</p>
     <h1>Assign {{ user.name }}</h1>

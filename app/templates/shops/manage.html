@@ -7,7 +7,7 @@
 {% block title %}Manage {{ shop.name }} | Prints On Demand{% endblock %}
 
 {% block content %}
-  <a class="back-link" href="{{ url_for('access.shop') }}">← Assigned shop</a>
+  {% set back_url = url_for('access.shop') %}{% set back_label = 'Back to shop dashboard' %}{% include '_vector_back.html' %}
   <header class="page-intro">
     <p class="page-eyebrow">Your printing shop</p>
     <h1>Manage {{ shop.name }}</h1>
@@ -15,35 +15,20 @@
   </header>
 
   <nav class="management-jump" aria-label="Shop settings sections">
-    <a href="#payment-settings">Payments</a><a href="#shop-information">Information</a><a href="#shop-photo">Photo</a><a href="#shop-services">Services</a><a href="#shop-prices">Prices</a><a href="#delivery-settings">Delivery fee</a><a href="#shop-fees">Other fees</a>
+    <a href="#shop-information">Profile &amp; hours</a><a href="#shop-photo">Photo</a><a href="#shop-services">Services</a><a href="#shop-prices">Prices</a><a href="#delivery-settings">Delivery fee</a><a href="#payment-settings">Payments</a><a href="#shop-fees">Other fees</a>
   </nav>
 
   <div class="management-grid">
-    <section class="section-card" id="payment-settings">
-      <h2>Payment settings</h2>
-      <p class="hint">These methods and details appear only for your assigned shop. Online references still require staff verification.</p>
-      <form class="account-form form-grid" method="post" action="{{ url_for('shop_staff.save_payment') }}" enctype="multipart/form-data" novalidate>
-        {{ payment_form.hidden_tag() }}
-        <div class="checkbox-field">{{ payment_form.cash_enabled() }} {{ payment_form.cash_enabled.label }}</div>
-        <div class="checkbox-field">{{ payment_form.online_enabled() }} {{ payment_form.online_enabled.label }}</div>
-        <div class="field field-wide">{{ payment_form.online_account_name.label }} {{ payment_form.online_account_name() }}{{ errors(payment_form.online_account_name) }}</div>
-        <div class="field field-wide">{{ payment_form.online_account_reference.label }} {{ payment_form.online_account_reference() }}{{ errors(payment_form.online_account_reference) }}</div>
-        <div class="field field-wide">{{ payment_form.online_instructions.label }} {{ payment_form.online_instructions() }}{{ errors(payment_form.online_instructions) }}</div>
-        <div class="field field-wide">{{ payment_form.payment_qr.label }} {{ payment_form.payment_qr(accept='image/png,image/jpeg,image/webp') }}{{ errors(payment_form.payment_qr) }}
-          {% if payment_error %}<p class="field-error" role="alert">{{ payment_error }}</p>{% endif %}
-          <p class="hint">PNG, JPEG, or WebP, up to 5 MB. Replace this image with your shop's actual payment QR before accepting transfers.</p>
-          {% if shop.payment_qr_digest %}<img class="shop-payment-qr-preview" src="{{ url_for('shop_staff.payment_qr', v=shop.payment_qr_digest[:12]) }}" alt="Current payment QR for {{ shop.name }}" width="180" height="180">{% endif %}
-        </div>
-        <div class="form-actions">{{ payment_form.submit(class_='button') }}</div>
-      </form>
-    </section>
     <section class="section-card" id="shop-information">
+      <p class="page-eyebrow">Public details</p>
       <h2>Shop information</h2>
       <form class="account-form form-grid" method="post" action="{{ url_for('shop_staff.save_details') }}" novalidate>
         {{ details_form.hidden_tag() }}
+        <h3 class="form-subheading">Profile</h3>
         {% for field in [details_form.description, details_form.address] %}
           <div class="field field-wide">{{ field.label }} {{ field() }}{{ errors(field) }}</div>
         {% endfor %}
+        <h3 class="form-subheading">Business hours</h3>
         {% for field in [details_form.opening_time, details_form.closing_time] %}
           <div class="field">{{ field.label }} {{ field() }}{{ errors(field) }}</div>
         {% endfor %}
@@ -53,10 +38,11 @@
     </section>
 
     <section class="section-card" id="shop-photo">
+      <p class="page-eyebrow">Storefront image</p>
       <h2>Shop photo</h2>
       {% if shop.photo_digest %}
-        <img class="shop-photo-preview" src="{{ url_for('shops.photo', shop_id=shop.id, v=shop.photo_digest[:12]) }}" alt="Current photo of {{ shop.name }}">
-      {% else %}<p class="hint">No photo uploaded yet.</p>{% endif %}
+        <div class="shop-photo-frame"><img class="shop-photo-preview" src="{{ url_for('shops.photo', shop_id=shop.id, v=shop.photo_digest[:12]) }}" alt="Current photo of {{ shop.name }}"><span>Current shop photo</span></div>
+      {% else %}<div class="shop-photo-placeholder"><strong>No shop photo yet</strong><p>Upload one to show your storefront on the shop page and map pin.</p></div>{% endif %}
       <p class="hint">JPEG, PNG, or WebP, up to 5 MB. The image is resized and shown publicly on your shop page and map pin.</p>
       <form class="account-form form-grid" method="post" action="{{ url_for('shop_staff.save_photo') }}" enctype="multipart/form-data" novalidate>
         {{ photo_form.hidden_tag() }}
@@ -72,8 +58,9 @@
     </section>
 
     <section class="section-card" id="shop-services">
+      <p class="page-eyebrow">Availability</p>
       <h2>Services offered</h2>
-      {% if services %}<ul class="summary-list">{% for service in services %}<li class="summary-row"><span>{{ service.service_type.label }}</span><strong>{{ 'On' if service.enabled else 'Off' }}</strong></li>{% endfor %}</ul>
+      {% if services %}<ul class="summary-list">{% for service in services %}<li class="summary-row"><span>{{ service.service_type.label }}</span><span class="status-badge status-badge--{{ 'success' if service.enabled else 'muted' }}">{{ 'On' if service.enabled else 'Off' }}</span></li>{% endfor %}</ul>
       {% else %}<p class="hint">No services configured.</p>{% endif %}
       <form class="account-form form-grid" method="post" action="{{ url_for('shop_staff.save_service') }}" novalidate>
         {{ service_form.hidden_tag() }}
@@ -84,11 +71,13 @@
     </section>
 
     <section class="section-card" id="shop-prices">
+      <p class="page-eyebrow">Current rates</p>
       <h2>Print prices</h2>
-      {% if prices %}<div class="table-scroll" role="region" aria-label="Print prices" tabindex="0"><table class="data-table">
-        <thead><tr><th scope="col">Paper size</th><th scope="col">Output</th><th scope="col">Price per page</th></tr></thead>
-        <tbody>{% for price in prices %}<tr><td>{{ price.paper_size.label }}</td><td>{{ price.color_mode.label }}</td><td>₱{{ '%.2f'|format(price.price) }}</td></tr>{% endfor %}</tbody>
+      {% if prices %}<div class="table-scroll" role="region" aria-label="Print prices" tabindex="0"><table class="data-table pricing-table staff-pricing-table">
+        <thead><tr><th scope="col">Paper size</th><th scope="col">Grayscale / page</th><th scope="col">Color / page</th></tr></thead>
+        <tbody>{% for size, grayscale, color in price_rows %}<tr><th scope="row">{{ size.label }}</th><td data-label="Grayscale / page">{{ '₱%.2f'|format(grayscale.price) if grayscale else 'Not set' }}</td><td data-label="Color / page">{{ '₱%.2f'|format(color.price) if color else 'Not set' }}</td></tr>{% endfor %}</tbody>
       </table></div>{% else %}<p class="hint">No prices configured.</p>{% endif %}
+      <h3 class="form-subheading">Update a rate</h3>
       <form class="account-form form-grid" method="post" action="{{ url_for('shop_staff.save_price') }}" novalidate>
         {{ price_form.hidden_tag() }}
         <div class="field">{{ price_form.paper_size.label }} {{ price_form.paper_size() }}{{ errors(price_form.paper_size) }}</div>
@@ -99,8 +88,9 @@
     </section>
 
     <section class="section-card" id="delivery-settings">
+      <p class="page-eyebrow">Fulfillment charges</p>
       <h2>Delivery Fee</h2>
-      <p class="summary-row"><span>Delivery service</span><strong>{{ 'Enabled' if delivery_enabled else 'Disabled' }}</strong></p>
+      <p class="summary-row"><span>Delivery service</span><span class="status-badge status-badge--{{ 'success' if delivery_enabled else 'muted' }}">{{ 'Enabled' if delivery_enabled else 'Disabled' }}</span></p>
       <p class="hint">Set the fee for normal Delivery. Change service availability separately under Services offered.</p>
       <form class="account-form form-grid" method="post" action="{{ url_for('shop_staff.save_fee') }}" novalidate>
         {{ delivery_fee_form.csrf_token(id='delivery_csrf_token') }}
@@ -112,7 +102,28 @@
       </form>
     </section>
 
+    <section class="section-card" id="payment-settings">
+      <p class="page-eyebrow">Checkout methods</p>
+      <h2>Payment settings</h2>
+      <p class="hint">These methods and details appear only for your assigned shop. Online references still require staff verification.</p>
+      <form class="account-form form-grid" method="post" action="{{ url_for('shop_staff.save_payment') }}" enctype="multipart/form-data" novalidate>
+        {{ payment_form.hidden_tag() }}
+        <div class="checkbox-field setting-toggle">{{ payment_form.cash_enabled() }} {{ payment_form.cash_enabled.label }}</div>
+        <div class="checkbox-field setting-toggle">{{ payment_form.online_enabled() }} {{ payment_form.online_enabled.label }}</div>
+        <h3 class="form-subheading">Online account and instructions</h3>
+        <div class="field field-wide">{{ payment_form.online_account_name.label }} {{ payment_form.online_account_name() }}{{ errors(payment_form.online_account_name) }}</div>
+        <div class="field field-wide">{{ payment_form.online_account_reference.label }} {{ payment_form.online_account_reference() }}{{ errors(payment_form.online_account_reference) }}</div>
+        <div class="field field-wide">{{ payment_form.online_instructions.label }} {{ payment_form.online_instructions() }}{{ errors(payment_form.online_instructions) }}</div>
+        <div class="field field-wide">{{ payment_form.payment_qr.label }} {{ payment_form.payment_qr(accept='image/png,image/jpeg,image/webp') }}{{ errors(payment_form.payment_qr) }}
+          {% if payment_error %}<p class="field-error" role="alert">{{ payment_error }}</p>{% endif %}
+          <p class="hint">PNG, JPEG, or WebP, up to 5 MB. Replace this image with your shop's actual payment QR before accepting transfers.</p>
+          {% if shop.payment_qr_digest %}<img class="shop-payment-qr-preview" src="{{ url_for('shop_staff.payment_qr', v=shop.payment_qr_digest[:12]) }}" alt="Current payment QR for {{ shop.name }}" width="180" height="180">{% endif %}
+        </div>
+        <div class="form-actions">{{ payment_form.submit(class_='button') }}</div>
+      </form>
+    </section>
     <section class="section-card" id="shop-fees">
+      <p class="page-eyebrow">Additional charges</p>
       <h2>Additional fees</h2>
       {% if fees %}<ul class="summary-list">{% for fee in fees %}<li class="summary-row"><span>{{ fee.fee_type.label }}</span><strong>₱{{ '%.2f'|format(fee.amount) }}</strong></li>{% endfor %}</ul>
       {% else %}<p class="hint">No additional fees configured.</p>{% endif %}

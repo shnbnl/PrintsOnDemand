@@ -101,6 +101,33 @@ def test_staff_list_detail_and_shop_isolation(client, test_app):
     assert client.get(a).status_code == 403
 
 
+def test_staff_dashboard_counts_only_assigned_shop_work(client, test_app):
+    _, staff_a, staff_b, url_a, url_b, *_ = setup_orders(client, test_app)
+    reference_a = url_a.rsplit("/", 1)[1]
+    reference_b = url_b.rsplit("/", 1)[1]
+    sign_in(client, staff_a)
+    dashboard = client.get("/shop")
+    assert dashboard.status_code == 200
+    assert reference_a.encode() in dashboard.data
+    assert reference_b.encode() not in dashboard.data
+    assert b"<strong>1</strong><span>Payment reviews</span>" in dashboard.data
+    assert b"<strong>0</strong><span>Ready to print</span>" in dashboard.data
+    with test_app.app_context():
+        order = db.session.scalar(select(Order).where(Order.order_reference == reference_a))
+        order.payment.payment_status = PaymentStatus.PAID
+        db.session.commit()
+    # The test fixture keeps an app context open across requests; expire its
+    # identity map so the next request sees the committed payment update.
+    db.session.expire_all()
+    dashboard = client.get("/shop")
+    assert b"<strong>0</strong><span>Payment reviews</span>" in dashboard.data
+    assert b"<strong>1</strong><span>Ready to print</span>" in dashboard.data
+    sign_in(client, staff_b)
+    dashboard = client.get("/shop")
+    assert reference_b.encode() in dashboard.data
+    assert reference_a.encode() not in dashboard.data
+
+
 def test_unverified_payment_blocks_processing_and_form_forgery(client, test_app):
     owner, staff_a, _, url_a, _, _, _, _, _ = setup_orders(client, test_app)
     a = staff_url(url_a)

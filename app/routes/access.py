@@ -4,8 +4,9 @@ from flask import Blueprint, render_template, url_for
 from flask_login import current_user
 
 from app.authorization import roles_required
-from app.models import UserRole
+from app.models import OrderStatus, PaymentStatus, UserRole
 from app.routes.shops import detail_context
+from app.services.order_processing import available_action, list_staff_orders
 
 
 access_bp = Blueprint("access", __name__)
@@ -36,7 +37,22 @@ def professor():
 @roles_required(UserRole.SHOP_STAFF)
 def shop():
     if current_user.shop is not None:
-        return render_template("shops/detail.html", staff_view=True, **detail_context(current_user.shop))
+        orders = list_staff_orders(current_user)
+        queue = {
+            "payment_review": sum(bool(order.payment and order.payment.payment_status == PaymentStatus.SUBMITTED)
+                                  for order in orders),
+            "ready_to_print": sum(available_action(order) == "start_processing" for order in orders),
+            "printing": sum(order.status == OrderStatus.PROCESSING for order in orders),
+            "ready": sum(order.status == OrderStatus.READY for order in orders),
+            "delivered": sum(order.status == OrderStatus.DELIVERED for order in orders),
+            "completed": sum(order.status == OrderStatus.COMPLETED for order in orders),
+        }
+        attention_orders = [order for order in orders if
+                            (order.payment and order.payment.payment_status == PaymentStatus.SUBMITTED)
+                            or available_action(order) == "start_processing"][:5]
+        return render_template("shops/detail.html", staff_view=True, queue=queue,
+                               attention_orders=attention_orders, recent_orders=orders[:5],
+                               **detail_context(current_user.shop))
     return render_template("main/protected.html", title="Shop Staff access")
 
 

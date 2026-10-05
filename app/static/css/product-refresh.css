@@ -240,7 +240,66 @@ tbody tr:hover { background: #f1f5fa; }
 .operations-overview--compact p { max-width: 35rem; margin: 0; color: var(--muted); }
 .danger-zone { border-top: 4px solid var(--danger); }
 
+/* Shop operations reuse the product surfaces while putting actionable work first. */
+.page-access .page:has(.staff-queue), .page-shop_staff .page,
+.page-staff_orders .page, .page-payment_verification .page,
+.page-admin_management .page, .page-shop_admin .page { width: min(100% - 2 * var(--gutter), 86rem); }
+.staff-queue, .staff-recent { margin-block: 1rem; padding: clamp(1rem, 2.3vw, 1.7rem); }
+.staff-queue { border-top: 3px solid var(--cobalt); }
+.staff-queue .section-heading, .staff-recent .section-heading { align-items: center; margin-bottom: 1rem; }
+.staff-queue .section-heading p, .staff-recent .section-heading p { margin-bottom: .2rem; }
+.staff-queue .section-heading .hint { margin: 0; }
+.staff-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: .65rem; }
+.staff-metric { display: grid; align-content: start; gap: .25rem; min-width: 0; min-height: 8rem; padding: 1rem; border: 1px solid #d5e0eb; border-radius: .7rem; color: var(--navy); background: #f8fafc; text-decoration: none; }
+.staff-metric--attention { border-color: #b6c9e6; background: #edf3fd; }
+.staff-metric strong { font-size: clamp(1.7rem, 2.4vw, 2.3rem); line-height: 1; font-variant-numeric: tabular-nums; }
+.staff-metric span { font-size: .87rem; font-weight: 800; }
+.staff-metric small { color: var(--muted); font-size: .73rem; line-height: 1.35; }
+.staff-metric:hover, .staff-metric:focus-visible { border-color: var(--cobalt); background: #e7effb; }
+.staff-attention { margin-top: 1.2rem; }
+.staff-attention h3 { margin-bottom: .65rem; font-size: 1rem; }
+.staff-attention-list, .staff-recent-list { margin: 0; padding: 0; list-style: none; }
+.staff-attention-list li, .staff-recent-list li { display: flex; align-items: center; justify-content: space-between; gap: .75rem 1.2rem; padding: .85rem 0; border-top: 1px solid var(--line); }
+.staff-attention-list li > div:first-child, .staff-recent-list li > div:first-child { display: grid; min-width: 0; gap: .2rem; overflow-wrap: anywhere; }
+.staff-attention-list li span, .staff-recent-list li span { color: var(--muted); font-size: .84rem; }
+.staff-attention-list .button { flex: none; min-height: 2.75rem; }
+.staff-queue-empty { padding: 1.1rem; margin-top: 1rem; border: 1px dashed #bbcad9; border-radius: .65rem; background: #fafcfe; }
+.staff-queue-empty p { margin: .2rem 0 0; color: var(--muted); }
+.staff-recent-open { flex: none; font-weight: 800; }
+.staff-recent-list .status-group { margin: 0; }
+.staff-workspace { margin-top: 1rem; }
+.staff-workspace .action-card { display: flex; flex-direction: column; }
+.staff-workspace .action-card .card-action { margin-top: auto; }
+.page-staff_orders .order-list .order-card, .page-payment_verification .order-list .order-card { min-width: 0; }
+.page-staff_orders .order-list .order-card .card-action, .page-payment_verification .order-list .order-card .card-action { margin-top: auto; }
+.page-staff_orders .file-card::before { display: none; }
+.file-type-chip { width: fit-content; margin: .1rem 0 .7rem; padding: .25rem .5rem; border-radius: .35rem; color: var(--navy); background: #eaf0fa; font-size: .72rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.print-file-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .55rem .9rem; margin: 0 0 1rem; }
+.print-file-facts > div { min-width: 0; padding: .55rem .65rem; border-radius: .45rem; background: #f5f8fb; overflow-wrap: anywhere; }
+.print-file-facts dt { color: var(--muted); font-size: .72rem; font-weight: 700; }
+.print-file-facts dd { margin: .2rem 0 0; color: var(--navy); font-size: .88rem; font-weight: 750; }
+.print-job .card-action svg { width: 1rem; height: 1rem; }
+.processing-focus { border-top-width: 4px !important; }
+.page-staff_orders .operations-grid > .processing-focus { grid-column: 1 / -1; }
+.page-staff_orders .operations-grid > section:last-child { grid-column: auto; }
+.processing-focus .button { min-height: 3.1rem; }
+.management-grid .section-card { scroll-margin-top: 6.5rem; }
+.management-grid .page-eyebrow { margin-bottom: .35rem; }
+.form-subheading { grid-column: 1 / -1; margin: .65rem 0 0; padding-top: .85rem; border-top: 1px solid var(--line); font-size: 1rem; }
+.management-grid .setting-toggle { display: flex; align-items: center; gap: .5rem; padding: .8rem; border: 1px solid #d5e0eb; border-radius: .6rem; background: #f8fafc; }
+.management-grid .setting-toggle label { margin: 0; }
+.shop-photo-frame { width: min(100%, 25rem); margin: .5rem 0 1rem; overflow: hidden; border: 1px solid var(--line); border-radius: .7rem; background: #f8fafc; }
+.shop-photo-frame .shop-photo-preview { width: 100%; max-height: 17rem; margin: 0; border-radius: 0; object-fit: cover; }
+.shop-photo-frame span { display: block; padding: .5rem .75rem; color: var(--muted); font-size: .8rem; font-weight: 700; }
+.shop-photo-placeholder { margin: .5rem 0 1rem; padding: 1.5rem; border: 1px dashed #b8cada; border-radius: .7rem; background: #f8fafc; }
+.shop-photo-placeholder p { margin: .25rem 0 0; color: var(--muted); }
+.staff-pricing-table th[scope="row"] { color: var(--navy); }
+.staff-pricing-table td { font-variant-numeric: tabular-nums; }
+.management-jump { position: sticky; z-index: 5; top: 4.75rem; }
+.management-jump a:focus-visible, .staff-metric:focus-visible, .staff-recent-open:focus-visible { outline: 3px solid var(--cobalt); outline-offset: 2px; }
+
 @media (max-width: 75rem) {
+  .staff-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .mobile-nav nav .nav-identity--staff { color: var(--navy); }
   .mobile-nav nav .nav-identity--staff small { color: var(--muted); }
 }
@@ -250,6 +309,10 @@ tbody tr:hover { background: #f1f5fa; }
   .checkout-grid > .price-summary { position: static; }
 }
 @media (max-width: 48rem) {
+  .staff-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .staff-attention-list li, .staff-recent-list li { align-items: flex-start; flex-wrap: wrap; }
+  .staff-recent-list .status-group { order: 3; width: 100%; }
+  .management-jump { position: static; flex-wrap: wrap; }
   .operations-overview { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .operations-overview > div { min-height: 5rem; padding: .8rem; }
   .operations-overview strong { font-size: 1.35rem; }
@@ -269,6 +332,8 @@ tbody tr:hover { background: #f1f5fa; }
   .workspace-panel { border-radius: .85rem; }
 }
 @media (max-width: 24rem) {
+  .staff-metrics, .print-file-facts { grid-template-columns: 1fr; }
+  .staff-attention-list .button { width: 100%; }
   .operations-overview { grid-template-columns: 1fr; }
   .brand { font-size: .9rem; }
   .landing-hero { padding: 1.5rem 1rem; }

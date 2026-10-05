@@ -43,6 +43,7 @@ def editor(*, details_form=None, service_form=None, price_form=None, fee_form=No
     fee_form = fee_form or FeeForm(formdata=None)
     fee_form.fee_type.choices = [choice for choice in fee_form.fee_type.choices
                                if choice[0] != FeeType.DELIVERY.value]
+    price_map = {(price.paper_size, price.color_mode): price for price in shop.prices}
     return render_template(
         "shops/manage.html", shop=shop,
         details_form=details_form or ShopStaffDetailsForm(formdata=None, obj=shop),
@@ -57,6 +58,8 @@ def editor(*, details_form=None, service_form=None, price_form=None, fee_form=No
         payment_error=payment_error,
         services=sorted(shop.services, key=lambda item: item.service_type.value),
         prices=sorted(shop.prices, key=lambda item: (item.paper_size.value, item.color_mode.value)),
+        price_rows=[(size, price_map.get((size, ColorMode.GRAYSCALE)),
+                     price_map.get((size, ColorMode.COLOR))) for size in PaperSize],
         fees=sorted((fee for fee in shop.fees if fee.fee_type != FeeType.DELIVERY),
                     key=lambda item: item.fee_type.value),
     ), status

@@ -3,7 +3,7 @@
 {% block title %}Professors | Prints On Demand{% endblock %}
 
 {% block content %}
-  <a class="back-link" href="{{ url_for('access.shop') }}">← Assigned shop</a>
+  {% set back_url = url_for('access.shop') %}{% set back_label = 'Back to shop dashboard' %}{% include '_vector_back.html' %}
   <header class="page-intro page-intro--with-action">
     <div>
       <p class="eyebrow">Administration / Recipients</p>

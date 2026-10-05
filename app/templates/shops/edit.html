@@ -7,7 +7,7 @@
 {% block title %}Edit {{ shop.name }} | Prints On Demand{% endblock %}
 
 {% block content %}
-  <a class="back-link" href="{{ url_for('shop_admin.index') }}">← Manage shops</a>
+  {% set back_url = url_for('shop_admin.index') %}{% set back_label = 'Back to manage shops' %}{% include '_vector_back.html' %}
   <header class="page-intro">
     <p class="eyebrow">Administration / Shops</p>
     <h1>Edit {{ shop.name }}</h1>

@@ -4,6 +4,7 @@
 {% block title %}Payment verification | Prints On Demand{% endblock %}
 
 {% block content %}
+  {% if current_user.role.value == 'SHOP_STAFF' %}{% set back_url = url_for('access.shop') %}{% set back_label = 'Back to shop dashboard' %}{% include '_vector_back.html' %}{% endif %}
   <header class="page-intro">
     <p class="page-eyebrow">Manual review</p>
     <h1>Payment verification</h1>
@@ -29,7 +30,7 @@
             <div class="summary-row"><dt>Payment reference</dt><dd>{{ payment.payment_reference }}</dd></div>
             <div class="summary-row"><dt>Submitted</dt><dd>{% if payment.submitted_at %}<time datetime="{{ payment.submitted_at.isoformat() }}">{{ payment.submitted_at.strftime('%Y-%m-%d %H:%M UTC') }}</time>{% else %}Unknown{% endif %}</dd></div>
           </dl>
-          <a class="card-action" href="{{ url_for('payment_verification.detail', payment_id=payment.id) }}">Review payment <span aria-hidden="true">→</span></a>
+          <a class="card-action" href="{{ url_for('payment_verification.detail', payment_id=payment.id) }}">Review payment</a>
         </li>
       {% endfor %}
     </ul>

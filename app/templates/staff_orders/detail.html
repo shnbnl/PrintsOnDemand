@@ -4,7 +4,7 @@
 {% block title %}Shop order {{ order.order_reference }} | Prints On Demand{% endblock %}
 
 {% block content %}
-  <a class="back-link" href="{{ url_for('staff_orders.index') }}">← Shop orders</a>
+  {% set back_url = url_for('staff_orders.index') %}{% set back_label = 'Back to shop orders' %}{% include '_vector_back.html' %}
   <header class="page-intro">
     <p class="eyebrow">Shop Staff / Order detail</p>
     <h1>Order {{ order.order_reference }}</h1>
@@ -16,6 +16,26 @@
   </header>
 
   <div class="operations-grid">
+  <section class="section-card processing-focus">
+    <p class="page-eyebrow">Next step</p><h2>Processing</h2>
+    <p>Current status: {{ order_badge(order) }}</p>
+    {% if order.processing_started_at or order.ready_at or order.delivered_at or order.completed_at %}
+      <dl class="summary-list">
+        {% if order.processing_started_at %}<div class="summary-row"><dt>Processing started</dt><dd><time datetime="{{ order.processing_started_at.isoformat() }}">{{ order.processing_started_at.strftime('%Y-%m-%d %H:%M UTC') }}</time></dd></div>{% endif %}
+        {% if order.ready_at %}<div class="summary-row"><dt>Ready</dt><dd><time datetime="{{ order.ready_at.isoformat() }}">{{ order.ready_at.strftime('%Y-%m-%d %H:%M UTC') }}</time></dd></div>{% endif %}
+        {% if order.delivered_at %}<div class="summary-row"><dt>Delivered to Faculty</dt><dd><time datetime="{{ order.delivered_at.isoformat() }}">{{ order.delivered_at.strftime('%Y-%m-%d %H:%M UTC') }}</time></dd></div>{% endif %}
+        {% if order.completed_at %}<div class="summary-row"><dt>Completed</dt><dd><time datetime="{{ order.completed_at.isoformat() }}">{{ order.completed_at.strftime('%Y-%m-%d %H:%M UTC') }}</time></dd></div>{% endif %}
+      </dl>
+    {% endif %}
+    {% if action %}
+      <form class="form-actions" method="post" action="{{ url_for('staff_orders.advance', order_reference=order.order_reference) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="button" type="submit" name="action" value="{{ action }}">{% if action == 'start_processing' %}Start processing{% elif action == 'mark_ready' %}Mark ready{% elif action == 'mark_delivered' %}Mark delivered to Faculty{% else %}Complete order{% endif %}</button>
+      </form>
+    {% elif order.status.value == 'PENDING_PAYMENT' %}
+      <p class="notice notice-warning">Processing is unavailable until payment is recorded as paid by an authorized process.</p>
+    {% endif %}
+  </section>
   <section class="section-card">
     <h2>Order and customer</h2>
     <dl class="summary-list">
@@ -38,10 +58,15 @@
             </div>
             <strong>{{ order.currency }} {{ item.line_total }}</strong>
           </div>
-          <p class="hint">{{ item.paper_size.label }} · {{ item.color_mode.label }} · {{ item.quantity }} {{ 'copy' if item.quantity == 1 else 'copies' }} · Rush: {{ 'Yes' if item.is_rush else 'No' }}</p>
-          {% if item.pdf_page_count is not none %}<p class="hint">Document pages: {{ item.pdf_page_count }} · Total Printed Pages: {{ item.total_printed_pages }}</p>{% endif %}
-          <p class="hint">Price per page: {{ order.currency }} {{ item.unit_price }}</p>
-          <a class="card-action" href="{{ url_for('staff_orders.download_file', order_reference=order.order_reference, item_id=item.id) }}">Download file <span aria-hidden="true">↓</span></a>
+          <p class="file-type-chip">{{ item.uploaded_file.file_extension|upper }} file</p>
+          <dl class="print-file-facts">
+            <div><dt>Paper / output</dt><dd>{{ item.paper_size.label }} · {{ item.color_mode.label }}</dd></div>
+            <div><dt>Print Count</dt><dd>{{ item.quantity }} {{ 'copy' if item.quantity == 1 else 'copies' }}</dd></div>
+            {% if item.pdf_page_count is not none %}<div><dt>Document pages</dt><dd>{{ item.pdf_page_count }}</dd></div><div><dt>Total Printed Pages</dt><dd>{{ item.total_printed_pages }}</dd></div>{% endif %}
+            <div><dt>Priority</dt><dd>{{ 'Rush printing' if item.is_rush else 'Standard' }}</dd></div>
+            <div><dt>Price per page</dt><dd>{{ order.currency }} {{ item.unit_price }}</dd></div>
+          </dl>
+          <a class="card-action" href="{{ url_for('staff_orders.download_file', order_reference=order.order_reference, item_id=item.id) }}">Download file <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M4 17v3h16v-3"/></svg></a>
         </li>
       {% endfor %}
     </ul>
@@ -94,25 +119,5 @@
     {% if order.destination and order.destination.value == 'DELIVERY' %}<p class="hint">Delivery is requested; no courier is automatically booked.</p>{% endif %}
   </section>
 
-  <section class="section-card processing-focus">
-    <h2>Processing</h2>
-    <p>Current status: {{ order_badge(order) }}</p>
-    {% if order.processing_started_at or order.ready_at or order.delivered_at or order.completed_at %}
-      <dl class="summary-list">
-        {% if order.processing_started_at %}<div class="summary-row"><dt>Processing started</dt><dd><time datetime="{{ order.processing_started_at.isoformat() }}">{{ order.processing_started_at.strftime('%Y-%m-%d %H:%M UTC') }}</time></dd></div>{% endif %}
-        {% if order.ready_at %}<div class="summary-row"><dt>Ready</dt><dd><time datetime="{{ order.ready_at.isoformat() }}">{{ order.ready_at.strftime('%Y-%m-%d %H:%M UTC') }}</time></dd></div>{% endif %}
-        {% if order.delivered_at %}<div class="summary-row"><dt>Delivered to Faculty</dt><dd><time datetime="{{ order.delivered_at.isoformat() }}">{{ order.delivered_at.strftime('%Y-%m-%d %H:%M UTC') }}</time></dd></div>{% endif %}
-        {% if order.completed_at %}<div class="summary-row"><dt>Completed</dt><dd><time datetime="{{ order.completed_at.isoformat() }}">{{ order.completed_at.strftime('%Y-%m-%d %H:%M UTC') }}</time></dd></div>{% endif %}
-      </dl>
-    {% endif %}
-    {% if action %}
-      <form class="form-actions" method="post" action="{{ url_for('staff_orders.advance', order_reference=order.order_reference) }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button class="button" type="submit" name="action" value="{{ action }}">{% if action == 'start_processing' %}Start processing{% elif action == 'mark_ready' %}Mark ready{% elif action == 'mark_delivered' %}Mark delivered to Faculty{% else %}Complete order{% endif %} <span aria-hidden="true">→</span></button>
-      </form>
-    {% elif order.status.value == 'PENDING_PAYMENT' %}
-      <p class="notice notice-warning">Processing is unavailable until payment is recorded as paid by an authorized process.</p>
-    {% endif %}
-  </section>
   </div>
 {% endblock %}
