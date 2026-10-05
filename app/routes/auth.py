@@ -112,26 +112,29 @@ def shop_login():
         return redirect(role_home(current_user.role))
 
     form = ShopStaffLoginForm()
-    shops = db.session.execute(
-        select(PrintingShop.id, PrintingShop.name).order_by(PrintingShop.name)
-    ).all()
-    form.shop_id.choices = [(0, "Select your shop")] + [(id, name) for id, name in shops]
     if form.validate_on_submit():
         identifier = form.identifier.data.casefold()
-        candidates = db.session.scalars(select(User).where(
-            User.role == UserRole.SHOP_STAFF,
-            User.shop_id == form.shop_id.data,
-            User.is_active.is_(True),
-        )).all()
         if "@" in identifier:
-            matches = [user for user in candidates if user.email == identifier]
+            user = db.session.scalar(select(User).where(
+                User.role == UserRole.SHOP_STAFF,
+                User.email == User.normalize_email(identifier),
+            ))
         else:
+            candidates = db.session.scalars(select(User).where(
+                User.role == UserRole.SHOP_STAFF,
+            )).all()
             matches = [user for user in candidates if user.name.casefold() == identifier]
-        user = matches[0] if len(matches) == 1 else None
-        if user and user.check_password(form.password.data):
+            user = matches[0] if len(matches) == 1 else None
+        if (
+            user and user.check_password(form.password.data)
+            and user.is_active and user.shop_id is not None and user.shop is not None
+        ):
             login_user(user, remember=False)
             return redirect(safe_next_url(request.args.get("next")) or role_home(user.role))
-        form.password.errors.append("Invalid shop, staff email or name, or password.")
+        form.password.errors.append(
+            "Unable to sign in. Check your staff email or name and password, "
+            "or contact your administrator about account access."
+        )
     response = make_response(render_template("auth/shop_login.html", form=form))
     response.headers["X-Robots-Tag"] = "noindex, nofollow"
     return response

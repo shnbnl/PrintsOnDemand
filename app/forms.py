@@ -48,7 +48,6 @@ class BlueStaffLoginForm(FlaskForm):
 
 
 class ShopStaffLoginForm(FlaskForm):
-    shop_id = SelectField("Printing shop", coerce=int, validators=[DataRequired()])
     identifier = StringField(
         "Staff email or name", filters=[strip_text],
         validators=[DataRequired(), Length(max=254)],

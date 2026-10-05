@@ -8,17 +8,12 @@
     <header class="auth-heading">
       <p class="page-eyebrow">Prints On Demand</p>
       <h1>Printing shop sign-in</h1>
-      <p class="page-lead">Choose your assigned shop and enter your staff credentials.</p>
+      <p class="page-lead">Enter your staff credentials to open your assigned shop.</p>
     </header>
     <section class="content-card auth-card" aria-labelledby="shop-login-heading">
       <h2 id="shop-login-heading">Shop staff</h2>
       <form class="account-form form-stack" method="post" novalidate>
         {{ form.hidden_tag() }}
-        <div class="field">
-          {{ form.shop_id.label }}
-          {{ form.shop_id() }}
-          {% for error in form.shop_id.errors %}<p class="field-error" role="alert">{{ error }}</p>{% endfor %}
-        </div>
         <div class="field">
           {{ form.identifier.label }}
           {{ form.identifier(autocomplete="username", placeholder="Your staff email or name") }}
