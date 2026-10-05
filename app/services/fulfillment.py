@@ -201,8 +201,6 @@ def validate_fulfillment(*, shop: PrintingShop, values, actor=None) -> Fulfillme
             raise FulfillmentError("The managed professor profile needs a valid Faculty.")
         return Fulfillment(destination, professor.id, professor_snapshot(professor, faculty=faculty),
                            "SELF" if self_order else "STUDENT_SELECTED")
-    if actor is not None and actor.role == UserRole.PROFESSOR and destination == OrderDestination.DELIVERY:
-        raise FulfillmentError("Professor accounts can choose Scheduled Pickup or Deliver to Faculty.")
     service = ServiceType.PICKUP if destination == OrderDestination.PICKUP else ServiceType.DELIVERY
     if not service_available(shop.id, service):
         raise FulfillmentError(f"This shop does not offer {destination.label}.")

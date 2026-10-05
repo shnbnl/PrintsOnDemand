@@ -5,6 +5,7 @@ from sqlalchemy import select
 from app.extensions import db
 from app.models import Order, Professor, ProfessorVerificationStatus, User
 from test_checkout_flow import post, setup
+from test_fulfillment import delivery_fields, offer_delivery
 from test_orders import approved_professor, offer_professor_service, pickup_fields, shop
 
 
@@ -145,13 +146,14 @@ def test_professor_unverified_unlinked_or_inactive_profile_cannot_deliver_to_fac
     assert post(client, "/checkout/payment", {"payment_method": "ONSITE"}).status_code == 302
 
 
-def test_professor_cannot_submit_general_delivery_or_bypass_csrf(client, test_app):
+def test_professor_general_delivery_uses_shop_setting_and_preserves_csrf(client, test_app):
     _, blue, file_id = setup(client, test_app, professor=True)
     select_shop(client, file_id, blue)
     assert b'value="DELIVERY"' not in client.get("/checkout/configure").data
     assert post(client, "/checkout/configure", configure(
-        file_id, destination="DELIVERY", delivery_recipient_name="Professor",
-        delivery_recipient_phone="09171234567", delivery_address="Campus Building Room 101",
-        delivery_date=pickup_fields()["pickup_date"], delivery_slot="14:00-15:00",
+        file_id, **delivery_fields(),
     )).status_code == 400
+    offer_delivery(test_app, blue)
+    assert b'value="DELIVERY"' in client.get("/checkout/configure").data
+    assert post(client, "/checkout/configure", configure(file_id, **delivery_fields())).status_code == 302
     assert client.post("/checkout/configure", data=configure(file_id, **pickup_fields())).status_code == 400

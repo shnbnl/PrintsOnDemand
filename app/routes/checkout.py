@@ -103,6 +103,9 @@ def upload():
         shop_id = positive_id(request.args.get("shop_id"))
         shop = db.session.get(PrintingShop, shop_id) if shop_id else None
         if shop is not None and shop.is_active:
+            if saved.get("shop_id") != shop.id:
+                for key in ("fulfillment", "payment_method", "payment_reference", "review"):
+                    saved.pop(key, None)
             saved["shop_id"] = shop.id
         save(saved)
         return render_upload()
@@ -233,8 +236,6 @@ def render_config(files, shop, *, options=None, fields=None, error=None, status=
     professors = (selectable_professors() if current_user.role == UserRole.STUDENT
                   and offered[OrderDestination.PROFESSOR.value] else [])
     own_professor = current_user.professor if professor_can_self_deliver(current_user) else None
-    if current_user.role == UserRole.PROFESSOR:
-        offered[OrderDestination.DELIVERY.value] = False
     if (current_user.role == UserRole.STUDENT and not professors) or (
         current_user.role == UserRole.PROFESSOR and own_professor is None
     ):

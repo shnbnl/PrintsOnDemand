@@ -40,7 +40,7 @@ DEMO_SHOP_COORDINATES = {
 DEMO_SHOPS = (
     (
         "Blue and Silver Bookstore", time(6, 0), time(17, 0),
-        (ServiceType.PICKUP, ServiceType.DIRECT_TO_PROFESSOR),
+        (ServiceType.PICKUP, ServiceType.DELIVERY, ServiceType.DIRECT_TO_PROFESSOR),
     ),
     (
         "Iced Design and Prints", time(9, 0), time(15, 0),
@@ -48,29 +48,37 @@ DEMO_SHOPS = (
     ),
     (
         "CHALECOSPOT", time(8, 30), time(18, 50),
-        (ServiceType.PICKUP, ServiceType.RUSH_PRINTING),
+        (ServiceType.PICKUP, ServiceType.RUSH_PRINTING, ServiceType.DELIVERY),
     ),
     (
         "Pixels Print and Press", time(9, 0), time(17, 0),
-        (ServiceType.PICKUP, ServiceType.RUSH_PRINTING),
+        (ServiceType.PICKUP, ServiceType.RUSH_PRINTING, ServiceType.DELIVERY),
     ),
 )
 
 
 def seed_demo_shops() -> tuple[int, int]:
-    """Insert sample shops and refresh verified coordinates on their seed records."""
+    """Insert sample shops; refresh coordinates and missing delivery defaults."""
     added = 0
     coordinates_updated = 0
     for name, opening_time, closing_time, services in DEMO_SHOPS:
         existing = db.session.scalar(select(PrintingShop).where(PrintingShop.name == name))
         if existing:
-            # The name plus sample-data flag identify the seeded record; preserve all
-            # other fields and leave real/admin-created shops untouched.
+            # The name plus sample-data flag identify the seeded record. Preserve
+            # existing shop settings and leave real/admin-created shops untouched.
             if existing.is_demo:
                 coordinates = DEMO_SHOP_COORDINATES[name]
                 if (existing.latitude, existing.longitude) != coordinates:
                     existing.latitude, existing.longitude = coordinates
                     coordinates_updated += 1
+                # Add the newly offered service to older sample records, while
+                # respecting a shop's explicit saved enabled/disabled choice.
+                if not any(item.service_type == ServiceType.DELIVERY for item in existing.services):
+                    existing.services.append(ShopService(service_type=ServiceType.DELIVERY, enabled=True))
+                if not any(item.fee_type == FeeType.DELIVERY for item in existing.fees):
+                    existing.fees.append(ShopFee(
+                        fee_type=FeeType.DELIVERY, amount=Decimal(DEMO_FEES[FeeType.DELIVERY]), is_demo=True,
+                    ))
             continue
         shop = PrintingShop(
             name=name,
