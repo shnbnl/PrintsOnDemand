@@ -95,6 +95,9 @@ class PrintingShop(db.Model):
     closing_time: Mapped[time] = mapped_column(db.Time, nullable=False)
     is_active: Mapped[bool] = mapped_column(db.Boolean, nullable=False, default=True)
     is_demo: Mapped[bool] = mapped_column(db.Boolean, nullable=False, default=False)
+    photo_data: Mapped[bytes | None] = mapped_column(db.LargeBinary, nullable=True, deferred=True)
+    photo_mime: Mapped[str | None] = mapped_column(db.String(32), nullable=True)
+    photo_digest: Mapped[str | None] = mapped_column(db.String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(db.DateTime(timezone=True), nullable=False, default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(
         db.DateTime(timezone=True), nullable=False, default=utc_now, onupdate=utc_now

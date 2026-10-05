@@ -23,7 +23,7 @@
           <select id="shop_id" name="shop_id" required>
             <option value="">Select a shop</option>
             {% for shop in shops %}
-              <option value="{{ shop.id }}" data-professor="{{ '1' if shop_availability[shop.id].PROFESSOR else '0' }}" data-pickup="{{ '1' if shop_availability[shop.id].PICKUP else '0' }}" data-delivery="{{ '1' if shop_availability[shop.id].DELIVERY else '0' }}" data-opening="{{ shop.opening_time.strftime('%H:%M') }}" data-closing="{{ shop.closing_time.strftime('%H:%M') }}" {% if shop.id == selected_shop_id %}selected{% endif %}>{{ shop.name }}{% if shop.is_demo %} (demo rates){% endif %}</option>
+              <option value="{{ shop.id }}" data-professor="{{ '1' if shop_availability[shop.id].PROFESSOR else '0' }}" data-pickup="{{ '1' if shop_availability[shop.id].PICKUP else '0' }}" data-delivery="{{ '1' if shop_availability[shop.id].DELIVERY else '0' }}" data-opening="{{ shop.opening_time.strftime('%H:%M') }}" data-closing="{{ shop.closing_time.strftime('%H:%M') }}" {% if shop.id == selected_shop_id %}selected{% endif %}>{{ shop.name }}{% if shop.is_demo %} (sample rates){% endif %}</option>
             {% endfor %}
           </select>
         </div>

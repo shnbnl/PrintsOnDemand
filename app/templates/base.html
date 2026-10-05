@@ -28,6 +28,7 @@
           <a href="{{ url_for('account.settings') }}" {% if request.blueprint == 'account' %}aria-current="page"{% endif %}>Account</a>
         {% elif current_user.role.value == 'SHOP_STAFF' %}
           <a href="{{ url_for('access.shop') }}" {% if request.endpoint == 'access.shop' %}aria-current="page"{% endif %}>Assigned Shop</a>
+          {% if current_user.shop %}<a href="{{ url_for('shop_staff.index') }}" {% if request.blueprint == 'shop_staff' %}aria-current="page"{% endif %}>Edit Shop</a>{% endif %}
           <a href="{{ url_for('staff_orders.index') }}" {% if request.blueprint == 'staff_orders' %}aria-current="page"{% endif %}>Shop Orders</a>
           <a href="{{ url_for('payment_verification.index') }}" {% if request.blueprint == 'payment_verification' %}aria-current="page"{% endif %}>Payment verification</a>
           {% if current_user.shop and current_user.shop.name == 'Blue and Silver Bookstore' %}<a href="{{ url_for('admin_management.professors') }}" {% if request.blueprint == 'admin_management' %}aria-current="page"{% endif %}>Professor Management</a>{% endif %}

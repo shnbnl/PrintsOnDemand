@@ -78,7 +78,7 @@ When payment is verified after printing begins, update the separate payment reco
 
 ## Pricing
 
-Final prices are undecided. Store prices and supported options in database/settings records, scoped to shops as needed. Any development seed prices must be clearly marked sample/demo values and kept out of production defaults.
+Final prices are undecided. Store prices and supported options in database/settings records, scoped to shops as needed. Any development seed prices must be clearly marked sample values and kept out of production defaults.
 
 Calculate and validate prices on the server using trusted document/option data and current configuration. Use decimal money values, not binary floating-point arithmetic. Preserve the accepted line items, quantities, currency, and total on the order so later price edits do not rewrite order history. Revalidate a quote at submission and require confirmation if its price changed.
 
@@ -97,7 +97,7 @@ Likely database records include users/roles, shops/staff assignments, professors
 - Keep local uploads outside `app/static/` and exclude them from Git. A Render application's local filesystem must not be treated as permanent storage.
 - Production must choose and configure durable private storage before accepting real uploads. Any signed download links must be short-lived and issued only after authorization.
 - Plan cleanup of abandoned uploads and failed submissions so files and orders cannot silently diverge. Set retention, deletion, backups, and recovery policy before launch.
-- Use environment variables for environment selection, signing secrets, PostgreSQL connection, upload limits, and storage credentials. Fail clearly on missing required production configuration; never fall back to demo secrets or temporary storage silently.
+- Use environment variables for environment selection, signing secrets, PostgreSQL connection, upload limits, and storage credentials. Fail clearly on missing required production configuration; never fall back to sample secrets or temporary storage silently.
 - Add the Gunicorn command, Render service configuration, migration/release steps, and health checks after the application exists. Production must use HTTPS, secure cookies, and disabled debug mode.
 
 ## Security requirements for later stages

@@ -10,7 +10,7 @@
     <p class="page-lead">Confirm every file, its print options, the destination, and the current price.</p>
   </header>
   {% if warning %}<p class="notice notice-warning" role="alert">{{ warning }}</p>{% endif %}
-  {% if quote.is_demo %}<p class="demo-label">Demo shop or rates — sample values, not approved business rates.</p>{% endif %}
+  {% if quote.is_demo %}<p class="sample-label">Sample shop or rates — confirm with the shop before paying.</p>{% endif %}
   <div class="checkout-grid">
     <div class="checkout-main">
       <section class="content-card">

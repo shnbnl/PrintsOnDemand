@@ -170,7 +170,7 @@ def test_student_list_search_and_detail_only_show_active_shops(client, test_app)
     assert b"Closed Shop" not in listed.data
     assert b"Pick-up" in listed.data
     assert b"Delivery" not in listed.data
-    assert b"Demo shop information" in listed.data
+    assert b"Sample shop information" in listed.data
 
     searched = client.get("/shops?q=bLuE")
     assert b"Blue Bookstore" in searched.data
@@ -181,7 +181,7 @@ def test_student_list_search_and_detail_only_show_active_shops(client, test_app)
     assert detail.status_code == 200
     assert b"Campus Road" in detail.data
     assert b"4.50" in detail.data
-    assert b"(demo)" in detail.data
+    assert b"(sample)" in detail.data
     assert b"Not set" in detail.data
     assert b"Delivery" not in detail.data
     assert b"Select files to print" in detail.data
@@ -370,8 +370,9 @@ def test_seed_is_explicit_idempotent_and_marked_demo(test_app):
     second = runner.invoke(args=["seed-demo-shops"])
 
     assert first.exit_code == second.exit_code == 0
-    assert "Added 4 demo shops" in first.output
-    assert "Added 0 demo shops" in second.output
+    assert "Added 4 sample shops" in first.output
+    assert "Added 0 sample shops" in second.output
+    assert "Added 0 sample shops" in runner.invoke(args=["seed-sample-shops"]).output
     with test_app.app_context():
         shops = db.session.scalars(select(PrintingShop)).all()
         prices = db.session.scalars(select(PrintPrice)).all()

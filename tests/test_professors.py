@@ -84,7 +84,8 @@ def test_demo_seed_is_explicit_idempotent_and_does_not_overwrite(test_app):
     runner = test_app.test_cli_runner()
     result = runner.invoke(args=["seed-demo-professors"])
     assert result.exit_code == 0
-    assert "Added 0 demo professors" in result.output
+    assert "Added 0 sample professors" in result.output
+    assert "Added 0 sample professors" in runner.invoke(args=["seed-sample-professors"]).output
     test_app.config["ENV_NAME"] = "production"
     result = runner.invoke(args=["seed-demo-professors"])
     assert result.exit_code != 0

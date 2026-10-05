@@ -54,6 +54,7 @@ def create_app(config_object: object | None = None) -> Flask:
     from app.routes.payment_verification import payment_verification_bp
     from app.routes.professor_settings import professor_settings_bp
     from app.routes.shop_admin import shop_admin_bp
+    from app.routes.shop_staff import shop_staff_bp
     from app.routes.shops import shops_bp
     from app.routes.staff_orders import staff_orders_bp
 
@@ -68,6 +69,7 @@ def create_app(config_object: object | None = None) -> Flask:
     app.register_blueprint(admin_management_bp)
     app.register_blueprint(shops_bp)
     app.register_blueprint(shop_admin_bp)
+    app.register_blueprint(shop_staff_bp)
     app.register_blueprint(staff_orders_bp)
     login_manager.login_view = "auth.login"
 

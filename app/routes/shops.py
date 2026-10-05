@@ -1,6 +1,8 @@
 """Ordering-account shop directory and read-only shop details."""
 
-from flask import Blueprint, abort, current_app, render_template, request, url_for
+from io import BytesIO
+
+from flask import Blueprint, abort, current_app, render_template, request, send_file, url_for
 from flask_login import current_user
 from sqlalchemy import Numeric, cast, select
 from sqlalchemy.orm import selectinload
@@ -91,24 +93,26 @@ def map_view():
             "fees": [{
                 "label": item.fee_type.label,
                 "amount": f"₱{item.amount:.2f}",
-                "is_demo": item.is_demo,
+                "is_sample": item.is_demo,
             } for item in context["fees"]],
             "prices": [{
                 "size": row["size"].label,
                 "grayscale": (
                     f"₱{row['grayscale'].price:.2f}"
-                    f"{' (demo)' if row['grayscale'].is_demo else ''}"
+                    f"{' (sample)' if row['grayscale'].is_demo else ''}"
                     if row["grayscale"] else "Not set"
                 ),
                 "color": (
                     f"₱{row['color'].price:.2f}"
-                    f"{' (demo)' if row['color'].is_demo else ''}"
+                    f"{' (sample)' if row['color'].is_demo else ''}"
                     if row["color"] else "Not set"
                 ),
             } for row in context["price_rows"]],
-            "is_demo": shop.is_demo,
+            "is_sample": shop.is_demo,
             "position": {"lat": float(shop.latitude), "lng": float(shop.longitude)},
             "detail_url": url_for("shops.detail", shop_id=shop.id),
+            "photo_url": (url_for("shops.photo", shop_id=shop.id, v=shop.photo_digest[:12])
+                          if shop.photo_digest else None),
         })
     return render_template(
         "shops/map.html", markers=markers, query=query,
@@ -132,3 +136,14 @@ def detail(shop_id: int):
         .limit(1)
     ) is not None
     return render_template("shops/detail.html", **detail_context(shop), can_order=has_configured_file)
+
+
+@shops_bp.get("/<int:shop_id>/photo")
+def photo(shop_id: int):
+    shop = db.get_or_404(PrintingShop, shop_id)
+    if not (shop.photo_digest and shop.photo_mime and shop.photo_data):
+        abort(404)
+    return send_file(
+        BytesIO(shop.photo_data), mimetype=shop.photo_mime,
+        as_attachment=False, etag=shop.photo_digest, max_age=3600,
+    )

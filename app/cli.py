@@ -112,25 +112,31 @@ def register_commands(app: Flask) -> None:
             raise click.ClickException("Account could not be created.") from error
         click.echo(f"Created Blue and Silver staff account for {user.name}.")
 
-    @app.cli.command("seed-demo-shops")
-    def seed_demo_shops_command() -> None:
+    @app.cli.command("seed-sample-shops")
+    def seed_sample_shops_command() -> None:
         """Insert sample shops/prices only when intentionally run locally."""
         if current_app.config["ENV_NAME"] not in {"development", "testing"}:
-            raise click.ClickException("Demo seeding is disabled in production.")
+            raise click.ClickException("Sample data seeding is disabled in production.")
         from app.seed import seed_demo_shops
 
         added, coordinates_updated = seed_demo_shops()
         click.echo(
-            f"Added {added} demo shops; refreshed verified coordinates on "
-            f"{coordinates_updated} existing demo shops."
+            f"Added {added} sample shops; refreshed verified coordinates on "
+            f"{coordinates_updated} existing sample shops."
         )
+    app.cli.add_command(click.Command(
+        "seed-demo-shops", callback=seed_sample_shops_command.callback, hidden=True,
+    ))
 
-    @app.cli.command("seed-demo-professors")
-    def seed_demo_professors_command() -> None:
+    @app.cli.command("seed-sample-professors")
+    def seed_sample_professors_command() -> None:
         """Insert fictional professors only when intentionally run locally."""
         if current_app.config["ENV_NAME"] not in {"development", "testing"}:
-            raise click.ClickException("Demo seeding is disabled in production.")
+            raise click.ClickException("Sample data seeding is disabled in production.")
         from app.seed import seed_demo_professors
 
         count = seed_demo_professors()
-        click.echo(f"Added {count} demo professors. Existing professors were left unchanged.")
+        click.echo(f"Added {count} sample professors. Existing professors were left unchanged.")
+    app.cli.add_command(click.Command(
+        "seed-demo-professors", callback=seed_sample_professors_command.callback, hidden=True,
+    ))

@@ -12,9 +12,9 @@
     <p class="eyebrow">Administration / Shops</p>
     <h1>Edit {{ shop.name }}</h1>
     <p class="page-lead">Manage information, availability, staff, services, and pricing.</p>
-    <p><span class="status-badge status-badge--{{ 'success' if shop.is_active else 'muted' }}">{{ 'Active' if shop.is_active else 'Inactive' }}</span>{% if shop.is_demo %} <span class="status-badge status-badge--warning">Demo shop</span>{% endif %}</p>
+    <p><span class="status-badge status-badge--{{ 'success' if shop.is_active else 'muted' }}">{{ 'Active' if shop.is_active else 'Inactive' }}</span>{% if shop.is_demo %} <span class="status-badge status-badge--warning">Sample shop</span>{% endif %}</p>
   </header>
-  {% if shop.is_demo %}<p class="notice demo-label">Seeded demo shop. Save final details and prices before real use.</p>{% endif %}
+  {% if shop.is_demo %}<p class="notice sample-label">Sample shop information. Save confirmed details and prices before real use.</p>{% endif %}
 
   <div class="management-grid">
   <section class="section-card" id="shop-information">
@@ -69,7 +69,7 @@
     {% if prices %}
       <div class="table-scroll" role="region" aria-label="Print prices" tabindex="0"><table class="data-table">
         <thead><tr><th scope="col">Paper Size</th><th scope="col">Output</th><th scope="col">Price per page</th></tr></thead>
-        <tbody>{% for price in prices %}<tr><td>{{ price.paper_size.label }}</td><td>{{ price.color_mode.label }}</td><td>₱{{ '%.2f'|format(price.price) }}{% if price.is_demo %} (demo){% endif %}</td></tr>{% endfor %}</tbody>
+        <tbody>{% for price in prices %}<tr><td>{{ price.paper_size.label }}</td><td>{{ price.color_mode.label }}</td><td>₱{{ '%.2f'|format(price.price) }}{% if price.is_demo %} (sample){% endif %}</td></tr>{% endfor %}</tbody>
       </table></div>
     {% else %}<p class="hint">No print prices configured.</p>{% endif %}
     <form class="account-form form-grid" method="post" action="{{ url_for('shop_admin.save_price', shop_id=shop.id) }}" novalidate>
@@ -83,7 +83,7 @@
 
   <section class="section-card" id="shop-fees">
     <h2>Additional fees</h2>
-    {% if fees %}<ul>{% for fee in fees %}<li>{{ fee.fee_type.label }} <strong>₱{{ '%.2f'|format(fee.amount) }}</strong>{% if fee.is_demo %} <span class="status-badge status-badge--warning">Demo</span>{% endif %}</li>{% endfor %}</ul>
+    {% if fees %}<ul>{% for fee in fees %}<li>{{ fee.fee_type.label }} <strong>₱{{ '%.2f'|format(fee.amount) }}</strong>{% if fee.is_demo %} <span class="status-badge status-badge--warning">Sample</span>{% endif %}</li>{% endfor %}</ul>
     {% else %}<p class="hint">No additional fees configured.</p>{% endif %}
     <form class="account-form form-grid" method="post" action="{{ url_for('shop_admin.save_fee', shop_id=shop.id) }}" novalidate>
       {{ fee_form.hidden_tag() }}

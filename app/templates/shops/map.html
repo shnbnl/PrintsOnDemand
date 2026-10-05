@@ -51,14 +51,14 @@
           {% for marker in markers %}
             <section class="map-shop-panel" data-shop-panel="{{ marker.id }}" {% if not loop.first %}hidden{% endif %}>
               <div class="map-panel-heading">
-                <span class="shop-avatar" aria-hidden="true">P</span>
+                <span class="shop-avatar" aria-hidden="true">{% if marker.photo_url %}<img src="{{ marker.photo_url }}" alt="">{% else %}P{% endif %}</span>
                 <div>
                   <p class="page-eyebrow">Selected printing shop</p>
                   <h2>{{ marker.name }}</h2>
                   <span class="status-badge status-success">Available</span>
                 </div>
               </div>
-              {% if marker.is_demo %}<p class="demo-label">Seeded demo shop with user-provided coordinates.</p>{% endif %}
+              {% if marker.is_sample %}<p class="sample-label">Sample shop information; confirm details before placing an order.</p>{% endif %}
               {% if marker.description %}<p>{{ marker.description }}</p>{% endif %}
               <p><strong>Address:</strong> {{ marker.address }}</p>
               <p><strong>Hours:</strong> {{ marker.hours }}</p>
@@ -78,7 +78,7 @@
               {% if marker.fees %}
                 <div class="map-panel-fees">
                   <h3>Applicable fees</h3>
-                  <ul class="summary-list">{% for fee in marker.fees %}<li class="summary-row"><span>{{ fee.label }}{% if fee.is_demo %} (demo){% endif %}</span><strong>{{ fee.amount }}</strong></li>{% endfor %}</ul>
+                  <ul class="summary-list">{% for fee in marker.fees %}<li class="summary-row"><span>{{ fee.label }}{% if fee.is_sample %} (sample){% endif %}</span><strong>{{ fee.amount }}</strong></li>{% endfor %}</ul>
                 </div>
               {% endif %}
               <div class="map-panel-prices">
@@ -102,7 +102,7 @@
                 <button type="button" class="map-shop-choice" data-shop-id="{{ marker.id }}" aria-pressed="{{ 'true' if loop.first else 'false' }}">
                   <strong>{{ marker.name }}</strong>
                   <span>{{ marker.hours }}</span>
-                  {% if marker.is_demo %}<small>Demo shop</small>{% endif %}
+                  {% if marker.is_sample %}<small>Sample shop</small>{% endif %}
                 </button>
                 <a href="{{ marker.detail_url }}">Shop details</a>
               </li>

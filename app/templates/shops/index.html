@@ -27,13 +27,13 @@
       {% for shop in shops %}
         <li class="content-card shop-card">
           <div class="shop-card-top">
-            <span class="shop-avatar" aria-hidden="true">P</span>
+            <span class="shop-avatar" aria-hidden="true">{% if shop.photo_digest %}<img src="{{ url_for('shops.photo', shop_id=shop.id, v=shop.photo_digest[:12]) }}" alt="">{% else %}P{% endif %}</span>
             <div>
               <span class="status-badge status-success">Available</span>
               <h2><a href="{{ url_for('shops.detail', shop_id=shop.id) }}">{{ shop.name }}</a></h2>
             </div>
           </div>
-          {% if shop.is_demo %}<p class="demo-label">Demo shop information</p>{% endif %}
+          {% if shop.is_demo %}<p class="sample-label">Sample shop information</p>{% endif %}
           <p class="shop-address">{{ shop.address }}</p>
           <p class="shop-hours"><strong>Hours</strong> {{ shop.opening_time.strftime('%I:%M %p') }} - {{ shop.closing_time.strftime('%I:%M %p') }}</p>
           {% set enabled_services = shop.services | selectattr('enabled') | list %}

@@ -19,7 +19,7 @@
         <li class="shop-card section-card">
           <p class="eyebrow">Printing shop</p>
           <h2><a href="{{ url_for('shop_admin.edit', shop_id=shop.id) }}">{{ shop.name }}</a></h2>
-          <p><span class="status-badge status-badge--{{ 'success' if shop.is_active else 'muted' }}">{{ 'Active' if shop.is_active else 'Inactive' }}</span>{% if shop.is_demo %} <span class="status-badge status-badge--warning">Demo shop</span>{% endif %}</p>
+          <p><span class="status-badge status-badge--{{ 'success' if shop.is_active else 'muted' }}">{{ 'Active' if shop.is_active else 'Inactive' }}</span>{% if shop.is_demo %} <span class="status-badge status-badge--warning">Sample shop</span>{% endif %}</p>
           <p>{{ shop.address }}</p>
           <a class="card-action" href="{{ url_for('shop_admin.edit', shop_id=shop.id) }}">Manage shop <span aria-hidden="true">→</span></a>
         </li>

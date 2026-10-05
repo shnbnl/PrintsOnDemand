@@ -83,11 +83,19 @@
       shops.forEach((shop) => {
         const pin = document.createElement("span");
         pin.className = "map-pin";
-        pin.textContent = "P";
+        if (shop.photo_url) {
+          const photo = document.createElement("img");
+          photo.src = shop.photo_url;
+          photo.alt = "";
+          photo.addEventListener("error", () => { pin.textContent = "P"; });
+          pin.append(photo);
+        } else {
+          pin.textContent = "P";
+        }
         const marker = new AdvancedMarkerElement({
           map,
           position: shop.position,
-          title: `${shop.name}${shop.is_demo ? " (demo shop)" : ""}`,
+          title: shop.name,
           gmpClickable: true,
         });
         marker.append(pin);

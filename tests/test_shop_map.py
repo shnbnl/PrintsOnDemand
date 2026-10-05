@@ -81,7 +81,7 @@ def test_student_map_search_and_existing_shop_flow(client, test_app):
     assert shops[0]["prices"][2]["color"] == "₱8.75"
     assert set(shops[0]) == {
         "id", "name", "description", "address", "hours", "services",
-        "fulfillment", "fees", "prices", "is_demo", "position", "detail_url",
+        "fulfillment", "fees", "prices", "is_sample", "position", "detail_url", "photo_url",
     }
     assert shops[0]["fulfillment"] == [] and shops[0]["fees"] == []
     assert "admin" not in response.get_data(as_text=True).lower()
@@ -119,7 +119,7 @@ def test_custom_panel_uses_registered_shop_services_fees_and_existing_proceed(cl
     marker = map_data(response)[0]
     assert marker["id"] == mapped
     assert marker["fulfillment"] == ["Scheduled Pickup", "Delivery"]
-    assert marker["fees"] == [{"label": "Delivery", "amount": "₱30.00", "is_demo": False}]
+    assert marker["fees"] == [{"label": "Delivery", "amount": "₱30.00", "is_sample": False}]
     assert b"Available" in response.data
     assert b"Applicable fees" in response.data
     assert b"Scheduled Pickup" in response.data
@@ -219,7 +219,7 @@ def test_demo_seed_corrects_only_coordinates_for_existing_demo_shops(test_app):
     runner = test_app.test_cli_runner()
     seeded = runner.invoke(args=["seed-demo-shops"])
     assert seeded.exit_code == 0
-    assert "Added 4 demo shops; refreshed verified coordinates on 0 existing demo shops." in seeded.output
+    assert "Added 4 sample shops; refreshed verified coordinates on 0 existing sample shops." in seeded.output
     with test_app.app_context():
         assigned_shop_id = db.session.scalar(
             select(PrintingShop.id).where(PrintingShop.name == "Blue and Silver Bookstore")
@@ -246,7 +246,7 @@ def test_demo_seed_corrects_only_coordinates_for_existing_demo_shops(test_app):
         db.session.commit()
     refreshed = runner.invoke(args=["seed-demo-shops"])
     assert refreshed.exit_code == 0
-    assert "Added 0 demo shops; refreshed verified coordinates on 4 existing demo shops." in refreshed.output
+    assert "Added 0 sample shops; refreshed verified coordinates on 4 existing sample shops." in refreshed.output
     with test_app.app_context():
         shops = db.session.scalars(select(PrintingShop).order_by(PrintingShop.name)).all()
         assert len(shops) == 4
@@ -265,7 +265,7 @@ def test_demo_seed_corrects_only_coordinates_for_existing_demo_shops(test_app):
         assert staff_id in tuple(staff.id for staff in shops[0].staff)
     unchanged = runner.invoke(args=["seed-demo-shops"])
     assert unchanged.exit_code == 0
-    assert "Added 0 demo shops; refreshed verified coordinates on 0 existing demo shops." in unchanged.output
+    assert "Added 0 sample shops; refreshed verified coordinates on 0 existing sample shops." in unchanged.output
 
 
 def test_exact_demo_coordinates_are_persisted_and_sent_to_map(client, test_app):

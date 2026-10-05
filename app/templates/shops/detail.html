@@ -5,17 +5,17 @@
 {% block content %}
   {% if not staff_view %}<a class="back-link" href="{{ url_for('shops.index') }}">← Printing shops</a>{% endif %}
   <header class="content-card shop-detail-hero">
-    <span class="shop-avatar shop-avatar-large" aria-hidden="true">P</span>
+    <span class="shop-avatar shop-avatar-large" aria-hidden="true">{% if shop.photo_digest %}<img src="{{ url_for('shops.photo', shop_id=shop.id, v=shop.photo_digest[:12]) }}" alt="">{% else %}P{% endif %}</span>
     <div>
       {% if staff_view %}<span class="status-badge {{ 'status-warning' if not shop.is_active else 'status-success' }}">Your assigned shop{% if not shop.is_active %} — inactive{% endif %}</span>{% endif %}
       <h1>{{ shop.name }}</h1>
-      {% if shop.is_demo %}<p class="demo-label">Demo shop information and pricing — not final business rates.</p>{% endif %}
+      {% if shop.is_demo %}<p class="sample-label">Sample shop information and pricing — confirm rates before paying.</p>{% endif %}
       {% if shop.description %}<p>{{ shop.description }}</p>{% endif %}
       <p><strong>Address:</strong> {{ shop.address }}</p>
       <p><strong>Hours:</strong> {{ shop.opening_time.strftime('%I:%M %p') }} - {{ shop.closing_time.strftime('%I:%M %p') }}</p>
     </div>
   </header>
-  {% if staff_view %}<p><a class="button button-primary" href="{{ url_for('staff_orders.index') }}">View this shop's orders</a></p>{% endif %}
+  {% if staff_view %}<p class="form-actions"><a class="button button-primary" href="{{ url_for('staff_orders.index') }}">View this shop's orders</a><a class="button button-secondary" href="{{ url_for('shop_staff.index') }}">Edit shop details</a></p>{% endif %}
 
   <div class="shop-detail-grid">
     <section class="content-card">
@@ -36,8 +36,8 @@
             {% for row in price_rows %}
               <tr>
                 <th scope="row">{{ row.size.label }}</th>
-                <td data-label="Grayscale/page">{% if row.grayscale %}₱{{ '%.2f'|format(row.grayscale.price) }}{% if row.grayscale.is_demo %} (demo){% endif %}{% else %}Not set{% endif %}</td>
-                <td data-label="Colored/page">{% if row.color %}₱{{ '%.2f'|format(row.color.price) }}{% if row.color.is_demo %} (demo){% endif %}{% else %}Not set{% endif %}</td>
+                <td data-label="Grayscale/page">{% if row.grayscale %}₱{{ '%.2f'|format(row.grayscale.price) }}{% if row.grayscale.is_demo %} (sample){% endif %}{% else %}Not set{% endif %}</td>
+                <td data-label="Colored/page">{% if row.color %}₱{{ '%.2f'|format(row.color.price) }}{% if row.color.is_demo %} (sample){% endif %}{% else %}Not set{% endif %}</td>
               </tr>
             {% endfor %}
           </tbody>
@@ -47,7 +47,7 @@
     {% if fees %}
       <section class="content-card">
         <h2>Additional fees</h2>
-        <ul class="summary-list">{% for fee in fees %}<li class="summary-row"><span>{{ fee.fee_type.label }}{% if fee.is_demo %} (demo){% endif %}</span><strong>₱{{ '%.2f'|format(fee.amount) }}</strong></li>{% endfor %}</ul>
+        <ul class="summary-list">{% for fee in fees %}<li class="summary-row"><span>{{ fee.fee_type.label }}{% if fee.is_demo %} (sample){% endif %}</span><strong>₱{{ '%.2f'|format(fee.amount) }}</strong></li>{% endfor %}</ul>
       </section>
     {% endif %}
   </div>

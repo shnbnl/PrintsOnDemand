@@ -19,7 +19,7 @@ from app.models import (
 )
 
 
-# DEMO values only. Never use these as approved production rates.
+# Sample values only. Never use these as approved production rates.
 DEMO_PRICES = {
     PaperSize.LETTER: ("3.00", "7.00"),
     PaperSize.LEGAL: ("5.00", "10.00"),
@@ -28,8 +28,8 @@ DEMO_PRICES = {
     PaperSize.A2: ("18.00", "30.00"),
 }
 DEMO_FEES = {FeeType.RUSH_PRINTING: "25.00", FeeType.DELIVERY: "30.00"}
-DEMO_ADDRESS = "Demo location near Mapúa Malayan Colleges Laguna"
-# User-provided coordinates for these seeded demo-shop records.
+DEMO_ADDRESS = "Near Mapúa Malayan Colleges Laguna"
+# User-provided coordinates for these seeded sample-shop records.
 DEMO_SHOP_COORDINATES = {
     "Blue and Silver Bookstore": (Decimal("14.243257164979285"), Decimal("121.11300634061479")),
     "CHALECOSPOT": (Decimal("14.242503893301787"), Decimal("121.1137415531051")),
@@ -58,13 +58,13 @@ DEMO_SHOPS = (
 
 
 def seed_demo_shops() -> tuple[int, int]:
-    """Insert demo shops and refresh verified coordinates on their seed records."""
+    """Insert sample shops and refresh verified coordinates on their seed records."""
     added = 0
     coordinates_updated = 0
     for name, opening_time, closing_time, services in DEMO_SHOPS:
         existing = db.session.scalar(select(PrintingShop).where(PrintingShop.name == name))
         if existing:
-            # The name plus demo flag identify the seeded record; preserve all
+            # The name plus sample-data flag identify the seeded record; preserve all
             # other fields and leave real/admin-created shops untouched.
             if existing.is_demo:
                 coordinates = DEMO_SHOP_COORDINATES[name]

@@ -3,6 +3,7 @@
 from decimal import Decimal
 
 from flask_wtf import FlaskForm
+from flask_wtf.file import FileField
 from wtforms import BooleanField, DecimalField, SelectField, StringField, SubmitField, TextAreaField, TimeField
 from wtforms.validators import DataRequired, InputRequired, Length, Optional, ValidationError
 
@@ -29,7 +30,7 @@ class ShopForm(FlaskForm):
     opening_time = TimeField("Opening time", format="%H:%M", validators=[InputRequired()])
     closing_time = TimeField("Closing time", format="%H:%M", validators=[InputRequired()])
     is_active = BooleanField("Active", default=True)
-    is_demo = BooleanField("Demo shop information")
+    is_demo = BooleanField("Sample shop information")
     submit = SubmitField("Save shop")
 
     def validate(self, extra_validators=None) -> bool:
@@ -106,3 +107,20 @@ class FeeForm(FlaskForm):
 class StaffAssignmentForm(FlaskForm):
     staff_id = SelectField("Shop Staff account", coerce=int, validators=[DataRequired()])
     submit = SubmitField("Assign staff")
+
+
+class ShopStaffDetailsForm(FlaskForm):
+    description = TextAreaField("Shop description", filters=[strip_text], validators=[Length(max=2000)])
+    address = StringField("Address", filters=[strip_text], validators=[DataRequired(), Length(max=255)])
+    opening_time = TimeField("Opening time", format="%H:%M", validators=[InputRequired()])
+    closing_time = TimeField("Closing time", format="%H:%M", validators=[InputRequired()])
+    submit = SubmitField("Save details")
+
+    def validate_closing_time(self, field) -> None:
+        if self.opening_time.data and field.data == self.opening_time.data:
+            raise ValidationError("Opening and closing times must differ.")
+
+
+class ShopPhotoForm(FlaskForm):
+    photo = FileField("Shop photo", validators=[DataRequired()])
+    submit = SubmitField("Upload photo")
