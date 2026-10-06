@@ -2,9 +2,8 @@
 {% block title %}Review order | Prints On Demand{% endblock %}
 {% block content %}
   {% include "checkout/progress.html" %}
-  <header class="page-intro"><p class="page-eyebrow">Step 5 · Review</p><h1>Review and Place Order</h1><p class="page-lead">Check every detail before submitting your print job.</p></header>
+  <header class="page-intro"><p class="page-eyebrow">Step 5 · Review</p><h1>Review and Place Order</h1></header>
   {% if warning %}<p class="notice notice-warning" role="alert">{{ warning }}</p>{% endif %}
-  {% if quote.is_demo %}<p class="sample-label">Sample shop or rates — confirm with the shop before paying.</p>{% endif %}
   <div class="checkout-grid"><div class="checkout-main">
     <section class="content-card"><p class="page-eyebrow">Customer and shop</p><h2>{{ current_user.name }}</h2><p>{{ quote.shop.name }} · {{ quote.shop.address }}</p><a href="{{ url_for('checkout.shop') }}">Change shop</a></section>
     <section class="content-card"><p class="page-eyebrow">Files and configuration</p><h2>{{ quote.items|length }} file{{ '' if quote.items|length == 1 else 's' }}</h2><div class="order-item-list">{% for item in quote.items %}<article class="order-item-card"><h3>{{ item.uploaded_file.original_filename }}</h3><dl class="detail-list">{% if item.pdf_page_count is not none %}<div class="detail-row"><dt>Document pages</dt><dd>{{ item.pdf_page_count }} {{ 'page' if item.pdf_page_count == 1 else 'pages' }}</dd></div><div class="detail-row"><dt>Total Printed Pages</dt><dd>{{ item.total_printed_pages }}</dd></div>{% endif %}<div class="detail-row"><dt>Paper / output</dt><dd>{{ item.paper_size.label }} · {{ item.color_mode.label }}</dd></div><div class="detail-row"><dt>Print count</dt><dd>{{ item.quantity }} {{ 'copy' if item.quantity == 1 else 'copies' }}</dd></div><div class="detail-row"><dt>Rush printing</dt><dd>{{ 'Yes' if item.is_rush else 'No' }}</dd></div><div class="detail-row"><dt>Line total</dt><dd>{{ quote.currency }} {{ item.line_total }}</dd></div></dl></article>{% endfor %}</div><a href="{{ url_for('checkout.shop') }}">Edit print settings</a></section>

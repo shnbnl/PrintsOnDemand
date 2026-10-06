@@ -22,7 +22,6 @@
           <p class="hint" role="status" aria-live="polite" data-upload-status></p>
         </div>
       </form>
-      <p class="hint">Only the selected shop can access these files after you place the order. Unused staged uploads are cleaned up after {{ config.CHECKOUT_STAGED_RETENTION_HOURS }} hours.</p>
     </section>
     <section class="content-card"><h2>Files for this order</h2>
       {% if records %}<form class="form-stack" method="post" action="{{ url_for('checkout.upload') }}">
