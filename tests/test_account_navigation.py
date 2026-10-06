@@ -55,7 +55,7 @@ def test_customer_dashboards_share_printing_actions_and_account_navigation(clien
     user_id = student(test_app, f"dashboard-{role.value.lower()}@example.edu", role)
     sign_in(client, user_id)
     page = client.get(path)
-    for label in (b"From file to finished.", b"Pick a shop", b"My Orders",
+    for label in (b"Start a print order", b"Pick a shop", b"My Orders",
                   b"History &amp; tracking", b"Account settings"):
         assert label in page.data
     assert page.data.count(b">Account</a>") == 2
