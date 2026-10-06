@@ -22,3 +22,9 @@ The isolated browser audit covers guest, student, professor, all four shop staff
 Google Maps is stubbed for repeatable browser checks; these checks validate layout and interactions rather than live map tiles or API availability. Chromium mobile viewport checks are not physical iPhone/Safari or Android device certification.
 
 No schema, business-rule, authentication, payment, storage, or API dependency changes are included.
+
+## Screenshot alignment refinement
+
+`campus-concept.css`, loaded by the shared base template, applies the approved ivory/navy printing-desk treatment to every role's existing pages. The customer desk uses the approved headline and primary card copy. Existing destinations and account details remain accessible.
+
+Both embedded map panels use the dark navy surfaces shown in the approved shop-workspace screenshots, including coordinated inputs, selectable price cells, file controls and totals. Minimizing preserves the selected shop heading while hiding configuration. The mobile sheet remains within the map container. Original brand assets, live map tiles and shop photos are retained; illustrative map geometry, invented order summaries and mock prices are not introduced.
