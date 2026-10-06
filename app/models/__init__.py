@@ -7,6 +7,7 @@ from app.models.order import Order, OrderDestination, OrderItem, OrderStatus
 from app.models.professor import Faculty, Professor
 from app.models.payment import Payment, PaymentMethod, PaymentStatus
 from app.models.payment_settings import PaymentSettings
+from app.models.password_reset import PasswordResetAttempt, PasswordResetGrant
 
 __all__ = [
     "ColorMode",
@@ -20,6 +21,8 @@ __all__ = [
     "PaymentMethod",
     "PaymentStatus",
     "PaymentSettings",
+    "PasswordResetAttempt",
+    "PasswordResetGrant",
     "PaperSize",
     "PrintPrice",
     "Professor",

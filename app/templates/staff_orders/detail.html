@@ -21,10 +21,10 @@
     <p>Current status: {{ order_badge(order) }}</p>
     {% if order.processing_started_at or order.ready_at or order.delivered_at or order.completed_at %}
       <dl class="summary-list">
-        {% if order.processing_started_at %}<div class="summary-row"><dt>Processing started</dt><dd><time datetime="{{ order.processing_started_at.isoformat() }}">{{ order.processing_started_at.strftime('%Y-%m-%d %H:%M UTC') }}</time></dd></div>{% endif %}
-        {% if order.ready_at %}<div class="summary-row"><dt>Ready</dt><dd><time datetime="{{ order.ready_at.isoformat() }}">{{ order.ready_at.strftime('%Y-%m-%d %H:%M UTC') }}</time></dd></div>{% endif %}
-        {% if order.delivered_at %}<div class="summary-row"><dt>Delivered to Faculty</dt><dd><time datetime="{{ order.delivered_at.isoformat() }}">{{ order.delivered_at.strftime('%Y-%m-%d %H:%M UTC') }}</time></dd></div>{% endif %}
-        {% if order.completed_at %}<div class="summary-row"><dt>Completed</dt><dd><time datetime="{{ order.completed_at.isoformat() }}">{{ order.completed_at.strftime('%Y-%m-%d %H:%M UTC') }}</time></dd></div>{% endif %}
+        {% if order.processing_started_at %}<div class="summary-row"><dt>Processing started</dt><dd><time datetime="{{ order.processing_started_at|utc_iso }}">{{ order.processing_started_at|pht_datetime }}</time></dd></div>{% endif %}
+        {% if order.ready_at %}<div class="summary-row"><dt>Ready</dt><dd><time datetime="{{ order.ready_at|utc_iso }}">{{ order.ready_at|pht_datetime }}</time></dd></div>{% endif %}
+        {% if order.delivered_at %}<div class="summary-row"><dt>Delivered to Faculty</dt><dd><time datetime="{{ order.delivered_at|utc_iso }}">{{ order.delivered_at|pht_datetime }}</time></dd></div>{% endif %}
+        {% if order.completed_at %}<div class="summary-row"><dt>Completed</dt><dd><time datetime="{{ order.completed_at|utc_iso }}">{{ order.completed_at|pht_datetime }}</time></dd></div>{% endif %}
       </dl>
     {% endif %}
     {% if action %}
@@ -39,7 +39,7 @@
   <section class="section-card">
     <h2>Order and customer</h2>
     <dl class="summary-list">
-      <div class="summary-row"><dt>Created</dt><dd><time datetime="{{ order.created_at.isoformat() }}">{{ order.created_at.strftime('%Y-%m-%d %H:%M UTC') }}</time></dd></div>
+      <div class="summary-row"><dt>Created</dt><dd><time datetime="{{ order.created_at|utc_iso }}">{{ order.created_at|pht_datetime }}</time></dd></div>
       <div class="summary-row"><dt>Printing shop</dt><dd>{{ order.shop_name }}</dd></div>
       <div class="summary-row"><dt>Customer</dt><dd>{{ order.user.name }}</dd></div>
       <div class="summary-row"><dt>Order status</dt><dd>{{ order_badge(order) }}</dd></div>

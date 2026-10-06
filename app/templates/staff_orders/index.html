@@ -24,7 +24,7 @@
             <div>
               <p class="eyebrow">Order reference</p>
               <h2><a href="{{ url_for('staff_orders.detail', order_reference=order.order_reference) }}">{{ order.order_reference }}</a></h2>
-              <p class="hint">Placed <time datetime="{{ order.created_at.isoformat() }}">{{ order.created_at.strftime('%Y-%m-%d %H:%M UTC') }}</time></p>
+              <p class="hint">Placed <time datetime="{{ order.created_at|utc_iso }}">{{ order.created_at|pht_datetime }}</time></p>
             </div>
             <strong class="order-total">{{ order.currency }} {{ order.total }}</strong>
           </div>
@@ -36,7 +36,7 @@
             <div class="summary-row"><dt>Customer</dt><dd>{{ order.user.name }}</dd></div>
             <div class="summary-row"><dt>Fulfillment</dt><dd>{{ order.destination.label if order.destination else 'Not selected' }}</dd></div>
             {% set latest = order.completed_at or order.ready_at or order.processing_started_at %}
-            {% if latest %}<div class="summary-row"><dt>Latest processing event</dt><dd><time datetime="{{ latest.isoformat() }}">{{ latest.strftime('%Y-%m-%d %H:%M UTC') }}</time></dd></div>{% endif %}
+            {% if latest %}<div class="summary-row"><dt>Latest processing event</dt><dd><time datetime="{{ latest|utc_iso }}">{{ latest|pht_datetime }}</time></dd></div>{% endif %}
           </dl>
           <a class="card-action" href="{{ url_for('staff_orders.detail', order_reference=order.order_reference) }}">View order</a>
         </li>

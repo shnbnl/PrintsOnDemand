@@ -3,8 +3,8 @@
 from flask import Blueprint, current_app, flash, redirect, render_template, session, url_for
 from flask_login import current_user, logout_user
 from flask_wtf import FlaskForm
-from wtforms import BooleanField, PasswordField, SelectField, SubmitField
-from wtforms.validators import DataRequired, ValidationError
+from wtforms import BooleanField, PasswordField, SelectField, StringField, SubmitField
+from wtforms.validators import DataRequired, Length, ValidationError
 
 from app.authorization import roles_required
 from app.extensions import db
@@ -45,7 +45,18 @@ class ProfessorPreferenceForm(FlaskForm):
             raise ValidationError("Select a valid department.")
 
 
-def render_settings(*, preference_form=None, status=200):
+class ProfileForm(FlaskForm):
+    name = StringField("Display name", validators=[DataRequired(), Length(min=2, max=120)])
+    submit = SubmitField("Save display name")
+
+    def validate_name(self, field):
+        field.data = (field.data or "").strip()
+        if len(field.data) < 2:
+            raise ValidationError("Enter at least two characters.")
+
+
+def render_settings(*, preference_form=None, profile_form=None, status=200):
+    profile_form = profile_form or ProfileForm(formdata=None, name=current_user.name)
     if current_user.role == UserRole.PROFESSOR:
         profile = current_user.professor
         department = current_user.professor_department or (profile.department if profile else None)
@@ -55,15 +66,27 @@ def render_settings(*, preference_form=None, status=200):
                 profile.accepts_student_deliveries if profile is not None
                 else current_user.student_delivery_preference
             )
-        return render_template("account/settings.html", preference_form=form,
+        return render_template("account/settings.html", preference_form=form, profile_form=profile_form,
                                department=department, needs_department=not department), status
-    return render_template("account/settings.html"), status
+    return render_template("account/settings.html", profile_form=profile_form), status
 
 
 @account_bp.get("")
 @roles_required(UserRole.STUDENT, UserRole.PROFESSOR)
 def settings():
     return render_settings()
+
+
+@account_bp.post("/profile")
+@roles_required(UserRole.STUDENT, UserRole.PROFESSOR)
+def profile():
+    form = ProfileForm()
+    if form.validate_on_submit():
+        current_user.name = form.name.data
+        db.session.commit()
+        flash("Display name updated.", "success")
+        return redirect(url_for("account.settings"))
+    return render_settings(profile_form=form, status=400)
 
 
 @account_bp.post("/professor-preference")

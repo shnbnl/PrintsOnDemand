@@ -1,6 +1,7 @@
-"""The embedded pricing table selects actual per-file configurations."""
+"""Simple print controls and optional rate table use actual per-file prices."""
 
 from decimal import Decimal
+import re
 
 import pytest
 from sqlalchemy import select
@@ -27,6 +28,9 @@ def test_every_price_cell_matches_stored_rate_and_configuration(client, test_app
     assert 'Sample shop based on' not in page.split('<script id="map-shop-data"')[0]
     assert 'type="radio" name="paper_size_' not in page
     assert 'type="radio" name="color_mode_' not in page
+    assert f'name="paper_size_{file_id}" data-paper-select' in page
+    assert f'name="color_mode_{file_id}" data-color-select' in page
+    assert '<summary>View shop rates</summary>' in page
     with test_app.app_context():
         rates = [(rate.paper_size.value, rate.color_mode.value, rate.price) for rate in
                  db.session.scalars(select(PrintPrice).where(PrintPrice.shop_id == shop_id))]
@@ -49,6 +53,7 @@ def test_missing_rates_are_not_selectable_and_compound_values_are_validated(clie
     page = client.get('/checkout/shop').get_data(as_text=True)
     assert 'value="A4:GRAYSCALE"' in page
     assert 'value="A4:COLOR"' not in page and 'Not offered' in page
+    assert re.search(r'<option value="COLOR"[^>]*disabled', page)
     for invalid in ['A4:COLOR', 'A4:NEON', 'A9:COLOR', 'A4', 'A4:COLOR:0.01']:
         assert post(client, '/checkout/shop', {'shop_id': shop_id, **print_fields(file_id),
                     f'print_choice_{file_id}': invalid}).status_code == 400

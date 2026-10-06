@@ -6,7 +6,6 @@
   <div class="landing-shell">
     <header class="page-intro landing-hero">
       <div class="landing-hero-copy">
-        <img class="auth-brand" src="{{ url_for('static', filename='img/prints-on-demand-logo.png') }}" alt="" width="88" height="88">
         <p class="page-eyebrow">Your campus printing desk</p>
         <h1>Prints On Demand</h1>
         <p class="page-lead">Find a printing shop, prepare your file, and follow your order from one place.</p>
@@ -22,16 +21,16 @@
             <a class="button button-primary" href="{{ url_for('access.admin') }}">Go to admin management</a>
           {% endif %}
         {% else %}
-          <a class="button button-primary" href="{{ url_for('auth.login') }}">Log-in</a>
+          <a class="button button-primary" href="{{ url_for('auth.login') }}">Log in</a>
           <a class="button button-secondary" href="{{ url_for('auth.register', account_type='STUDENT') }}">Create student account</a>
           <a class="button button-secondary" href="{{ url_for('auth.register', account_type='PROFESSOR') }}">Create professor account</a>
+          <a class="button button-secondary" href="{{ url_for('shops.public_preview') }}">Browse printing shops</a>
         {% endif %}
         </div>
       </div>
       <div class="landing-hero-visual" aria-hidden="true">
         <div class="landing-art-page landing-art-page--back"></div>
         <div class="landing-art-page landing-art-page--front"><span></span><span></span><span></span></div>
-        <div class="landing-art-seal"><img src="{{ url_for('static', filename='img/prints-on-demand-logo.png') }}" alt=""></div>
       </div>
     </header>
     <div class="card-grid landing-steps" aria-label="How ordering works">
@@ -39,5 +38,10 @@
       <div class="content-card"><span class="action-icon" aria-hidden="true">02</span><h2>Prepare your file</h2><p>Upload privately and choose your print settings.</p></div>
       <div class="content-card"><span class="action-icon" aria-hidden="true">03</span><h2>Track your order</h2><p>Review payment and shop status whenever you need to.</p></div>
     </div>
+    <section class="content-card landing-trust" aria-labelledby="landing-trust-heading">
+      <h2 id="landing-trust-heading">Your files and support</h2>
+      <p>Files you upload stay private during checkout. After you place an order, only you and authorized staff at the selected shop can access its files. Unused checkout uploads become eligible for cleanup after 24 hours.</p>
+      {% if config.SUPPORT_EMAIL %}<p>Need help with your account? <a href="mailto:{{ config.SUPPORT_EMAIL }}">Email support</a>. For a print order, contact the selected shop.</p>{% else %}<p>For help with an order, contact the selected printing shop.</p>{% endif %}
+    </section>
   </div>
 {% endblock %}

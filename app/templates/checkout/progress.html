@@ -1,4 +1,5 @@
 <nav class="checkout-progress" aria-label="Checkout progress">
+  <p class="checkout-progress-compact">Step {{ step }} of 5 · {{ {1: 'Upload', 2: 'Shop & print settings', 3: 'Fulfillment', 4: 'Payment', 5: 'Review'}[step] }}</p>
   <ol>
     {% for number, label, endpoint in [(1, 'Upload', 'checkout.upload'), (2, 'Shop', 'checkout.shop'), (3, 'Fulfillment', 'checkout.fulfillment'), (4, 'Payment', 'checkout.payment'), (5, 'Review', 'checkout.review')] %}
       <li class="{{ 'is-current' if step == number else 'is-complete' if step > number else '' }}">

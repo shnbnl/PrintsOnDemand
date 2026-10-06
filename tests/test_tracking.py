@@ -1,5 +1,7 @@
 """Stage 8 confirmation and read-only tracking from authoritative records."""
 
+from datetime import timezone
+
 from flask import g
 from sqlalchemy import select
 
@@ -13,13 +15,17 @@ from test_orders import (
 from test_payments import choose, configured_online, created_order, submit
 
 
+def utc_iso(value):
+    return (value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value).astimezone(timezone.utc).isoformat()
+
+
 def test_new_order_confirmation_and_timeline_without_payment(client, test_app):
     _, url = created_order(client, test_app)
     response = client.get(url)
     with test_app.app_context():
         order = db.session.scalar(select(Order))
         reference = order.order_reference
-        created = order.created_at.isoformat()
+        created = utc_iso(order.created_at)
         total = str(order.total)
         tracking = build_tracking(order)
         assert tracking.payment_method == "Not selected"
@@ -53,7 +59,7 @@ def test_online_tracking_changes_only_with_recorded_payment(client, test_app):
     pending = client.get(url)
     with test_app.app_context():
         payment = db.session.scalar(select(Payment))
-        selected_at = payment.updated_at.isoformat()
+        selected_at = utc_iso(payment.updated_at)
         assert build_tracking(payment.order).steps[1].timestamp == payment.updated_at
     assert b"Payment method: <strong>Online</strong>" in pending.data
     assert b"Payment pending" in pending.data
@@ -66,7 +72,7 @@ def test_online_tracking_changes_only_with_recorded_payment(client, test_app):
     submitted = client.get(url)
     with test_app.app_context():
         payment = db.session.scalar(select(Payment))
-        submitted_at = payment.updated_at.isoformat()
+        submitted_at = utc_iso(payment.updated_at)
         assert build_tracking(payment.order).steps[1].timestamp == payment.updated_at
         assert payment.order.status.value == "PENDING_PAYMENT"
     assert b"Payment method: <strong>Online</strong>" in submitted.data
@@ -92,7 +98,7 @@ def test_onsite_confirmation_and_tracking_remain_pending(client, test_app):
     response = client.get(url)
     with test_app.app_context():
         payment = db.session.scalar(select(Payment))
-        selected_at = payment.updated_at.isoformat()
+        selected_at = utc_iso(payment.updated_at)
         assert build_tracking(payment.order).steps[1].timestamp == payment.updated_at
     assert b"Payment method: <strong>Onsite</strong>" in response.data
     assert b"Payment pending" in response.data

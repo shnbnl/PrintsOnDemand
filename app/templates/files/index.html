@@ -15,7 +15,7 @@
           <div class="file-card-body">
             <h2><a href="{{ url_for('files.detail', file_id=record.id) }}">{{ record.original_filename }}</a></h2>
             <p class="file-meta">{{ record.file_extension|upper }} · {{ record.file_size }} bytes</p>
-            <p class="file-meta">Uploaded <time datetime="{{ record.created_at.isoformat() }}">{{ record.created_at.strftime('%Y-%m-%d %H:%M UTC') }}</time></p>
+            <p class="file-meta">Uploaded <time datetime="{{ record.created_at|utc_iso }}">{{ record.created_at|pht_datetime }}</time></p>
             <span class="status-badge {{ 'status-success' if record.configuration else 'status-warning' }}">{{ 'Configured' if record.configuration else 'Needs print settings' }}</span>
           </div>
           <a class="button button-secondary" href="{{ url_for('files.detail', file_id=record.id) }}">View file</a>

@@ -2,15 +2,19 @@
   <h2>Print settings</h2>
   <label class="sr-only" for="workspace-file">Active file</label>
   <select id="workspace-file" data-file-selector>{% for file in files %}<option value="{{ file.id }}">{{ loop.index }}. {{ file.original_filename }}</option>{% endfor %}</select>
-  <p class="hint">Click a price to choose paper and output for this file.</p>
+  <p class="hint">Choose paper and output for each file. Open View shop rates to compare all available combinations.</p>
   {% for file in files %}{% set choice = options[file.id] %}
   <fieldset class="workspace-file" data-file-settings="{{ file.id }}" data-currency="{{ config.ORDER_CURRENCY }}" data-document-pages="{{ file.pdf_page_count if file.pdf_page_count else '' }}" data-page-count-capable="{{ 'true' if file.file_extension in ('pdf', 'doc', 'docx') else 'false' }}">
     <legend class="sr-only">{{ file.original_filename }}</legend>
     <p class="workspace-file-pages"><strong>Document Pages</strong> <span data-document-pages-label>{% if file.pdf_page_count %}{{ file.pdf_page_count }} {{ 'page' if file.pdf_page_count == 1 else 'pages' }}{% elif file.file_extension in ('pdf', 'doc', 'docx') %}Unable to determine{% else %}Not available for this file type{% endif %}</span></p>
     <input type="hidden" name="file_id" value="{{ file.id }}">
-    <input type="hidden" name="paper_size_{{ file.id }}" value="{{ choice.paper_size }}">
-    <input type="hidden" name="color_mode_{{ file.id }}" value="{{ choice.color_mode }}">
     {% if shop %}
+    <div class="workspace-simple-choices">
+      <div class="field"><label for="paper-size-{{ file.id }}">Paper size</label><select id="paper-size-{{ file.id }}" name="paper_size_{{ file.id }}" data-paper-select>{% for row in shop_details.price_rows if row.grayscale or row.color %}<option value="{{ row.size.value }}" {% if choice.paper_size == row.size.value %}selected{% endif %}>{{ row.size.label }}</option>{% endfor %}</select></div>
+      <div class="field"><label for="color-mode-{{ file.id }}">Print color output</label><select id="color-mode-{{ file.id }}" name="color_mode_{{ file.id }}" data-color-select><option value="GRAYSCALE" {% if choice.color_mode == 'GRAYSCALE' %}selected{% endif %} {% if (choice.paper_size, 'GRAYSCALE') not in shop_details.price_map %}disabled{% endif %}>Grayscale</option><option value="COLOR" {% if choice.color_mode == 'COLOR' %}selected{% endif %} {% if (choice.paper_size, 'COLOR') not in shop_details.price_map %}disabled{% endif %}>Color</option></select></div>
+    </div>
+    <p class="hint" data-configuration-message role="status" hidden></p>
+    <details class="workspace-rate-details"><summary>View shop rates</summary>
     <table class="print-price-selector">
       <caption class="sr-only">Choose a print setup for {{ file.original_filename }}</caption>
       <thead><tr><th scope="col">Paper</th><th scope="col">Grayscale / page</th><th scope="col">Color / page</th></tr></thead>
@@ -22,8 +26,9 @@
         </label>{% else %}<span class="price-unavailable" aria-label="{{ row.size.label }} {{ mode }} not offered">Not offered</span>{% endif %}</td>
         {% endfor %}</tr>{% endfor %}</tbody>
     </table>
+    </details>
     <p class="workspace-selection" data-selection-summary aria-live="polite">{{ choice.paper_size }} · {{ 'Color' if choice.color_mode == 'COLOR' else 'Grayscale' }}</p>
-    {% else %}<p class="hint">Select a shop pin to see its available prices.</p>{% endif %}
+    {% else %}<input type="hidden" name="paper_size_{{ file.id }}" value="{{ choice.paper_size }}"><input type="hidden" name="color_mode_{{ file.id }}" value="{{ choice.color_mode }}"><p class="hint">Select a shop to see its available prices.</p>{% endif %}
     <div class="workspace-file-controls">
       <div><label for="quantity-{{ file.id }}">Print Count</label><div class="print-count-control" data-print-count>
         <button type="button" data-count-step="-1" aria-label="Decrease print count for {{ file.original_filename }}">−</button>

@@ -59,6 +59,15 @@ def index():
     return render_template("shops/index.html", shops=shops, query=query)
 
 
+@shops_bp.get("/preview")
+def public_preview():
+    """Show only active shop information that is already public-facing."""
+    shops = db.session.scalars(select(PrintingShop).where(
+        PrintingShop.is_active.is_(True),
+    ).order_by(PrintingShop.name)).all()
+    return render_template("shops/preview.html", shops=shops)
+
+
 def map_markers(query: str = "") -> list[dict]:
     """Use one authoritative map payload for discovery and checkout."""
     statement = active_shop_statement(query).where(

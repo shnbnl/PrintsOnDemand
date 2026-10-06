@@ -38,6 +38,15 @@ class Config:
     ONSITE_PAYMENT_INSTRUCTIONS = "Pay at the printing shop. Your order remains unpaid until payment is recorded."
     GOOGLE_MAPS_API_KEY = ""
     GOOGLE_MAPS_MAP_ID = "DEMO_MAP_ID"
+    RESET_TOKEN_MINUTES = 30
+    MAIL_HOST = ""
+    MAIL_PORT = 587
+    MAIL_FROM = ""
+    MAIL_USERNAME = ""
+    MAIL_PASSWORD = ""
+    MAIL_USE_SSL = False
+    PASSWORD_RESET_BASE_URL = ""
+    SUPPORT_EMAIL = ""
 
 
 class DevelopmentConfig(Config):
@@ -139,5 +148,10 @@ def configure_runtime(app: Flask) -> None:
         value = os.getenv(name)
         if value:
             app.config[name] = value.strip()
+    for name in ("MAIL_HOST", "MAIL_FROM", "MAIL_USERNAME", "MAIL_PASSWORD", "SUPPORT_EMAIL"):
+        app.config[name] = (os.getenv(name) or app.config[name]).strip()
+    app.config["MAIL_PORT"] = int(os.getenv("MAIL_PORT") or app.config["MAIL_PORT"])
+    app.config["MAIL_USE_SSL"] = (os.getenv("MAIL_USE_SSL") or "false").lower() in {"1", "true", "yes", "on"}
+    app.config["PASSWORD_RESET_BASE_URL"] = (os.getenv("PASSWORD_RESET_BASE_URL") or app.config["PASSWORD_RESET_BASE_URL"]).rstrip("/")
     # Allow room for multipart headers while enforcing the file's own limit separately.
     app.config["MAX_CONTENT_LENGTH"] = app.config["UPLOAD_MAX_SIZE"] + 64 * 1024

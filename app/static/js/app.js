@@ -101,10 +101,12 @@ const professorDepartment = document.querySelector("[data-professor-department]"
 const departmentInput = professorDepartment?.querySelector("select, input");
 if (professorDepartment && departmentInput) {
   const registrationForm = professorDepartment.closest("form");
+  const professorGuidance = registrationForm.querySelector('[data-professor-guidance]');
   const updateProfessorDepartment = () => {
     const professorSelected = registrationForm.querySelector('input[name="account_type"][value="PROFESSOR"]:checked') !== null;
     professorDepartment.hidden = !professorSelected;
     departmentInput.required = professorSelected;
+    if (professorGuidance) professorGuidance.hidden = !professorSelected;
   };
   registrationForm.querySelectorAll('input[name="account_type"]').forEach((input) => {
     input.addEventListener("change", updateProfessorDepartment);

@@ -41,7 +41,7 @@
     <p class="page-eyebrow">Order</p>
     <h2>Order information</h2>
     <dl class="detail-list">
-      <div class="detail-row"><dt>Created</dt><dd>{{ order.created_at.strftime('%Y-%m-%d %H:%M UTC') }}</dd></div>
+      <div class="detail-row"><dt>Created</dt><dd>{{ order.created_at|pht_datetime }}</dd></div>
       <div class="detail-row"><dt>Printing shop</dt><dd>{{ order.shop_name }}</dd></div>
       <div class="detail-row"><dt>Customer</dt><dd>{{ order.user.name }}</dd></div>
     </dl>
@@ -54,7 +54,7 @@
         <p>Faculty: {{ order.professor_faculty or 'Not recorded for this older order' }}</p>
         <p>Office: {{ order.professor_office or 'Not listed' }}</p>
         <p>Email: {{ order.professor_email }}</p>
-        <p>Blue and Silver staff physically deliver the printed papers to this Faculty. {% if order.delivered_at %}Staff recorded the handoff at {{ order.delivered_at.strftime('%Y-%m-%d %H:%M UTC') }}.{% else %}No physical handoff has been confirmed yet.{% endif %} No file is sent electronically.</p>
+        <p>Blue and Silver staff physically deliver the printed papers to this Faculty. {% if order.delivered_at %}Staff recorded the handoff at {{ order.delivered_at|pht_datetime }}.{% else %}No physical handoff has been confirmed yet.{% endif %} No file is sent electronically.</p>
       </div>
     {% elif order.destination and order.destination.value == 'PICKUP' %}
       <div class="destination-panel"><h3>Scheduled Pickup</h3><p>Requested pickup date: {{ order.pickup_date }}</p><p>Requested pickup time: {{ order.pickup_slot }} (Philippine time)</p><p>Check order tracking for processing progress.</p></div>
@@ -174,7 +174,7 @@
           <span class="tracking-marker" aria-hidden="true"></span>
           <div><strong>{{ step.title }}</strong>: {{ step.detail }}
           {% if step.timestamp %}
-            <time datetime="{{ step.timestamp.isoformat() }}">{{ step.timestamp.strftime('%Y-%m-%d %H:%M UTC') }}</time>
+            <time datetime="{{ step.timestamp|utc_iso }}">{{ step.timestamp|pht_datetime }}</time>
           {% endif %}
           </div>
         </li>

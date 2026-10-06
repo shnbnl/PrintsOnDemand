@@ -21,6 +21,15 @@
       </dl>
     {% endif %}
   </section>
+  <section class="content-card account-settings-card" aria-labelledby="profile-heading">
+    <h2 id="profile-heading">Profile</h2>
+    <p class="hint">Your display name appears on your orders. Your sign-in email stays the same.</p>
+    <form class="form-stack" method="post" action="{{ url_for('account.profile') }}" novalidate>
+      {{ profile_form.hidden_tag() }}
+      <div class="field">{{ profile_form.name.label }} {{ profile_form.name(autocomplete="name", maxlength="120") }}{% for error in profile_form.name.errors %}<p class="field-error" role="alert">{{ error }}</p>{% endfor %}</div>
+      {{ profile_form.submit(class_='button button-secondary') }}
+    </form>
+  </section>
   {% if current_user.role.value == 'PROFESSOR' %}
     <section class="content-card account-settings-card" aria-labelledby="student-delivery-heading">
       <h2 id="student-delivery-heading">Student print deliveries</h2>
