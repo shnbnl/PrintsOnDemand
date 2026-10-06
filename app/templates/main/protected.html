@@ -17,17 +17,17 @@
     </div>
     <div class="card-grid action-grid">
       <article class="content-card action-card action-card-primary">
-        <span class="action-icon" aria-hidden="true">01</span>
+        <span class="action-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V3m-5 5 5-5 5 5M4 15v5a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-5"/></svg></span>
         <div><h2>Start a print order</h2><p>Upload files, choose a shop, configure printing, and review payment in one guided flow.</p></div>
         <a class="button button-primary" href="{{ url_for('checkout.upload') }}">Start Order</a>
       </article>
       <article class="content-card action-card">
-        <span class="action-icon" aria-hidden="true">02</span>
+        <span class="action-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 11-8 11S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg></span>
         <div><h2>Pick a shop</h2><p>Compare locations, services, hours, and prices on the shop map.</p></div>
         <a class="button button-secondary" href="{{ url_for('shops.map_view') }}">Explore shop map</a>
       </article>
       <article class="content-card action-card">
-        <span class="action-icon" aria-hidden="true">03</span>
+        <span class="action-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Z M9 7h6M9 11h6M9 15h3"/></svg></span>
         <div><h2>My Orders</h2><p>Check payment, shop progress, and your previous orders.</p></div>
         <a class="button button-secondary" href="{{ orders_url }}">Order History</a>
       </article>

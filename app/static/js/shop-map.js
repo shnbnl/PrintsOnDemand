@@ -170,7 +170,12 @@
       if (workspace && map.panBy) {
         const panel = workspace.querySelector('.workspace-panel');
         const offset = panel.getBoundingClientRect();
-        if (window.matchMedia('(max-width: 900px)').matches) map.panBy(0, offset.height / 2 + 60);
+        if (window.matchMedia('(max-width: 900px)').matches) {
+          // Center pins in the visible map above the mobile sheet, regardless of its content height.
+          const mapBounds = canvas.getBoundingClientRect();
+          const visibleHeight = Math.min(mapBounds.height, Math.max(0, offset.top - mapBounds.top));
+          map.panBy(0, (mapBounds.height - visibleHeight) / 2);
+        }
         else map.panBy(offset.width / 2, 0);
       }
 

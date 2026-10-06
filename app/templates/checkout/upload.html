@@ -11,7 +11,7 @@
     <p class="page-lead">Upload up to {{ max_files }} documents for this order. They are staged privately until you place the order.</p></header>
   {% if error %}<p class="notice notice-error" role="alert">{{ error }}</p>{% endif %}
   <div class="checkout-step-grid">
-    <section class="content-card"><h2>Add files</h2>
+    <section class="content-card upload-card"><h2>Add files</h2>
       <p class="hint">Supported: {{ extensions|sort|join(', ')|upper }}. Each file may be up to {{ (config.UPLOAD_MAX_SIZE / 1048576)|round(1) }} MiB. Add fewer files at a time if the combined upload is too large.</p>
       <form class="form-stack" action="{{ url_for('checkout.upload_files') }}" method="post" enctype="multipart/form-data" data-checkout-upload data-max-file-bytes="{{ config.UPLOAD_MAX_SIZE }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
