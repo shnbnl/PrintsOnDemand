@@ -170,6 +170,42 @@ def register_commands(app: Flask) -> None:
         "seed-demo-shops", callback=seed_sample_shops_command.callback, hidden=True,
     ))
 
+    @app.cli.command("update-shop-map-pins")
+    @click.option("--apply", is_flag=True, help="Save the three verified shop coordinates.")
+    def update_shop_map_pins_command(apply: bool) -> None:
+        """Preview or correct three existing shops, including non-sample records."""
+        from app.seed import SHOP_PIN_CORRECTIONS
+
+        shops = {
+            shop.name: shop for shop in db.session.scalars(
+                select(PrintingShop).where(PrintingShop.name.in_(SHOP_PIN_CORRECTIONS))
+            )
+        }
+        missing = set(SHOP_PIN_CORRECTIONS) - set(shops)
+        if missing:
+            raise click.ClickException(
+                "No coordinates changed. Missing shops: " + ", ".join(sorted(missing))
+            )
+
+        changed = 0
+        for name, coordinates in SHOP_PIN_CORRECTIONS.items():
+            shop = shops[name]
+            current = (shop.latitude, shop.longitude)
+            click.echo(f"{name}: {current[0]}, {current[1]} -> {coordinates[0]}, {coordinates[1]}")
+            if current != coordinates:
+                changed += 1
+                if apply:
+                    shop.latitude, shop.longitude = coordinates
+        if apply:
+            try:
+                db.session.commit()
+            except SQLAlchemyError as error:
+                db.session.rollback()
+                raise click.ClickException("Could not update shop coordinates.") from error
+            click.echo(f"Updated coordinates on {changed} existing shops.")
+        else:
+            click.echo(f"Preview: {changed} shops would change. Run with --apply to save.")
+
     @app.cli.command("seed-sample-professors")
     def seed_sample_professors_command() -> None:
         """Insert fictional professors only when intentionally run locally."""

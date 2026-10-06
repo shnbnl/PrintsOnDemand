@@ -301,3 +301,70 @@ def test_demo_seed_does_not_locate_existing_non_demo_shop(test_app):
         existing = db.session.get(PrintingShop, existing_id)
         assert existing.is_demo is False
         assert (existing.latitude, existing.longitude) == (Decimal("14.240001"), Decimal("121.110001"))
+
+
+def test_existing_shop_pin_correction_works_for_non_sample_shops(client, test_app):
+    from app.seed import SHOP_PIN_CORRECTIONS
+
+    shop_ids = {name: add_shop(test_app, name) for name in SHOP_PIN_CORRECTIONS}
+    pixel_id = add_shop(test_app, "Pixels Print and Press")
+    for name, shop_id in shop_ids.items():
+        latitude, longitude = PREVIOUS_DEMO_COORDINATES[name]
+        set_location(test_app, shop_id, str(latitude), str(longitude))
+    set_location(test_app, pixel_id, "14.241960049308364", "121.11268038748165")
+    with test_app.app_context():
+        blue = db.session.get(PrintingShop, shop_ids["Blue and Silver Bookstore"])
+        blue.description = "Staff-edited description"
+        blue.services.append(ShopService(service_type=ServiceType.DELIVERY, enabled=True))
+        blue.prices.append(PrintPrice(
+            paper_size=PaperSize.A4, color_mode=ColorMode.COLOR, price=Decimal("8.75"),
+        ))
+        db.session.commit()
+
+    runner = test_app.test_cli_runner()
+    preview = runner.invoke(args=["update-shop-map-pins"])
+    assert preview.exit_code == 0
+    assert "Preview: 3 shops would change" in preview.output
+    with test_app.app_context():
+        for name, shop_id in shop_ids.items():
+            shop = db.session.get(PrintingShop, shop_id)
+            assert (shop.latitude, shop.longitude) == PREVIOUS_DEMO_COORDINATES[name]
+
+    applied = runner.invoke(args=["update-shop-map-pins", "--apply"])
+    assert applied.exit_code == 0
+    assert "Updated coordinates on 3 existing shops." in applied.output
+    with test_app.app_context():
+        for name, shop_id in shop_ids.items():
+            shop = db.session.get(PrintingShop, shop_id)
+            assert shop.id == shop_id and shop.is_demo is False
+            assert (shop.latitude, shop.longitude) == SHOP_PIN_CORRECTIONS[name]
+        blue = db.session.get(PrintingShop, shop_ids["Blue and Silver Bookstore"])
+        assert blue.description == "Staff-edited description"
+        assert [(service.service_type, service.enabled) for service in blue.services] == [
+            (ServiceType.DELIVERY, True),
+        ]
+        assert [(price.paper_size, price.color_mode, price.price) for price in blue.prices] == [
+            (PaperSize.A4, ColorMode.COLOR, Decimal("8.75")),
+        ]
+        pixel = db.session.get(PrintingShop, pixel_id)
+        assert (pixel.latitude, pixel.longitude) == PREVIOUS_DEMO_COORDINATES[pixel.name]
+
+    add_user(test_app, UserRole.STUDENT, "corrected.pins@example.com")
+    login(client, "corrected.pins@example.com")
+    markers = {marker["name"]: marker for marker in map_data(client.get("/shops/map"))}
+    for name, (latitude, longitude) in SHOP_PIN_CORRECTIONS.items():
+        assert markers[name]["position"] == {"lat": float(latitude), "lng": float(longitude)}
+    again = runner.invoke(args=["update-shop-map-pins", "--apply"])
+    assert again.exit_code == 0
+    assert "Updated coordinates on 0 existing shops." in again.output
+
+
+def test_shop_pin_correction_aborts_if_named_shop_is_missing(test_app):
+    blue_id = add_shop(test_app, "Blue and Silver Bookstore")
+    set_location(test_app, blue_id, "14.240001", "121.110001")
+    result = test_app.test_cli_runner().invoke(args=["update-shop-map-pins", "--apply"])
+    assert result.exit_code != 0
+    assert "No coordinates changed. Missing shops:" in result.output
+    with test_app.app_context():
+        blue = db.session.get(PrintingShop, blue_id)
+        assert (blue.latitude, blue.longitude) == (Decimal("14.240001"), Decimal("121.110001"))
