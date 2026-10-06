@@ -68,8 +68,8 @@
             {% for row in price_rows %}
               <tr>
                 <th scope="row">{{ row.size.label }}</th>
-                <td data-label="Grayscale/page">{% if row.grayscale %}₱{{ '%.2f'|format(row.grayscale.price) }}{% if row.grayscale.is_demo %} (sample){% endif %}{% else %}Not set{% endif %}</td>
-                <td data-label="Colored/page">{% if row.color %}₱{{ '%.2f'|format(row.color.price) }}{% if row.color.is_demo %} (sample){% endif %}{% else %}Not set{% endif %}</td>
+                <td data-label="Grayscale/page">{% if row.grayscale %}₱{{ '%.2f'|format(row.grayscale.price) }}{% if row.grayscale.is_demo %} (sample){% endif %}{% else %}—{% endif %}</td>
+                <td data-label="Colored/page">{% if row.color %}₱{{ '%.2f'|format(row.color.price) }}{% if row.color.is_demo %} (sample){% endif %}{% else %}—{% endif %}</td>
               </tr>
             {% endfor %}
           </tbody>
@@ -78,8 +78,8 @@
     </section>
     {% if fees %}
       <section class="content-card">
-        <h2>Additional fees</h2>
-        <ul class="summary-list">{% for fee in fees %}<li class="summary-row"><span>{{ fee.fee_type.label }}{% if fee.is_demo %} (sample){% endif %}</span><strong>₱{{ '%.2f'|format(fee.amount) }}</strong></li>{% endfor %}</ul>
+        <h2>Additional fees</h2><p class="hint">Rush printing adds 20% of the printing subtotal when enabled and selected. Delivery is excluded.</p>
+        <ul class="summary-list">{% for fee in fees %}<li class="summary-row"><span>{{ fee.fee_type.label }}{% if fee.is_demo %} (sample){% endif %}</span><strong>{% if fee.fee_type.value == 'RUSH_PRINTING' %}20% of printing subtotal{% else %}₱{{ '%.2f'|format(fee.amount) }}{% endif %}</strong></li>{% endfor %}</ul>
       </section>
     {% endif %}
   </div>

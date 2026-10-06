@@ -195,7 +195,7 @@ def test_two_rush_items_and_delivery_charge_each_fee_once(client, test_app):
     fields = {"shop_id": str(shop_id), "file_id": [str(first), str(second)], **delivery_fields()}
     response = client.get("/orders/new", query_string=fields)
     assert response.status_code == 200
-    assert b"Rush printing fee: PHP 5.50" in response.data
+    assert b"Rush printing fee: PHP 2.70" in response.data
     assert b"Delivery fee: PHP 40.00" in response.data
     assert client.post("/orders/create", data={
         **fields, "csrf_token": token(response), "delivery_fee": "0.01",
@@ -206,10 +206,10 @@ def test_two_rush_items_and_delivery_charge_each_fee_once(client, test_app):
     with test_app.app_context():
         order = db.session.scalar(select(Order))
         assert len(order.items) == 2
-        assert order.rush_fee == Decimal("5.50")
+        assert order.rush_fee == Decimal("2.70")
         assert order.delivery_fee == Decimal("40.00")
-        assert order.fees_total == Decimal("45.50")
-        assert order.total == order.subtotal + Decimal("45.50")
+        assert order.fees_total == Decimal("42.70")
+        assert order.total == order.subtotal + Decimal("42.70")
         assert order.payment is None
 
 

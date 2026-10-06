@@ -1,6 +1,7 @@
 """Ordering-account shop directory and read-only shop details."""
 
 from io import BytesIO
+from types import SimpleNamespace
 
 from flask import Blueprint, abort, current_app, render_template, request, send_file, url_for
 from sqlalchemy import Numeric, cast, select
@@ -11,7 +12,7 @@ from app.extensions import db
 from app.models import ColorMode, PaperSize, PrintingShop, UserRole
 from app.services.fulfillment import availability
 from app.services.professors import shop_supports_professor_delivery
-from app.models import ServiceType
+from app.models import ServiceType, FeeType
 
 
 shops_bp = Blueprint("shops", __name__, url_prefix="/shops")
@@ -19,7 +20,7 @@ SCHOOL_AREA_CENTER = {"lat": 14.243375, "lng": 121.112716}
 
 
 def detail_context(shop: PrintingShop) -> dict:
-    prices = {(item.paper_size, item.color_mode): item for item in shop.prices}
+    prices = {(item.paper_size, item.color_mode): item for item in shop.prices if item.price > 0}
     rows = [
         {
             "size": size,
@@ -36,9 +37,11 @@ def detail_context(shop: PrintingShop) -> dict:
     )
     service_types = {item.service_type.value for item in services}
     fees = sorted(
-        (item for item in shop.fees if item.fee_type.value in service_types),
+        (item for item in shop.fees if item.fee_type.value in service_types and item.fee_type != FeeType.RUSH_PRINTING),
         key=lambda item: item.fee_type.value,
     )
+    if ServiceType.RUSH_PRINTING.value in service_types:
+        fees.append(SimpleNamespace(fee_type=FeeType.RUSH_PRINTING, amount=0, is_demo=False))
     return {"shop": shop, "price_rows": rows, "price_map": prices, "services": services, "fees": fees}
 
 
@@ -88,7 +91,7 @@ def map_markers(query: str = "") -> list[dict]:
             ) if fulfillment[method]],
             "fees": [{
                 "label": item.fee_type.label,
-                "amount": f"₱{item.amount:.2f}",
+                "amount": "20% of printing subtotal" if item.fee_type == FeeType.RUSH_PRINTING else f"₱{item.amount:.2f}",
                 "is_sample": item.is_demo,
             } for item in context["fees"]],
             "prices": [{
@@ -96,12 +99,12 @@ def map_markers(query: str = "") -> list[dict]:
                 "grayscale": (
                     f"₱{row['grayscale'].price:.2f}"
                     f"{' (sample)' if row['grayscale'].is_demo else ''}"
-                    if row["grayscale"] else "Not set"
+                    if row["grayscale"] else "—"
                 ),
                 "color": (
                     f"₱{row['color'].price:.2f}"
                     f"{' (sample)' if row['color'].is_demo else ''}"
-                    if row["color"] else "Not set"
+                    if row["color"] else "—"
                 ),
             } for row in context["price_rows"]],
             "is_sample": shop.is_demo,

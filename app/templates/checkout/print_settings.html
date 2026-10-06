@@ -19,7 +19,7 @@
         <td>{% if rate %}<label class="price-cell">
           <input type="radio" name="print_choice_{{ file.id }}" value="{{ row.size.value }}:{{ mode }}" data-price-choice data-unit-price="{{ rate.price }}" {% if choice.paper_size == row.size.value and choice.color_mode == mode %}checked{% endif %} aria-label="{{ row.size.label }} {{ 'Grayscale' if mode == 'GRAYSCALE' else 'Color' }}, PHP {{ rate.price }}">
           <span>₱{{ '%.2f'|format(rate.price) }}</span><span class="price-check" aria-hidden="true">✓</span>
-        </label>{% else %}<span class="price-unavailable" aria-label="{{ row.size.label }} {{ mode }} not offered">Not offered</span>{% endif %}</td>
+        </label>{% else %}<span class="price-unavailable" aria-label="{{ row.size.label }} {{ mode }} not offered">—</span>{% endif %}</td>
         {% endfor %}</tr>{% endfor %}</tbody>
     </table>
     <p class="workspace-selection" data-selection-summary aria-live="polite">{{ choice.paper_size }} · {{ 'Color' if choice.color_mode == 'COLOR' else 'Grayscale' }}</p>
@@ -30,7 +30,7 @@
         <input id="quantity-{{ file.id }}" name="quantity_{{ file.id }}" type="number" inputmode="numeric" min="1" max="{{ max_quantity }}" step="1" value="{{ choice.quantity }}" required>
         <button type="button" data-count-step="1" aria-label="Increase print count for {{ file.original_filename }}">+</button>
       </div><p class="hint">Number of copies</p></div>
-      <div><span class="workspace-file-label">Printing Priority</span><label class="workspace-rush"><input type="checkbox" name="is_rush_{{ file.id }}" value="1" {% if rush_available and choice.is_rush %}checked{% endif %} {% if not rush_available %}disabled{% endif %}> Rush printing</label></div>
+      <div><span class="workspace-file-label">Printing Priority</span><label class="workspace-rush"><input type="checkbox" name="is_rush_{{ file.id }}" value="1" {% if rush_available and choice.is_rush %}checked{% endif %} {% if not rush_available %}disabled{% endif %}> Rush printing (+20%)</label></div>
     </div>
     <p class="workspace-file-pages"><strong>Total Printed Pages</strong> <span data-total-printed-pages aria-live="polite">{% if file.pdf_page_count %}{{ file.pdf_page_count * choice.quantity }} pages{% elif file.file_extension in ('pdf', 'doc', 'docx') %}Unable to determine{% else %}Not available for this file type{% endif %}</span></p>
     {% set selected_rate = shop_details.price_map.get((choice.paper_size, choice.color_mode)) if shop_details else none %}

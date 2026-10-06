@@ -4,14 +4,14 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
 from sqlalchemy import select
 
 from app.extensions import db
 from app.models import (
-    ColorMode, FeeType, PaperSize, PrintPrice, PrintingShop, ServiceType,
-    ShopFee, ShopService, UploadedFile,
+    ColorMode, PaperSize, PrintPrice, PrintingShop, ServiceType,
+    ShopService, UploadedFile,
 )
 from app.storage import StorageError, get_storage
 from app.storage.validation import UploadValidationError, count_pdf_pages, count_word_document_pages
@@ -170,14 +170,13 @@ def quote_order(
             PrintPrice.color_mode == color_mode,
         )
     )
-    if rate is None:
+    if rate is None or rate.price <= 0:
         raise PricingError("This shop has no price for the selected paper and color.")
     unit_price = money(rate.price, "Print price")
     billable_units = total_printed_pages if total_printed_pages is not None else quantity
     line_total = money(unit_price * billable_units, "Line total")
 
     rush_fee = Decimal("0.00")
-    fee_is_demo = False
     if is_rush:
         rush_service = db.session.scalar(
             select(ShopService).where(
@@ -188,15 +187,7 @@ def quote_order(
         )
         if rush_service is None:
             raise PricingError("Rush printing is not offered by this shop.")
-        fee = db.session.scalar(
-            select(ShopFee).where(
-                ShopFee.shop_id == shop.id, ShopFee.fee_type == FeeType.RUSH_PRINTING
-            )
-        )
-        if fee is None:
-            raise PricingError("Rush fee is not configured for this shop.")
-        rush_fee = money(fee.amount, "Rush fee")
-        fee_is_demo = fee.is_demo
+        rush_fee = money((line_total * Decimal("0.20")).quantize(CENT, rounding=ROUND_HALF_UP), "Rush fee")
 
     subtotal = line_total
     fees_total = rush_fee
@@ -207,7 +198,7 @@ def quote_order(
         pdf_page_count=pdf_page_count, total_printed_pages=total_printed_pages,
         is_rush=is_rush, unit_price=unit_price, line_total=line_total,
         subtotal=subtotal, rush_fee=rush_fee, fees_total=fees_total, total=total,
-        currency=currency, is_demo=shop.is_demo or rate.is_demo or fee_is_demo,
+        currency=currency, is_demo=shop.is_demo or rate.is_demo,
     )
 
 
@@ -219,7 +210,7 @@ def quote_cart(
     delivery_fee_is_demo: bool = False,
     verify_pdf: bool = False,
 ) -> CartQuote:
-    """Quote unique owned files; apply a shop's rush fee once per order."""
+    """Quote owned files; rush adds 20% of printing subtotal once per order."""
     if not file_ids:
         raise PricingError("Select at least one file for this order.")
     if len(file_ids) > max_files:
@@ -233,7 +224,7 @@ def quote_cart(
         verify_pdf=verify_pdf,
     ) for file_id in file_ids)
     subtotal = money(sum((item.line_total for item in items), Decimal("0.00")), "Order subtotal")
-    rush_fee = next((item.rush_fee for item in items if item.is_rush), Decimal("0.00"))
+    rush_fee = money((subtotal * Decimal("0.20")).quantize(CENT, rounding=ROUND_HALF_UP), "Rush fee") if any(item.is_rush for item in items) else Decimal("0.00")
     delivery_fee = money(delivery_fee, "Delivery fee")
     fees_total = money(rush_fee + delivery_fee, "Order fees")
     total = money(subtotal + fees_total, "Order total")

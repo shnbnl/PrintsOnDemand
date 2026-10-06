@@ -48,7 +48,7 @@ def test_missing_rates_are_not_selectable_and_compound_values_are_validated(clie
     assert post(client, '/checkout/shop', {'shop_id': shop_id, **print_fields(file_id)}).status_code == 302
     page = client.get('/checkout/shop').get_data(as_text=True)
     assert 'value="A4:GRAYSCALE"' in page
-    assert 'value="A4:COLOR"' not in page and 'Not offered' in page
+    assert 'value="A4:COLOR"' not in page and 'not offered' in page
     for invalid in ['A4:COLOR', 'A4:NEON', 'A9:COLOR', 'A4', 'A4:COLOR:0.01']:
         assert post(client, '/checkout/shop', {'shop_id': shop_id, **print_fields(file_id),
                     f'print_choice_{file_id}': invalid}).status_code == 400
@@ -76,14 +76,14 @@ def test_two_files_keep_independent_combined_choices_and_counts(client, test_app
         assert choices[str(first)] == dict(paper_size='LETTER', color_mode='COLOR', quantity=2, is_rush=False)
         assert choices[str(second)] == dict(paper_size='A4', color_mode='GRAYSCALE', quantity=3, is_rush=True)
     page = client.get('/checkout/shop').get_data(as_text=True)
-    assert 'PHP 26.25' in page
+    assert 'PHP 25.50' in page
     assert page.count('data-file-settings=') == 2
     assert post(client, '/checkout/fulfillment', pickup_fields()).status_code == 302
     assert post(client, '/checkout/payment', {'payment_method': 'ONSITE'}).status_code == 302
     assert post(client, '/checkout/place').status_code == 302
     with test_app.app_context():
         order = db.session.scalar(select(Order))
-        assert order.total == Decimal('26.25')
+        assert order.total == Decimal('25.50')
         items = {item.uploaded_file_id: item for item in order.items}
         assert (items[first].paper_size, items[first].color_mode, items[first].quantity, items[first].is_rush) == (PaperSize.LETTER, ColorMode.COLOR, 2, False)
         assert (items[second].paper_size, items[second].color_mode, items[second].quantity, items[second].is_rush) == (PaperSize.A4, ColorMode.GRAYSCALE, 3, True)

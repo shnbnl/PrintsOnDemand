@@ -55,7 +55,7 @@
       <p class="page-eyebrow">Printing priority</p>
       <label class="choice-card checkbox-choice">
         {{ form.is_rush() }}
-        <span><strong>Rush printing</strong><small>Request priority handling when the shop offers it. Any fee appears during order review.</small></span>
+        <span><strong>Rush printing</strong><small>Adds 20% of the printing subtotal when offered by the shop. Delivery is excluded.</small></span>
       </label>
       {% for error in form.is_rush.errors %}<p class="field-error" role="alert">{{ error }}</p>{% endfor %}
     </section>

@@ -432,29 +432,28 @@ def test_order_quote_creation_and_model_snapshots(client, test_app):
         assert type(item.unit_price) is Decimal
 
 
-def test_rush_fee_is_flat_and_database_backed(client, test_app):
+def test_rush_fee_is_twenty_percent_of_printing_subtotal(client, test_app):
     user_id = student(test_app)
     shop_id = shop(test_app, rush=True)
     file_id = file(test_app, user_id, quantity=4, rush=True)
     sign_in(client, user_id)
     page = review(client, file_id, shop_id)
-    assert b"Rush printing fee: PHP 5.50" in page.data
+    assert b"Rush printing fee: PHP 1.80" in page.data
     assert b"Subtotal: PHP 9.00" in page.data
-    assert b"Total: PHP 14.50" in page.data
+    assert b"Total: PHP 10.80" in page.data
     assert place(client, file_id, shop_id).status_code == 302
     with test_app.app_context():
         order = db.session.scalar(select(Order))
-        assert order.rush_fee == order.fees_total == Decimal("5.50")
+        assert order.rush_fee == order.fees_total == Decimal("1.80")
         assert order.subtotal == Decimal("9.00")
-        assert order.total == Decimal("14.50")
+        assert order.total == Decimal("10.80")
         assert order.items[0].is_rush
 
 
 @pytest.mark.parametrize("rush_enabled,fee,expected", [
     (False, "5.50", b"Rush printing is not offered"),
-    (True, None, b"Rush fee is not configured"),
 ])
-def test_rush_requires_service_and_fee(client, test_app, rush_enabled, fee, expected):
+def test_rush_requires_service(client, test_app, rush_enabled, fee, expected):
     user_id = student(test_app)
     shop_id = shop(test_app, rush=rush_enabled, rush_fee=fee)
     file_id = file(test_app, user_id, rush=True)

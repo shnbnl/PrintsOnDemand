@@ -72,10 +72,10 @@
 
     <section class="section-card" id="shop-prices">
       <p class="page-eyebrow">Current rates</p>
-      <h2>Print prices</h2>
+      <h2>Print prices</h2><p class="hint">Set a price to 0 to mark that paper and color combination as not offered.</p>
       {% if prices %}<div class="table-scroll" role="region" aria-label="Print prices" tabindex="0"><table class="data-table pricing-table staff-pricing-table">
         <thead><tr><th scope="col">Paper size</th><th scope="col">Grayscale / page</th><th scope="col">Color / page</th></tr></thead>
-        <tbody>{% for size, grayscale, color in price_rows %}<tr><th scope="row">{{ size.label }}</th><td data-label="Grayscale / page">{{ '₱%.2f'|format(grayscale.price) if grayscale else 'Not set' }}</td><td data-label="Color / page">{{ '₱%.2f'|format(color.price) if color else 'Not set' }}</td></tr>{% endfor %}</tbody>
+        <tbody>{% for size, grayscale, color in price_rows %}<tr><th scope="row">{{ size.label }}</th><td data-label="Grayscale / page">{{ '₱%.2f'|format(grayscale.price) if grayscale and grayscale.price > 0 else '—' }}</td><td data-label="Color / page">{{ '₱%.2f'|format(color.price) if color and color.price > 0 else '—' }}</td></tr>{% endfor %}</tbody>
       </table></div>{% else %}<p class="hint">No prices configured.</p>{% endif %}
       <h3 class="form-subheading">Update a rate</h3>
       <form class="account-form form-grid" method="post" action="{{ url_for('shop_staff.save_price') }}" novalidate>
@@ -124,15 +124,15 @@
     </section>
     <section class="section-card" id="shop-fees">
       <p class="page-eyebrow">Additional charges</p>
-      <h2>Additional fees</h2>
-      {% if fees %}<ul class="summary-list">{% for fee in fees %}<li class="summary-row"><span>{{ fee.fee_type.label }}</span><strong>₱{{ '%.2f'|format(fee.amount) }}</strong></li>{% endfor %}</ul>
+      <h2>Additional fees</h2><p class="hint">Rush printing adds 20% of the printing subtotal when enabled and selected. Delivery is excluded.</p>
+      {% if fees %}<ul class="summary-list">{% for fee in fees %}<li class="summary-row"><span>{{ fee.fee_type.label }}</span><strong>{% if fee.fee_type.value == 'RUSH_PRINTING' %}20% of printing subtotal{% else %}₱{{ '%.2f'|format(fee.amount) }}{% endif %}</strong></li>{% endfor %}</ul>
       {% else %}<p class="hint">No additional fees configured.</p>{% endif %}
-      <form class="account-form form-grid" method="post" action="{{ url_for('shop_staff.save_fee') }}" novalidate>
+      {% if fee_form.fee_type.choices %}<form class="account-form form-grid" method="post" action="{{ url_for('shop_staff.save_fee') }}" novalidate>
         {{ fee_form.hidden_tag() }}
         <div class="field">{{ fee_form.fee_type.label }} {{ fee_form.fee_type() }}{{ errors(fee_form.fee_type) }}</div>
         <div class="field">{{ fee_form.amount.label }} {{ fee_form.amount(min='0', step='0.01') }}{{ errors(fee_form.amount) }}</div>
         <div class="form-actions">{{ fee_form.submit(class_='button') }}</div>
-      </form>
+      </form>{% endif %}
     </section>
   </div>
 {% endblock %}

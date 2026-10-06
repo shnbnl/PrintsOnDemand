@@ -89,7 +89,10 @@ def test_student_map_search_and_existing_shop_flow(client, test_app):
         "id", "name", "description", "address", "hours", "services",
         "fulfillment", "fees", "prices", "is_sample", "position", "detail_url", "photo_url",
     }
-    assert shops[0]["fulfillment"] == [] and shops[0]["fees"] == []
+    assert shops[0]["fulfillment"] == []
+    assert shops[0]["fees"] == [{
+        "label": "Rush printing", "amount": "20% of printing subtotal", "is_sample": False,
+    }]
     assert "admin" not in response.get_data(as_text=True).lower()
     detail_url = shops[0]["detail_url"]
     assert detail_url == f"/shops/{mapped}"

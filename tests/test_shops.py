@@ -182,7 +182,7 @@ def test_student_list_search_and_detail_only_show_active_shops(client, test_app)
     assert b"Campus Road" in detail.data
     assert b"4.50" in detail.data
     assert b"(sample)" in detail.data
-    assert b"Not set" in detail.data
+    assert "—" in detail.get_data(as_text=True)
     assert b"Delivery" not in detail.data
     assert b"Start Order" in detail.data
     assert f"/checkout/upload?shop_id={active_id}".encode() in detail.data
@@ -256,9 +256,11 @@ def test_admin_can_configure_and_update_service_price_and_fee(client, test_app):
         client, shop_id, "prices",
         {"paper_size": "A2", "color_mode": "COLOR", "price": "16.75"},
     ).status_code == 302
-    assert admin_post(
+    rejected = admin_post(
         client, shop_id, "fees", {"fee_type": "RUSH_PRINTING", "amount": "5.25"}
-    ).status_code == 302
+    )
+    assert rejected.status_code == 200
+    assert b"Not a valid choice" in rejected.data
     assert admin_post(
         client, shop_id, "fees", {"fee_type": "DELIVERY", "amount": "12.00"}
     ).status_code == 302
@@ -268,12 +270,11 @@ def test_admin_can_configure_and_update_service_price_and_fee(client, test_app):
         prices = db.session.scalars(select(PrintPrice)).all()
         fees = db.session.scalars(select(ShopFee)).all()
         assert len(services) == len(prices) == 1
-        assert len(fees) == 2
+        assert len(fees) == 1
         assert services[0].enabled is False
         assert prices[0].price == Decimal("16.75")
         assert prices[0].is_demo is False
         assert {fee.fee_type: fee.amount for fee in fees} == {
-            FeeType.RUSH_PRINTING: Decimal("5.25"),
             FeeType.DELIVERY: Decimal("12.00"),
         }
 

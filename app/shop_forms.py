@@ -93,7 +93,7 @@ class PriceForm(FlaskForm):
 class FeeForm(FlaskForm):
     fee_type = SelectField(
         "Fee",
-        choices=[(item.value, item.label) for item in FeeType],
+        choices=[(item.value, item.label) for item in FeeType if item != FeeType.RUSH_PRINTING],
         validators=[DataRequired()],
     )
     amount = DecimalField(
