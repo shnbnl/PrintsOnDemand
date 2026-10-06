@@ -16,16 +16,16 @@ from tests.test_shops import add_shop, add_user, login, token
 
 
 FINAL_DEMO_COORDINATES = {
+    "Blue and Silver Bookstore": (Decimal("14.243045427730582"), Decimal("121.11295022996838")),
+    "CHALECOSPOT": (Decimal("14.242450941004314"), Decimal("121.11374693002904")),
+    "Iced Design and Prints": (Decimal("14.242825719311579"), Decimal("121.11344171457155")),
+    "Pixels Print and Press": (Decimal("14.241960049308364"), Decimal("121.11268038748165")),
+}
+PREVIOUS_DEMO_COORDINATES = {
     "Blue and Silver Bookstore": (Decimal("14.243257164979285"), Decimal("121.11300634061479")),
     "CHALECOSPOT": (Decimal("14.242503893301787"), Decimal("121.1137415531051")),
     "Iced Design and Prints": (Decimal("14.243062163277235"), Decimal("121.11345252527298")),
     "Pixels Print and Press": (Decimal("14.241960049308364"), Decimal("121.11268038748165")),
-}
-PREVIOUS_DEMO_COORDINATES = {
-    "Blue and Silver Bookstore": (Decimal("14.243034885614946"), Decimal("121.1129526948974")),
-    "CHALECOSPOT": (Decimal("14.24264686747224"), Decimal("121.11376032373335")),
-    "Iced Design and Prints": (Decimal("14.243072562326358"), Decimal("121.11352762558575")),
-    "Pixels Print and Press": (Decimal("14.242065977086666"), Decimal("121.11273536791352")),
 }
 
 
@@ -253,7 +253,7 @@ def test_demo_seed_corrects_only_coordinates_for_existing_demo_shops(test_app):
         db.session.commit()
     refreshed = runner.invoke(args=["seed-demo-shops"])
     assert refreshed.exit_code == 0
-    assert "Added 0 sample shops; refreshed verified coordinates on 4 existing sample shops." in refreshed.output
+    assert "Added 0 sample shops; refreshed verified coordinates on 3 existing sample shops." in refreshed.output
     with test_app.app_context():
         shops = db.session.scalars(select(PrintingShop).order_by(PrintingShop.name)).all()
         assert len(shops) == 4
