@@ -256,6 +256,7 @@ button:disabled, input[type="submit"]:disabled { opacity: 0.52; cursor: not-allo
 .account-delete-card .checkbox-field input { flex: none; margin-top: 0.7rem; }
 .account-delete-card .form-actions .button { min-height: 2.75rem; }
 @media (max-width: 40rem) {
+  html { scroll-behavior: auto; }
   .account-delete-card .form-actions .button { width: 100%; }
 }
 
@@ -647,13 +648,14 @@ form[aria-busy="true"] :is(button[type="submit"], input[type="submit"]) { box-sh
 }
 
 /* Guided customer checkout */
-.checkout-progress { margin-bottom: var(--space-lg); overflow-x: auto; }
+.checkout-progress { margin-bottom: var(--space-lg); overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .checkout-back-to-desk + .checkout-progress { margin-top: var(--space-md); }
 .checkout-progress ol { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .4rem; padding: 0; margin: 0; list-style: none; }
 .checkout-progress li > :is(a, span) { display: flex; align-items: center; gap: .4rem; min-height: 2.6rem; padding: .45rem .6rem; color: var(--muted); text-decoration: none; background: #fff; border: 1px solid var(--border); border-radius: var(--radius); font-size: .85rem; font-weight: 700; }
-.checkout-progress li > :is(a, span) > span { display: grid; place-items: center; width: 1.4rem; height: 1.4rem; flex: none; border-radius: 50%; background: #e8edf6; color: var(--navy); }
+.checkout-progress .step-number { display: grid; place-items: center; width: 1.4rem; height: 1.4rem; flex: none; border-radius: 50%; background: #e8edf6; color: var(--navy); }
+.checkout-progress .step-label-short { display: none; }
 .checkout-progress .is-current > span { color: #fff; background: var(--navy); border-color: var(--navy); }
-.checkout-progress .is-current > span > span { color: var(--navy); background: #fff; }
+.checkout-progress .is-current .step-number { color: var(--navy); background: #fff; }
 .checkout-progress .is-complete a { border-color: var(--cobalt); color: var(--navy); }
 .checkout-step-grid, .checkout-shop-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-lg); align-items: start; }
 .checkout-step-grid > *, .checkout-shop-grid > * { min-width: 0; margin: 0; }
@@ -687,6 +689,16 @@ form[aria-busy="true"] :is(button[type="submit"], input[type="submit"]) { box-sh
   .checkout-step-grid, .checkout-shop-grid, .checkout-payment-options { grid-template-columns: 1fr; }
   .checkout-online-details { flex-direction: column; }
   .checkout-online-details img { max-width: 180px; }
+}
+@media (max-width: 22.5rem) {
+  .checkout-progress ol { min-width: 0; gap: .15rem; }
+  .checkout-progress li > :is(a, span) { min-width: 0; min-height: 3.6rem; padding-inline: .1rem; font-size: .61rem; }
+  .checkout-progress .step-label-full { display: none; }
+  .checkout-progress .step-label-short { display: inline; }
+}
+@media (hover: none) and (pointer: coarse) {
+  a, button, summary, label, input, select { touch-action: manipulation; }
+  .mobile-nav[open] nav, .notice[role], .fulfillment-fields:not([hidden]) { animation: none; }
 }
 
 /* Checkout map and per-file print cards */
@@ -787,6 +799,7 @@ form[aria-busy="true"] :is(button[type="submit"], input[type="submit"]) { box-sh
   .workspace-map-viewport { height: max(56rem, 95svh); }
   .workspace-panel { top: auto; left: .5rem; right: .5rem; bottom: 1.5rem; width: auto; height: 72%; }
   .workspace-panel.is-minimized { height: auto; bottom: 1.5rem; }
+  .workspace-scroll { overscroll-behavior-y: auto; -webkit-overflow-scrolling: touch; }
   .workspace-shop-summary, .workspace-panel .checkout-customize { padding: .6rem .75rem; }
   .workspace-total { padding: .6rem .75rem; }
   .workspace-pin-preview { padding: .6rem .75rem; }

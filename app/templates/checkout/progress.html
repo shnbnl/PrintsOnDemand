@@ -1,9 +1,9 @@
 <nav class="checkout-progress" aria-label="Checkout progress">
   <ol>
-    {% for number, label, endpoint in [(1, 'Upload', 'checkout.upload'), (2, 'Shop', 'checkout.shop'), (3, 'Fulfillment', 'checkout.fulfillment'), (4, 'Payment', 'checkout.payment'), (5, 'Review', 'checkout.review')] %}
+    {% for number, label, short_label, endpoint in [(1, 'Upload', 'Upload', 'checkout.upload'), (2, 'Shop', 'Shop', 'checkout.shop'), (3, 'Fulfillment', 'Receive', 'checkout.fulfillment'), (4, 'Payment', 'Pay', 'checkout.payment'), (5, 'Review', 'Review', 'checkout.review')] %}
       <li class="{{ 'is-current' if step == number else 'is-complete' if step > number else '' }}">
-        {% if step > number %}<a href="{{ url_for(endpoint) }}"><span aria-hidden="true">{{ number }}</span>{{ label }}</a>
-        {% else %}<span {% if step == number %}aria-current="step"{% endif %}><span aria-hidden="true">{{ number }}</span>{{ label }}</span>{% endif %}
+        {% if step > number %}<a href="{{ url_for(endpoint) }}" aria-label="Step {{ number }}: {{ label }}"><span class="step-number" aria-hidden="true">{{ number }}</span><span class="step-label-full" aria-hidden="true">{{ label }}</span><span class="step-label-short" aria-hidden="true">{{ short_label }}</span></a>
+        {% else %}<span role="group" aria-label="Step {{ number }}: {{ label }}" {% if step == number %}aria-current="step"{% endif %}><span class="step-number" aria-hidden="true">{{ number }}</span><span class="step-label-full" aria-hidden="true">{{ label }}</span><span class="step-label-short" aria-hidden="true">{{ short_label }}</span></span>{% endif %}
       </li>
     {% endfor %}
   </ol>

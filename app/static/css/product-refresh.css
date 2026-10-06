@@ -344,6 +344,9 @@ tbody tr:hover { background: #f1f5fa; }
   .responsive-table td { display: block; text-align: left; }
   .responsive-table td::before { display: block; margin-bottom: .2rem; }
 }
+@media (max-width: 22.5rem) {
+  .checkout-progress ol { min-width: 0; }
+}
 @media (prefers-reduced-motion: reduce) {
   .action-card, .choice-card, .price-cell, .vector-back { transition: none; }
   .action-card:hover { transform: none; }

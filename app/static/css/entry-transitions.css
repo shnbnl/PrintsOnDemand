@@ -26,3 +26,7 @@
   ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none; }
 }
 
+@media (hover: none) and (pointer: coarse) {
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none; }
+}
+
