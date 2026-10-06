@@ -28,7 +28,7 @@
             <div class="summary-row"><dt>Method</dt><dd>{{ payment.payment_method.value }}</dd></div>
             <div class="summary-row"><dt>Status</dt><dd>{{ payment_badge(payment) }}</dd></div>
             {% if payment.payment_method.value == 'ONLINE' %}<div class="summary-row"><dt>Payment reference</dt><dd>{{ payment.payment_reference }}</dd></div>{% endif %}
-            <div class="summary-row"><dt>{{ 'Submitted' if payment.payment_method.value == 'ONLINE' else 'Order placed' }}</dt><dd>{% set action_time = payment.submitted_at if payment.payment_method.value == 'ONLINE' else payment.order.created_at %}{% if action_time %}<time datetime="{{ action_time|utc_iso }}">{{ action_time|pht_datetime }}</time>{% else %}Unknown{% endif %}</dd></div>
+            <div class="summary-row"><dt>{{ 'Submitted' if payment.payment_method.value == 'ONLINE' else 'Order placed' }}</dt><dd>{% set action_time = payment.submitted_at if payment.payment_method.value == 'ONLINE' else payment.order.created_at %}{% if action_time %}<time datetime="{{ action_time.isoformat() }}">{{ action_time.strftime('%Y-%m-%d %H:%M UTC') }}</time>{% else %}Unknown{% endif %}</dd></div>
           </dl>
           <a class="card-action" href="{{ url_for('payment_verification.detail', payment_id=payment.id) }}">{{ 'Review online payment' if payment.payment_method.value == 'ONLINE' else 'Confirm onsite cash' }}</a>
         </li>

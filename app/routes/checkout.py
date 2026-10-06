@@ -241,30 +241,6 @@ def submitted_options(files, values):
     return options
 
 
-def options_for_new_shop(files, shop, options):
-    """Preserve compatible choices and explain any replacements before pricing."""
-    rates = {(rate.paper_size.value, rate.color_mode.value) for rate in shop.prices}
-    if not rates:
-        raise PricingError("This shop has no print prices configured. Choose another shop.")
-    adjusted = {}
-    changes = []
-    for file in files:
-        choice = options[file.id]
-        pair = (choice.paper_size, choice.color_mode)
-        if pair not in rates:
-            replacement = next((item for item in sorted(rates) if item[0] == choice.paper_size), None)
-            replacement = replacement or next((item for item in sorted(rates) if item[1] == choice.color_mode), None)
-            replacement = replacement or sorted(rates)[0]
-            changes.append(f"{file.original_filename}: {choice.paper_size} {choice.color_mode.title()} is not offered; "
-                           f"selected {replacement[0]} {replacement[1].title()} instead.")
-            choice = PrintOptions(replacement[0], replacement[1], choice.quantity, choice.is_rush)
-        if choice.is_rush and not service_available(shop.id, ServiceType.RUSH_PRINTING):
-            changes.append(f"{file.original_filename}: rush printing is unavailable and was removed.")
-            choice = PrintOptions(choice.paper_size, choice.color_mode, choice.quantity, False)
-        adjusted[file.id] = choice
-    return adjusted, " ".join(changes)
-
-
 def workspace_context(files, selected, options, *, error=None):
     from app.routes.shops import detail_context
 
@@ -332,14 +308,9 @@ def shop():
             shop_id=selected.id,
         )
     changed_shop = saved.get("shop_id") != selected.id
-    adjustment_notice = ""
-    if intent == "select" and changed_shop:
-        try:
-            options, adjustment_notice = options_for_new_shop(files, selected, options)
-        except PricingError as issue:
-            if asynchronous:
-                return jsonify(error=str(issue)), issue.status_code
-            return render_shop(error=str(issue), status=issue.status_code)
+    if intent == "select" and changed_shop and not service_available(selected.id, ServiceType.RUSH_PRINTING):
+        options = {file_id: PrintOptions(choice.paper_size, choice.color_mode, choice.quantity, False)
+                   for file_id, choice in options.items()}
     if intent == "quote":
         try:
             quote = quote_for(saved["file_ids"], selected.id, options)
@@ -354,9 +325,7 @@ def shop():
     save(saved)
     if intent == "select":
         if asynchronous:
-            return jsonify(html=render_template("checkout/shop_workspace.html", **workspace_context(files, selected, options)), shop_id=selected.id, notice=adjustment_notice)
-        if adjustment_notice:
-            flash(adjustment_notice, "info")
+            return jsonify(html=render_template("checkout/shop_workspace.html", **workspace_context(files, selected, options)), shop_id=selected.id)
         return redirect(url_for("checkout.shop"))
     try:
         quote_for(saved["file_ids"], selected.id, options)

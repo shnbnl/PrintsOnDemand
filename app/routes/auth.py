@@ -8,21 +8,12 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
-from app.forms import BlueStaffLoginForm, LoginForm, PasswordResetForm, PasswordResetRequestForm, RegistrationForm, ShopStaffLoginForm
+from app.forms import BlueStaffLoginForm, LoginForm, RegistrationForm, ShopStaffLoginForm
 from app.models import PrintingShop, User, UserRole
 from app.services.professors import PROFESSOR_DELIVERY_SHOP
-from app.services.password_reset import consume_grant, request_reset, valid_grant
 
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
-
-
-@auth_bp.after_request
-def protect_recovery_pages(response):
-    if request.endpoint in {"auth.forgot_password", "auth.reset_password"}:
-        response.headers["Cache-Control"] = "no-store"
-        response.headers["Referrer-Policy"] = "no-referrer"
-    return response
 
 
 def role_home(role: UserRole) -> str:
@@ -112,35 +103,6 @@ def login():
         form.password.errors.append("Invalid name or password." if blue_login else "Invalid email or password.")
 
     return render_template("auth/login.html", form=form, blue_login=blue_login)
-
-
-@auth_bp.route("/forgot-password", methods=["GET", "POST"])
-def forgot_password():
-    form = PasswordResetRequestForm()
-    if form.validate_on_submit():
-        request_reset(User.normalize_email(form.email.data))
-        flash("If this is an active student or professor account, a reset link will be emailed if delivery is configured.", "info")
-        return redirect(url_for("auth.forgot_password"))
-    response = make_response(render_template("auth/forgot_password.html", form=form))
-    response.headers["Cache-Control"] = "no-store"
-    return response
-
-
-@auth_bp.route("/reset-password/<token>", methods=["GET", "POST"])
-def reset_password(token):
-    grant = valid_grant(token)
-    if grant is None:
-        return render_template("auth/reset_unavailable.html"), 400
-    form = PasswordResetForm()
-    if form.validate_on_submit():
-        if consume_grant(grant, form.password.data):
-            flash("Password updated. Log in with your new password.", "success")
-            return redirect(url_for("auth.login"))
-        return render_template("auth/reset_unavailable.html"), 400
-    response = make_response(render_template("auth/reset_password.html", form=form))
-    response.headers["Cache-Control"] = "no-store"
-    response.headers["Referrer-Policy"] = "no-referrer"
-    return response
 
 
 @auth_bp.route("/shop-login", methods=["GET", "POST"])

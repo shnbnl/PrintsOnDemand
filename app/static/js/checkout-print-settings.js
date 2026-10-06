@@ -28,9 +28,8 @@ function updatePrintedPageSummary(group) {
     return;
   }
   const pages = Number(group.dataset.documentPages);
-  const printed = pages * count;
   output.textContent = Number.isInteger(count) && count > 0
-    ? `${printed} ${printed === 1 ? 'page' : 'pages'}` : "Enter a valid copy count";
+    ? `${pages * count} pages` : "Enter a valid copy count";
   updateFileEstimate(group, count, pages);
 }
 

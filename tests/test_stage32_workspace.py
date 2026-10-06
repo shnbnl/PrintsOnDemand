@@ -7,7 +7,7 @@ from sqlalchemy import select
 from werkzeug.datastructures import MultiDict
 
 from app.extensions import db
-from app.models import ColorMode, FeeType, Order, PaperSize, PrintConfiguration, PrintPrice, ServiceType, ShopFee, ShopService
+from app.models import FeeType, Order, PrintConfiguration, PrintPrice, ServiceType, ShopFee, ShopService
 from test_checkout_flow import post, print_fields, setup, upload_checkout_file
 from test_orders import pickup_fields, shop, token
 
@@ -71,29 +71,6 @@ def test_switch_reprices_keeps_files_and_valid_options_clears_downstream(client,
         assert not any(key in saved for key in ("fulfillment", "payment_method", "review"))
     forged = workspace_post(client, second, file_id, "quote", **fields)
     assert forged.status_code == 400  # Unsupported rush cannot be forced into a quote.
-
-
-def test_switch_replaces_unavailable_configuration_with_explicit_notice(client, test_app):
-    _, first, file_id = setup(client, test_app)
-    second = shop(test_app, name="Limited shop")
-    with test_app.app_context():
-        db.session.add(PrintPrice(shop_id=first, paper_size=PaperSize.A3,
-                                  color_mode=ColorMode.COLOR, price=Decimal("20.00")))
-        db.session.commit()
-    options = {**print_fields(file_id, quantity="2"),
-               f"paper_size_{file_id}": "A3", f"color_mode_{file_id}": "COLOR"}
-    selected = workspace_post(client, first, file_id, **options)
-    assert selected.status_code == 200
-    switched = workspace_post(client, second, file_id, **options)
-    assert switched.status_code == 200
-    assert "A3 Color is not offered" in switched.json["notice"]
-    assert "selected A4 Grayscale instead" in switched.json["notice"]
-    with client.session_transaction() as state:
-        saved = state["checkout_draft"]
-        assert saved["file_ids"] == [file_id]
-        assert saved["options"][str(file_id)]["paper_size"] == "A4"
-        assert saved["options"][str(file_id)]["color_mode"] == "GRAYSCALE"
-        assert saved["options"][str(file_id)]["quantity"] == 2
 
 
 def test_workspace_rejects_incomplete_duplicate_and_foreign_file_settings(client, test_app):

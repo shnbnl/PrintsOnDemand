@@ -118,10 +118,7 @@
   }
 
   document.addEventListener("pod:shop-highlight", (event) => {
-    if (workspace) {
-      selectedWorkspaceShopId = String(event.detail.id);
-      canvas.dataset.selectedShopId = selectedWorkspaceShopId;
-    }
+    if (workspace) selectedWorkspaceShopId = String(event.detail.id);
     selectShop(event.detail.id);
   });
 
@@ -140,7 +137,7 @@
     detail.textContent = workspace ? "Use the shop selector to keep preparing your order." : "The interactive map could not load. You can still choose a shop below.";
     message.replaceChildren(title, detail, ...(link ? [link] : []));
     message.hidden = false;
-    if (picker && !workspace?.querySelector('[data-current-shop]')) picker.hidden = false;
+    if (picker) picker.hidden = false;
   }
 
   const apiKey = canvas.dataset.apiKey;
@@ -170,6 +167,12 @@
           zoomControlOptions: { position: google.maps.ControlPosition.LEFT_TOP },
         } : {}),
       });
+      if (workspace && map.panBy) {
+        const panel = workspace.querySelector('.workspace-panel');
+        const offset = panel.getBoundingClientRect();
+        if (window.matchMedia('(max-width: 900px)').matches) map.panBy(0, offset.height / 2 + 60);
+        else map.panBy(offset.width / 2, 0);
+      }
 
       shops.forEach((shop) => {
         const pin = document.createElement("span");
@@ -217,6 +220,8 @@
       else if (workspace && canvas.dataset.selectedShopId) selectShop(canvas.dataset.selectedShopId);
       else if (!workspace && !choices.some((choice) => choice.matches('input[type="radio"]')) && shops.length) selectShop(shops[0].id);
       message.hidden = true;
+      // Keep the compact selector available when any active shop has no pin.
+      if (picker && workspace) picker.hidden = workspace.querySelector('[name="shop_id"]').options.length - 1 === shops.length;
       locateButton.disabled = false;
       clearTimeout(loadTimer);
 
@@ -254,24 +259,16 @@
     }
   };
 
-  let loading = false;
-  function loadMap() {
-    if (loading) return;
-    loading = true;
-    const script = document.createElement("script");
-    const url = new URL("https://maps.googleapis.com/maps/api/js");
-    url.search = new URLSearchParams({
-      key: apiKey, v: "weekly", loading: "async", callback: "__podInitMap",
-    }).toString();
-    script.src = url.toString();
-    script.async = true;
-    script.onerror = showMapFailure;
-    document.head.append(script);
-    loadTimer = window.setTimeout(() => {
-      if (!map) showMapFailure();
-    }, 15000);
-  }
-  if (workspace && window.matchMedia('(max-width: 48rem)').matches) {
-    document.addEventListener('pod:show-map', loadMap, { once: true });
-  } else loadMap();
+  const script = document.createElement("script");
+  const url = new URL("https://maps.googleapis.com/maps/api/js");
+  url.search = new URLSearchParams({
+    key: apiKey, v: "weekly", loading: "async", callback: "__podInitMap",
+  }).toString();
+  script.src = url.toString();
+  script.async = true;
+  script.onerror = showMapFailure;
+  document.head.append(script);
+  loadTimer = window.setTimeout(() => {
+    if (!map) showMapFailure();
+  }, 15000);
 })();

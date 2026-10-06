@@ -1,8 +1,6 @@
 """Flask application factory for Prints On Demand."""
 
 import sqlite3
-from datetime import timezone
-from zoneinfo import ZoneInfo
 
 from flask import Flask, render_template, request
 from dotenv import load_dotenv
@@ -38,24 +36,6 @@ def create_app(config_object: object | None = None) -> Flask:
     app.url_map.converters["int"] = DatabaseIdConverter
     app.config.from_object(config_object or select_config())
     configure_runtime(app)
-
-    def pht_datetime(value):
-        """Render persisted UTC timestamps in Philippine time for people."""
-        if value is None:
-            return ""
-        aware = value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value
-        local = aware.astimezone(ZoneInfo("Asia/Manila"))
-        return f"{local.strftime('%b')} {local.day}, {local.year}, {local.strftime('%I:%M %p').lstrip('0')} PHT"
-
-    app.jinja_env.filters["pht_datetime"] = pht_datetime
-
-    def utc_iso(value):
-        if value is None:
-            return ""
-        aware = value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value
-        return aware.astimezone(timezone.utc).isoformat()
-
-    app.jinja_env.filters["utc_iso"] = utc_iso
 
     db.init_app(app)
     from . import models  # Import future model definitions for migration discovery.

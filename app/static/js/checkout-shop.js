@@ -5,7 +5,6 @@
   const select = form.querySelector('[name="shop_id"]');
   const content = form.querySelector("[data-workspace-content]");
   const error = form.querySelector("[data-workspace-error]");
-  const notice = form.querySelector('[data-workspace-notice]');
   let queue = Promise.resolve();
   let revision = 0;
   let timer;
@@ -14,41 +13,17 @@
   let committedShopId = select.value;
   let committedHTML = content.innerHTML;
   let previewRevision = 0;
-  const picker = form.querySelector('[data-workspace-picker]');
-  const search = form.querySelector('[data-shop-search]');
-  const clearSearch = form.querySelector('[data-search-clear]');
-  const searchStatus = form.querySelector('[data-search-status]');
-  const noResults = form.querySelector('[data-search-empty]');
-  const shopOptions = [...form.querySelectorAll('[data-shop-option]')];
-  const mapToggle = form.querySelector('[data-map-toggle]');
-  picker.hidden = Boolean(committedShopId);
-  function filterShops() {
-    const query = search.value.trim().toLocaleLowerCase();
-    let shown = 0;
-    shopOptions.forEach((option) => {
-      option.hidden = !option.dataset.searchText.includes(query);
-      if (!option.hidden) shown += 1;
-    });
-    clearSearch.hidden = !query;
-    noResults.hidden = shown !== 0;
-    searchStatus.textContent = shown ? `${shown} ${shown === 1 ? 'shop' : 'shops'} available. Choose one to continue.` : 'No shops match this search.';
+  const panel = form.querySelector('.workspace-panel');
+  const toggle = form.querySelector('[data-panel-toggle]');
+  function expandPanel() {
+    panel.classList.remove('is-minimized');
+    toggle.textContent = 'Minimize panel';
+    toggle.setAttribute('aria-expanded', 'true');
   }
-  search.addEventListener('input', filterShops);
-  clearSearch.addEventListener('click', () => { search.value = ''; filterShops(); search.focus(); });
-  picker.addEventListener('click', (event) => {
-    const option = event.target.closest('[data-shop-option]');
-    if (option) selectShop(option.dataset.shopOption);
-  });
-  content.addEventListener('click', (event) => {
-    if (!event.target.closest('[data-change-shop]')) return;
-    picker.hidden = false;
-    search.focus();
-  });
-  mapToggle.addEventListener('click', () => {
-    const showing = form.classList.toggle('is-map-open');
-    mapToggle.textContent = showing ? 'Hide map' : 'Show map';
-    mapToggle.setAttribute('aria-expanded', String(showing));
-    if (showing) document.dispatchEvent(new Event('pod:show-map'));
+  toggle.addEventListener('click', () => {
+    const minimized = panel.classList.toggle('is-minimized');
+    toggle.textContent = minimized ? 'Open print settings' : 'Minimize panel';
+    toggle.setAttribute('aria-expanded', String(!minimized));
   });
   function activateFile(id, recalculate = true) {
     const selector = content.querySelector('[data-file-selector]');
@@ -70,7 +45,7 @@
   });
   form.addEventListener('invalid', event => {
     const group = event.target.closest('[data-file-settings]');
-    if (group) activateFile(group.dataset.fileSettings);
+    if (group) { expandPanel(); activateFile(group.dataset.fileSettings); }
   }, true);
 
   function report(message) {
@@ -126,6 +101,7 @@
   function selectShop(id) {
     if (![...select.options].some((option) => option.value === String(id))) return;
     if (!pendingSelections && committedShopId === String(id)) return;
+    expandPanel();
     clearTimeout(timer);
     const version = ++revision;
     previewRevision += 1;
@@ -149,12 +125,9 @@
         committedShopId = String(result.shop_id);
         committedHTML = content.innerHTML;
         activateFile(activeFile);
-        picker.hidden = true;
-        shopOptions.forEach(option => option.setAttribute('aria-pressed', String(option.dataset.shopOption === committedShopId)));
+        expandPanel();
         requestAnimationFrame(() => content.classList.remove('is-switching'));
         document.dispatchEvent(new CustomEvent("pod:shop-highlight", { detail: { id: result.shop_id } }));
-        notice.textContent = result.notice || '';
-        notice.hidden = !result.notice;
         report("");
       } catch (issue) {
         if (version === revision) {
@@ -178,21 +151,15 @@
   function updateQuote() {
     if (!select.value || pendingSelections) return;
     const version = ++revision;
-    content.querySelector('[data-workspace-proceed]').disabled = true;
-    content.querySelector('[data-quote-valid]').dataset.quoteValid = 'false';
     const data = new FormData(form);
     data.set("intent", "quote");
     const total = content.querySelector("[data-print-total]");
     total.textContent = "Updating…";
-    content.querySelector('[data-print-subtotal]').textContent = 'Updating…';
-    content.querySelector('[data-rush-fee]').textContent = 'Updating…';
     queue = queue.then(async () => {
       try {
         const result = await send(data);
         if (version !== revision) return;
         total.textContent = `${result.currency} ${result.total}`;
-        content.querySelector('[data-print-subtotal]').textContent = `${result.currency} ${result.subtotal}`;
-        content.querySelector('[data-rush-fee]').textContent = `${result.currency} ${result.rush_fee}`;
         content.querySelector('[data-quote-valid]').dataset.quoteValid = 'true';
         content.querySelector('[data-workspace-proceed]').disabled = false;
         content.querySelector("[data-quote-error]").hidden = true;
@@ -200,8 +167,6 @@
       } catch (issue) {
         if (version !== revision) return;
         total.textContent = "Check print settings";
-        content.querySelector('[data-print-subtotal]').textContent = '—';
-        content.querySelector('[data-rush-fee]').textContent = '—';
         content.querySelector('[data-quote-valid]').dataset.quoteValid = 'false';
         content.querySelector('[data-workspace-proceed]').disabled = true;
         report(issue.message);
@@ -221,43 +186,20 @@
     if (event.target.matches('[data-file-selector]')) return;
     previewRevision += 1;
     restoreCommittedShop();
-    if (event.target.matches('[data-price-choice], [data-paper-select], [data-color-select]')) {
+    if (event.target.matches('[data-price-choice]')) {
       const group = event.target.closest('[data-file-settings]');
-      const paperSelect = group.querySelector('[data-paper-select]');
-      const colorSelect = group.querySelector('[data-color-select]');
-      const rates = [...group.querySelectorAll('[data-price-choice]')];
-      let [paper, mode] = event.target.matches('[data-price-choice]')
-        ? event.target.value.split(':') : [paperSelect.value, colorSelect.value];
-      let chosen = rates.find(rate => rate.value === `${paper}:${mode}`);
-      const message = group.querySelector('[data-configuration-message]');
-      if (!chosen) {
-        chosen = rates.find(rate => rate.value.startsWith(`${paper}:`)) || rates[0];
-        if (chosen) {
-          [, mode] = chosen.value.split(':');
-          message.textContent = `${mode === 'COLOR' ? 'Color' : 'Grayscale'} is the available output for ${paper}.`;
-          message.hidden = false;
-        }
-      } else message.hidden = true;
-      if (!chosen) return;
-      [paper, mode] = chosen.value.split(':');
-      paperSelect.value = paper;
-      colorSelect.value = mode;
-      [...colorSelect.options].forEach(option => {
-        option.disabled = !rates.some(rate => rate.value === `${paper}:${option.value}`);
-      });
-      chosen.checked = true;
+      const [paper, mode] = event.target.value.split(':');
+      group.querySelector('[name^="paper_size_"]').value = paper;
+      group.querySelector('[name^="color_mode_"]').value = mode;
       group.querySelector('[data-selection-summary]').textContent = `${paper} · ${mode === 'COLOR' ? 'Color' : 'Grayscale'}`;
     }
     revision += 1;
     clearTimeout(timer);
     content.querySelector('[data-print-total]').textContent = 'Updating…';
-    content.querySelector('[data-workspace-proceed]').disabled = true;
-    content.querySelector('[data-quote-valid]').dataset.quoteValid = 'false';
     timer = setTimeout(updateQuote, 300);
   });
   form.addEventListener("submit", (event) => {
-    if (pendingSelections || content.querySelector('[data-current-shop]')?.dataset.currentShop !== committedShopId
-        || content.querySelector('[data-quote-valid]')?.dataset.quoteValid !== 'true') {
+    if (pendingSelections || content.querySelector('[data-current-shop]')?.dataset.currentShop !== committedShopId) {
       event.preventDefault();
       return;
     }

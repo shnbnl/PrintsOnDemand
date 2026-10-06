@@ -18,7 +18,7 @@
       <label for="status">Order status</label>
       <select id="status" name="status">
         <option value="">All</option>
-        {% for value in order_statuses %}<option value="{{ value.value }}"{% if status == value.value %} selected{% endif %}>{{ {'PENDING_PAYMENT': 'Awaiting payment', 'PROCESSING': 'Printing', 'READY': 'Ready', 'DELIVERED': 'Delivered to Faculty', 'COMPLETED': 'Completed'}[value.value] }}</option>{% endfor %}
+        {% for value in order_statuses %}<option value="{{ value.value }}"{% if status == value.value %} selected{% endif %}>{{ value.value.replace('_', ' ').title() }}</option>{% endfor %}
       </select>
     </div>
     <div class="field">
@@ -42,7 +42,7 @@
           {% for order in orders.items %}
             <tr class="order-card">
               <th scope="row"><a href="{{ url_for('orders.detail', order_reference=order.order_reference) }}">{{ order.order_reference }}</a></th>
-              <td data-label="Placed"><time datetime="{{ order.created_at|utc_iso }}">{{ order.created_at|pht_datetime }}</time></td>
+              <td data-label="Placed"><time datetime="{{ order.created_at.isoformat() }}">{{ order.created_at.strftime('%Y-%m-%d %H:%M UTC') }}</time></td>
               <td data-label="Printing shop">{{ order.shop_name }}</td>
               <td data-label="Total" class="order-card-total">{{ order.currency }} {{ order.total }}</td>
               <td data-label="Order status">{{ order_badge(order) }}</td>

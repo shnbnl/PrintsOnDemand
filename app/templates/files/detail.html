@@ -21,7 +21,7 @@
       <div class="file-detail-heading"><span class="file-icon" aria-hidden="true">{{ record.file_extension|upper }}</span><div><p class="page-eyebrow">Your document</p><h2>{{ record.original_filename }}</h2></div></div>
       <dl class="detail-list">
         <div class="detail-row"><dt>File size</dt><dd>{{ record.file_size }} bytes</dd></div>
-        <div class="detail-row"><dt>Uploaded</dt><dd><time datetime="{{ record.created_at|utc_iso }}">{{ record.created_at|pht_datetime }}</time></dd></div>
+        <div class="detail-row"><dt>Uploaded</dt><dd><time datetime="{{ record.created_at.isoformat() }}">{{ record.created_at.strftime('%Y-%m-%d %H:%M UTC') }}</time></dd></div>
         <div class="detail-row"><dt>Type</dt><dd>{{ record.mime_type }}</dd></div>
       </dl>
       <a class="button button-secondary" href="{{ url_for('files.download', file_id=record.id) }}">Download my file</a>

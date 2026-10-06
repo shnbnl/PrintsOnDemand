@@ -74,17 +74,10 @@ def build_tracking(order: Order) -> OrderTracking:
             )
             next_step = "Follow the online instructions and submit your payment reference."
 
-    order_label = {
-        OrderStatus.PENDING_PAYMENT: "Awaiting payment",
-        OrderStatus.PROCESSING: "Printing",
-        OrderStatus.READY: "Ready",
-        OrderStatus.DELIVERED: "Delivered to Faculty",
-        OrderStatus.COMPLETED: "Completed",
-    }[order.status]
     order_detail = (
-        f"{order_label}: awaiting payment or verification."
+        f"{order.status.value}: awaiting payment or verification."
         if payment is None or payment.payment_status not in {PaymentStatus.PAID, PaymentStatus.REJECTED}
-        else f"{order_label} is the recorded order status."
+        else f"{order.status.value} is the recorded order status."
     )
 
     steps = [TrackingStep(
