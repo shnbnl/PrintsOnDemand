@@ -198,6 +198,10 @@ section section { margin-bottom: 0; background: var(--surface-muted); box-shadow
 .upload-picker { padding: 1rem; border: 2px dashed #9eb2c7; border-radius: var(--radius); background: var(--surface-muted); }
 .upload-icon { display: grid; place-items: center; width: 3rem; height: 3rem; border-radius: 0.85rem; color: white; background: var(--cobalt); font-size: 1.7rem; }
 .selected-file-name { display: block; color: var(--muted); font-size: 0.92rem; overflow-wrap: anywhere; }
+.upload-progress { display: grid; gap: .4rem; }
+.upload-progress[hidden], .upload-progress progress[hidden] { display: none; }
+.upload-progress progress { width: 100%; height: .7rem; accent-color: var(--cobalt); }
+.upload-progress p { margin: 0; }
 
 /* Forms and touch-friendly controls. */
 .account-form, .form-stack { display: grid; gap: var(--space-lg); width: min(100%, 35rem); }

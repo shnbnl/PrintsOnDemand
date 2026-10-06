@@ -13,6 +13,8 @@
   let committedShopId = select.value;
   let committedHTML = content.innerHTML;
   let previewRevision = 0;
+  let previewTimer;
+  let previewController;
   const panel = form.querySelector('.workspace-panel');
   const toggle = form.querySelector('[data-panel-toggle]');
   function expandPanel() {
@@ -52,9 +54,9 @@
     error.textContent = message || "";
     error.hidden = !message;
   }
-  async function send(data) {
+  async function send(data, signal) {
     const response = await fetch(form.action, { method: "POST", body: data,
-      headers: { Accept: "application/json" }, credentials: "same-origin" });
+      headers: { Accept: "application/json" }, credentials: "same-origin", signal });
     if (!response.headers.get("content-type")?.includes("application/json")) {
       throw new Error("Your session could not be updated. Reload the page and try again.");
     }
@@ -68,21 +70,32 @@
     activateFile(activeFile, false);
     requestAnimationFrame(() => content.classList.remove('is-switching'));
   }
+  function cancelPreview() {
+    clearTimeout(previewTimer);
+    previewController?.abort();
+    previewController = undefined;
+  }
   function previewShop(id) {
     const version = ++previewRevision;
     const shopId = String(id);
+    cancelPreview();
     if (![...select.options].some((option) => option.value === shopId) || !shopId) return;
     if (shopId === committedShopId) {
       restoreCommittedShop();
       return;
     }
+    if (pendingSelections) return;
     const stateVersion = revision;
     const data = new FormData(form);
     data.set('shop_id', shopId);
     data.set('intent', 'preview');
-    queue = queue.then(async () => {
+    // A hover is read-only: it must not wait behind older hover requests.
+    previewTimer = window.setTimeout(async () => {
+      if (version !== previewRevision || stateVersion !== revision || pendingSelections) return;
+      const controller = new AbortController();
+      previewController = controller;
       try {
-        const result = await send(data);
+        const result = await send(data, controller.signal);
         if (version !== previewRevision || stateVersion !== revision || pendingSelections) return;
         if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
           content.classList.add('is-switching');
@@ -95,8 +108,10 @@
         requestAnimationFrame(() => content.classList.remove('is-switching'));
       } catch (issue) {
         // Hover previews are informational and should not interrupt checkout.
+      } finally {
+        if (previewController === controller) previewController = undefined;
       }
-    });
+    }, 75);
   }
   function selectShop(id) {
     if (![...select.options].some((option) => option.value === String(id))) return;
@@ -105,6 +120,7 @@
     clearTimeout(timer);
     const version = ++revision;
     previewRevision += 1;
+    cancelPreview();
     select.value = String(id);
     pendingSelections += 1;
     form.querySelector("[data-workspace-proceed]").disabled = true;
@@ -178,6 +194,7 @@
   document.addEventListener("pod:shop-preview", (event) => previewShop(event.detail.id));
   document.addEventListener("pod:shop-preview-end", () => {
     previewRevision += 1;
+    cancelPreview();
     restoreCommittedShop();
   });
   form.querySelector("[data-load-shop]").hidden = true;
@@ -185,6 +202,7 @@
     if (!event.target.closest("[data-workspace-content]")) return;
     if (event.target.matches('[data-file-selector]')) return;
     previewRevision += 1;
+    cancelPreview();
     restoreCommittedShop();
     if (event.target.matches('[data-price-choice]')) {
       const group = event.target.closest('[data-file-settings]');
@@ -204,5 +222,6 @@
       return;
     }
     clearTimeout(timer);
+    cancelPreview();
   });
 })();

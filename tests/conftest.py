@@ -7,6 +7,12 @@ from app.config import TestingConfig
 from app.extensions import db
 
 
+@pytest.fixture(autouse=True)
+def isolate_word_converter_setting(monkeypatch):
+    """Keep local .env renderer paths from changing test expectations."""
+    monkeypatch.setenv("WORD_CONVERTER_PATH", "")
+
+
 @pytest.fixture
 def test_app(monkeypatch, tmp_path):
     monkeypatch.delenv("DATABASE_URL", raising=False)

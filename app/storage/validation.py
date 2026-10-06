@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import io
+import os
 import shutil
 import subprocess
 import tempfile
@@ -99,17 +100,40 @@ def count_pdf_pages(data: bytes) -> int:
         raise UploadValidationError("Unable to read this PDF. Please upload a valid PDF.") from error
 
 
+def word_converters() -> list[tuple[str, str]]:
+    """Find a headless renderer, including LibreOffice's default Windows path."""
+    candidates = []
+    configured = os.environ.get("WORD_CONVERTER_PATH", "").strip()
+    if configured:
+        candidate = Path(configured).expanduser()
+        if candidate.is_file():
+            candidates.append(str(candidate))
+    for name in ("soffice", "libreoffice", "abiword"):
+        executable = shutil.which(name)
+        if executable:
+            candidates.append(executable)
+    for root in (os.environ.get("ProgramFiles"), os.environ.get("ProgramFiles(x86)")):
+        if root:
+            candidate = Path(root) / "LibreOffice" / "program" / "soffice.exe"
+            if candidate.is_file():
+                candidates.append(str(candidate))
+
+    converters = []
+    seen = set()
+    for candidate in candidates:
+        if candidate in seen:
+            continue
+        name = "abiword" if "abiword" in Path(candidate).name.lower() else "soffice"
+        converters.append((name, candidate))
+        seen.add(candidate)
+    return converters
+
+
 def _render_word_document_pages(data: bytes, extension: str) -> int | None:
     """Count the pages a local office renderer would print, when available."""
     if extension not in {"doc", "docx"}:
         return None
-    converters = []
-    seen_executables = set()
-    for name in ("soffice", "libreoffice", "abiword"):
-        executable = shutil.which(name)
-        if executable and executable not in seen_executables:
-            converters.append((name, executable))
-            seen_executables.add(executable)
+    converters = word_converters()
     if not converters:
         return None
     try:
@@ -128,7 +152,7 @@ def _render_word_document_pages(data: bytes, extension: str) -> int | None:
                                "--nodefault", "--norestore", "--convert-to", "pdf:writer_pdf_Export",
                                "--outdir", str(root), str(source)]
                 try:
-                    subprocess.run(command, cwd=root, capture_output=True, timeout=15, check=False)
+                    subprocess.run(command, cwd=root, capture_output=True, timeout=30, check=False)
                     if target.is_file() and target.stat().st_size <= 64 * 1024 * 1024:
                         return count_pdf_pages(target.read_bytes())
                 except (OSError, subprocess.TimeoutExpired, UploadValidationError):

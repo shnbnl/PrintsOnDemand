@@ -13,10 +13,14 @@
   <div class="checkout-step-grid">
     <section class="content-card"><h2>Add files</h2>
       <p class="hint">Supported: {{ extensions|sort|join(', ')|upper }}. Each file may be up to {{ (config.UPLOAD_MAX_SIZE / 1048576)|round(1) }} MiB. Add fewer files at a time if the combined upload is too large.</p>
-      <form class="form-stack" action="{{ url_for('checkout.upload_files') }}" method="post" enctype="multipart/form-data">
+      <form class="form-stack" action="{{ url_for('checkout.upload_files') }}" method="post" enctype="multipart/form-data" data-checkout-upload data-max-file-bytes="{{ config.UPLOAD_MAX_SIZE }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="field upload-picker"><label for="checkout-files">Files to upload</label><input id="checkout-files" name="files" type="file" accept="{{ accept_types }}" multiple required><p class="hint upload-selection" data-upload-selection role="status" aria-live="polite">Choose files from your device to add to this order.</p></div>
         <button class="button button-secondary" type="submit">Upload selected files</button>
+        <div class="upload-progress" data-upload-progress hidden>
+          <progress max="100" value="0" aria-label="File upload progress"></progress>
+          <p class="hint" role="status" aria-live="polite" data-upload-status></p>
+        </div>
       </form>
       <p class="hint">Only the selected shop can access these files after you place the order. Unused staged uploads are cleaned up after {{ config.CHECKOUT_STAGED_RETENTION_HOURS }} hours.</p>
     </section>
@@ -31,4 +35,5 @@
       </form>{% else %}<p>No files uploaded yet. Use the upload form to start.</p>{% endif %}
     </section>
   </div>
+  <script src="{{ url_for('static', filename='js/checkout-upload.js') }}" defer></script>
 {% endblock %}

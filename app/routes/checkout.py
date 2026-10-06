@@ -144,17 +144,26 @@ def upload():
 def upload_files():
     if not FlaskForm().validate_on_submit():
         abort(400)
+    asynchronous = request.headers.get("Accept") == "application/json"
+
+    def upload_error(message, status):
+        if asynchronous:
+            return jsonify(error=message), status
+        return render_upload(error=message, status=status)
+
     uploads = [file for file in request.files.getlist("files") if file.filename]
     saved = draft().copy()
     if not uploads or len(uploads) + len(saved["file_ids"]) > current_app.config["ORDER_MAX_FILES"]:
-        return render_upload(error="Choose files within the order's file limit.", status=400)
+        return upload_error("Choose files within the order's file limit.", 400)
     try:
         validated = [validate_upload(file, current_app.config["UPLOAD_MAX_SIZE"]) for file in uploads]
     except UploadValidationError as error:
-        return render_upload(error=str(error), status=error.status_code)
+        return upload_error(str(error), error.status_code)
     try:
         storage = get_storage()
     except StorageError:
+        if asynchronous:
+            return jsonify(error="Private file storage is unavailable."), 503
         abort(503, description="Private file storage is unavailable.")
     keys = []
     records = []
@@ -180,6 +189,8 @@ def upload_files():
             except (OSError, StorageError):
                 current_app.logger.error("Could not remove failed checkout upload")
         current_app.logger.exception("Could not save checkout files")
+        if asynchronous:
+            return jsonify(error="Private file storage is unavailable."), 503
         abort(503, description="Private file storage is unavailable.")
     saved["file_ids"] = [*saved["file_ids"], *(record.id for record in records)]
     saved.pop("fulfillment", None)
@@ -189,11 +200,15 @@ def upload_files():
     saved.pop("review", None)
     save(saved)
     flash(f"{len(records)} {'file' if len(records) == 1 else 'files'} uploaded privately.", "success")
+    if asynchronous:
+        return jsonify(redirect=url_for("checkout.upload"))
     return redirect(url_for("checkout.upload"))
 
 
 @checkout_bp.errorhandler(RequestEntityTooLarge)
 def upload_too_large(error):
+    if request.headers.get("Accept") == "application/json":
+        return jsonify(error="The combined upload is too large. Add fewer files at a time."), 413
     return render_upload(error="The combined upload is too large. Add fewer files at a time.", status=413)
 
 

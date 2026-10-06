@@ -520,6 +520,22 @@ def test_doc_uses_abiword_rendered_pdf_when_available(monkeypatch):
     assert count_word_document_pages(bytes.fromhex("d0cf11e0a1b11ae1"), "doc") == 6
 
 
+def test_word_renderer_finds_default_windows_libreoffice_path(monkeypatch, tmp_path):
+    executable = tmp_path / "LibreOffice" / "program" / "soffice.exe"
+    executable.parent.mkdir(parents=True)
+    executable.write_bytes(b"test executable")
+    monkeypatch.setenv("ProgramFiles", str(tmp_path))
+    monkeypatch.delenv("WORD_CONVERTER_PATH", raising=False)
+    monkeypatch.setattr("app.storage.validation.shutil.which", lambda name: None)
+
+    def convert(command, *, cwd, capture_output, timeout, check):
+        assert command[0] == str(executable)
+        (cwd / "document.pdf").write_bytes(pdf_bytes(2))
+
+    monkeypatch.setattr("app.storage.validation.subprocess.run", convert)
+    assert count_word_document_pages(b"docx content", "docx") == 2
+
+
 def test_page_count_cli_reports_pdf_pages(test_app, tmp_path):
     document = tmp_path / "two.pdf"
     document.write_bytes(pdf_bytes(2))

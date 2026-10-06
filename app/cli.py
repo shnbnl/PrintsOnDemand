@@ -20,7 +20,9 @@ def register_commands(app: Flask) -> None:
     @click.argument("document", type=click.Path(exists=True, dir_okay=False, path_type=Path))
     def check_page_count(document: Path) -> None:
         """Check a PDF or Word file with the same parser used by checkout."""
-        from app.storage.validation import UploadValidationError, count_pdf_pages, count_word_document_pages
+        from app.storage.validation import (
+            UploadValidationError, count_pdf_pages, count_word_document_pages, word_converters,
+        )
 
         extension = document.suffix.lower().lstrip(".")
         if extension not in {"pdf", "doc", "docx"}:
@@ -32,7 +34,14 @@ def register_commands(app: Flask) -> None:
         except (OSError, UploadValidationError) as error:
             raise click.ClickException(f"Could not count pages: {error}") from error
         if pages is None:
-            raise click.ClickException("Word pages could not be rendered. Check for soffice, libreoffice, or abiword; or export the file as PDF.")
+            if not word_converters():
+                raise click.ClickException(
+                    "No Word renderer found. Install LibreOffice or set WORD_CONVERTER_PATH "
+                    "to its soffice executable, then retry."
+                )
+            raise click.ClickException(
+                "A Word renderer was found but could not render this file. Check the file and renderer setup."
+            )
         click.echo(f"Document pages: {pages}")
 
     @app.cli.command("cleanup-staged-uploads")

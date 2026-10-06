@@ -73,6 +73,78 @@ def test_upload_page_returns_to_role_workspace_without_losing_staged_files(
         assert db.session.get(UploadedFile, file_id) is not None
 
 
+def test_upload_progress_requests_keep_validation_and_store_files(client, test_app):
+    owner = student(test_app)
+    sign_in(client, owner)
+    upload_page = client.get("/checkout/upload")
+    assert b"data-checkout-upload" in upload_page.data
+    assert b"checkout-upload.js" in upload_page.data
+    csrf_token = token(upload_page)
+
+    rejected = client.post("/checkout/upload/files", data={
+        "csrf_token": csrf_token,
+        "files": (BytesIO(b"not a PDF"), "invalid.pdf"),
+    }, content_type="multipart/form-data", headers={"Accept": "application/json"})
+    assert rejected.status_code == 400
+    assert rejected.json == {"error": "File content does not match its extension."}
+
+    accepted = client.post("/checkout/upload/files", data={
+        "csrf_token": csrf_token,
+        "files": (BytesIO(pdf_bytes(2)), "two-pages.pdf"),
+    }, content_type="multipart/form-data", headers={"Accept": "application/json"})
+    assert accepted.status_code == 200
+    assert accepted.json == {"redirect": "/checkout/upload"}
+    with test_app.app_context():
+        record = db.session.scalar(select(UploadedFile).where(UploadedFile.user_id == owner))
+        assert record.original_filename == "two-pages.pdf"
+        assert record.pdf_page_count == 2
+
+    test_app.config["MAX_CONTENT_LENGTH"] = 32
+    too_large = client.post("/checkout/upload/files", data={
+        "csrf_token": csrf_token,
+        "files": (BytesIO(PDF), "too-large.pdf"),
+    }, content_type="multipart/form-data", headers={"Accept": "application/json"})
+    assert too_large.status_code == 413
+    assert "combined upload is too large" in too_large.json["error"]
+
+
+@pytest.mark.parametrize(("name", "content", "mime"), [
+    ("sample.pdf", PDF, "application/pdf"),
+    ("sample.jpg", b"\xff\xd8\xffphoto\xff\xd9", "image/jpeg"),
+    ("sample.png", b"\x89PNG\r\n\x1a\nimage", "image/png"),
+])
+def test_progress_upload_accepts_pdf_jpeg_and_png(client, test_app, name, content, mime):
+    owner = student(test_app)
+    sign_in(client, owner)
+    response = client.post("/checkout/upload/files", data={
+        "csrf_token": token(client.get("/checkout/upload")),
+        "files": (BytesIO(content), name, mime),
+    }, content_type="multipart/form-data", headers={"Accept": "application/json"})
+    assert response.status_code == 200
+    with test_app.app_context():
+        assert db.session.scalar(select(UploadedFile).where(UploadedFile.user_id == owner)).original_filename == name
+
+
+def test_progress_upload_accepts_docx_even_without_page_renderer(monkeypatch, client, test_app):
+    monkeypatch.setattr("app.storage.validation.shutil.which", lambda name: None)
+    owner = student(test_app)
+    sign_in(client, owner)
+    buffer = BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        archive.writestr("[Content_Types].xml", '<Types><Override ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>')
+        archive.writestr("word/document.xml", "<document/>")
+    response = client.post("/checkout/upload/files", data={
+        "csrf_token": token(client.get("/checkout/upload")),
+        "files": (BytesIO(buffer.getvalue()), "sample.docx",
+                  "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
+    }, content_type="multipart/form-data", headers={"Accept": "application/json"})
+    assert response.status_code == 200
+    with test_app.app_context():
+        record = db.session.scalar(select(UploadedFile).where(UploadedFile.user_id == owner))
+        assert record.original_filename == "sample.docx"
+        assert record.pdf_page_count is None
+
+
 def print_fields(file_id, *, quantity="1"):
     return {"file_id": str(file_id), f"paper_size_{file_id}": "A4",
             f"color_mode_{file_id}": "GRAYSCALE", f"quantity_{file_id}": quantity}
