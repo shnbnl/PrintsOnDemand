@@ -24,15 +24,16 @@
       </form>
     </section>
     <section class="content-card"><h2>Files for this order</h2>
-      {% if records %}<form class="form-stack" method="post" action="{{ url_for('checkout.upload') }}">
+      {% if records %}<form class="form-stack" method="post" action="{{ url_for('checkout.upload') }}" data-checkout-next-shop-form>
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <ul class="checkout-file-list">{% for record in records %}
           <li class="checkout-staged-file"><input type="hidden" name="file_id" value="{{ record.id }}"><span><strong>{{ record.original_filename }}</strong><small>{{ record.file_extension|upper }} · {{ record.file_size }} bytes{% if record.pdf_page_count %} · {{ record.pdf_page_count }} {{ 'page' if record.pdf_page_count == 1 else 'pages' }}{% elif record.file_extension in ('doc', 'docx') %} · Page count unavailable; export as PDF{% endif %}</small></span><button class="button button-secondary" type="submit" name="remove_file_id" value="{{ record.id }}" aria-label="Remove {{ record.original_filename }} from this order">Remove</button></li>
         {% endfor %}</ul>
         <p class="hint">Removing a file takes it out of this checkout. Unused staged copies expire automatically.</p>
-        <button class="button button-primary" type="submit">Next: Pick a Shop →</button>
+        <button class="button button-primary" type="submit" data-checkout-next-shop>Next: Pick a Shop →</button>
       </form>{% else %}<p>No files uploaded yet. Use the upload form to start.</p>{% endif %}
     </section>
   </div>
   <script src="{{ url_for('static', filename='js/checkout-upload.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/checkout-map-entry.js') }}" defer></script>
 {% endblock %}

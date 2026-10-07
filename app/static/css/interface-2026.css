@@ -361,3 +361,61 @@ h3 { font-weight: 710; letter-spacing: -.015em; }
   from { box-shadow: inset 0 0 0 1px rgb(36 83 166 / 0%); }
   to { box-shadow: inset 0 0 0 1px var(--cobalt); }
 }
+
+/* The three printing-desk actions arrive in a deliberate sequence. */
+@media (prefers-reduced-motion: no-preference) {
+  .action-grid[data-staggered-cards] > .action-card {
+    animation: desk-card-reveal 560ms var(--ease-out) both;
+  }
+  .action-grid[data-staggered-cards] > .action-card:nth-child(1) { animation-delay: 80ms; }
+  .action-grid[data-staggered-cards] > .action-card:nth-child(2) { animation-delay: 220ms; }
+  .action-grid[data-staggered-cards] > .action-card:nth-child(3) { animation-delay: 360ms; }
+  body.is-logging-out .site-header { position: relative; z-index: 15; }
+  body.is-logging-out .site-header .brand-logo {
+    position: relative;
+    z-index: 16;
+    animation: logout-logo-warp 480ms cubic-bezier(.15,.75,.3,1) both;
+  }
+  body.is-logging-out::after {
+    content: "";
+    position: fixed;
+    z-index: 14;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(circle at var(--warp-x) var(--warp-y), #fff 0, #dcecff 18%, transparent 62%);
+    animation: auth-warp-flash 480ms ease-out both;
+  }
+  body.is-map-waiting .checkout-progress,
+  body.is-map-waiting .page-intro,
+  body.is-map-waiting .workspace-panel,
+  body.is-map-waiting .workspace-shop-picker { opacity: 0; }
+  body.is-map-waiting .workspace-panel,
+  body.is-map-waiting .workspace-shop-picker { pointer-events: none; }
+  body.is-map-arriving .map-canvas {
+    animation: checkout-map-zoom-out 850ms cubic-bezier(.17,.74,.2,1) both;
+  }
+  body.is-map-arriving .checkout-progress,
+  body.is-map-arriving .page-intro,
+  body.is-map-arriving .workspace-panel,
+  body.is-map-arriving .workspace-shop-picker {
+    animation: checkout-map-content-reveal 380ms var(--ease-out) 620ms both;
+  }
+}
+@keyframes desk-card-reveal {
+  from { opacity: 0; transform: translateY(26px) scale(.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes logout-logo-warp {
+  0% { transform: scale(1); filter: blur(0); opacity: 1; }
+  55% { transform: scale(4); filter: blur(0); opacity: 1; }
+  100% { transform: scale(8); filter: blur(5px); opacity: 0; }
+}
+@keyframes checkout-map-zoom-out {
+  from { opacity: .45; transform: scale(1.38); filter: blur(5px); }
+  55% { opacity: 1; filter: blur(0); }
+  to { opacity: 1; transform: scale(1); filter: blur(0); }
+}
+@keyframes checkout-map-content-reveal {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}

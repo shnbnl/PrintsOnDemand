@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/product-refresh.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/interface-2026.css') }}">
     <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/logout-transition.js') }}" defer></script>
   </head>
   <body class="page-{{ request.blueprint or 'main' }}">
     <a class="skip-link" href="#main-content">Skip to main content</a>
@@ -43,7 +44,7 @@
             <span class="nav-identity-name" title="{{ current_user.name }}">{{ current_user.name }}<small>{{ 'Shop staff' if current_user.role.value == 'SHOP_STAFF' else 'Admin' }}</small></span>
           </span>
         {% endif %}
-        <form class="inline-form" method="post" action="{{ url_for('auth.logout') }}">
+        <form class="inline-form" method="post" action="{{ url_for('auth.logout') }}" data-logout-form>
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button class="nav-logout" type="submit">Log out</button>
         </form>
