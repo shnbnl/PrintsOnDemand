@@ -226,7 +226,7 @@
       else if (!workspace && !choices.some((choice) => choice.matches('input[type="radio"]')) && shops.length) selectShop(shops[0].id);
       message.hidden = true;
       // Keep the compact selector available when any active shop has no pin.
-      if (picker && workspace) picker.hidden = workspace.querySelector('[name="shop_id"]').options.length - 1 === shops.length;
+      if (picker && workspace) picker.hidden = false;
       locateButton.disabled = false;
       clearTimeout(loadTimer);
 

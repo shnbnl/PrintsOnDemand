@@ -589,6 +589,32 @@ tbody tr:nth-child(even) { background: #fbfcfd; }
   .button, .choice-card, .price-cell { transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease; }
 }
 
+/* Floating shop search and a persistent selected-shop card. */
+[data-shop-workspace] .map-stage { position: relative; }
+[data-shop-workspace] .workspace-shop-picker {
+  position: absolute; z-index: 5; top: 1.1rem; left: 4rem;
+  width: min(34rem, calc(57% - 5.5rem)); padding: 0;
+}
+.workspace-search { padding: .65rem .85rem; border: 1px solid var(--line); border-radius: .9rem; background: white; box-shadow: var(--shadow-raised); }
+.workspace-search label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.workspace-search input[type="search"] { width: 100%; min-height: 44px; padding: .4rem; border: 0; background: transparent; color: var(--navy); font: inherit; }
+.shop-search-results { max-height: 17rem; overflow-y: auto; border-top: 1px solid var(--line); }
+.shop-search-results button { display: block; width: 100%; min-height: 44px; padding: .65rem; border: 0; border-radius: .4rem; background: white; color: var(--navy); text-align: left; font-size: .85rem; }
+.shop-search-results button:hover, .shop-search-results button:focus-visible { background: #edf2fb; }
+[data-shop-workspace] .workspace-panel.is-minimized { top: 1.1rem; bottom: auto; }
+[data-shop-workspace] .workspace-panel.is-minimized [data-workspace-content] { display: flex; flex: none; }
+[data-shop-workspace] .workspace-panel.is-minimized .workspace-scroll { overflow: hidden; }
+[data-shop-workspace] .workspace-panel.is-minimized .checkout-customize,
+[data-shop-workspace] .workspace-panel.is-minimized .workspace-total,
+[data-shop-workspace] .workspace-panel.is-minimized .chip-list { display: none; }
+[data-shop-workspace] .workspace-panel.is-minimized .workspace-shop-summary { border-bottom: 0; }
+@media (max-width: 900px) {
+  [data-shop-workspace] .workspace-shop-picker { top: .75rem; left: 3.75rem; right: .75rem; width: auto; }
+  [data-shop-workspace] .workspace-panel.is-minimized { top: auto; bottom: auto; }
+  [data-shop-workspace] .workspace-map-viewport .map-message { top: 7rem; max-height: 10rem; }
+  [data-shop-workspace] .workspace-map-viewport .map-canvas { height: 100%; }
+}
+
 /* Compact rhythm shared by student, professor, and shop workspaces. */
 .page { margin-top: clamp(1rem, 2vw, 1.75rem); }
 .page-intro, .home-intro { margin-bottom: 1.15rem; }

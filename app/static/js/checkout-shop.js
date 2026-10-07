@@ -17,6 +17,52 @@
   let previewController;
   const panel = form.querySelector('.workspace-panel');
   const toggle = form.querySelector('[data-panel-toggle]');
+  const searchBox = form.querySelector('[data-shop-search]');
+  const search = searchBox.querySelector('input');
+  const results = searchBox.querySelector('.shop-search-results');
+  const searchStatus = searchBox.querySelector('[data-search-status]');
+  searchBox.hidden = false;
+  form.querySelector('[data-shop-select-fallback]').hidden = true;
+  function closeSearch() {
+    results.hidden = true;
+    searchStatus.hidden = true;
+    search.setAttribute('aria-expanded', 'false');
+  }
+  function showSearch() {
+    const query = search.value.trim().toLocaleLowerCase();
+    const matches = [...select.options].filter(option => option.value && option.text.toLocaleLowerCase().includes(query));
+    results.replaceChildren();
+    for (const option of matches) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = option.text;
+      button.addEventListener('click', () => {
+        selectShop(option.value);
+        expandPanel();
+        search.value = '';
+        search.placeholder = option.text;
+        search.focus();
+        closeSearch();
+      });
+      results.append(button);
+    }
+    results.hidden = !matches.length;
+    searchStatus.hidden = Boolean(matches.length);
+    searchStatus.textContent = 'No matching shops.';
+    search.setAttribute('aria-expanded', String(Boolean(matches.length)));
+  }
+  search.addEventListener('input', showSearch);
+  search.addEventListener('focus', showSearch);
+  search.addEventListener('keydown', event => {
+    if (event.key === 'Enter') { event.preventDefault(); results.querySelector('button')?.click(); }
+    if (event.key === 'ArrowDown') { event.preventDefault(); results.querySelector('button')?.focus(); }
+    if (event.key === 'Escape') closeSearch();
+  });
+  searchBox.addEventListener('keydown', event => {
+    if (event.key === 'Escape') { search.focus(); closeSearch(); }
+  });
+  document.addEventListener('pointerdown', event => { if (!searchBox.contains(event.target)) closeSearch(); });
+  searchBox.addEventListener('focusout', event => { if (!searchBox.contains(event.relatedTarget)) closeSearch(); });
   function expandPanel() {
     panel.classList.remove('is-minimized');
     toggle.textContent = 'Minimize panel';
@@ -24,6 +70,7 @@
   }
   toggle.addEventListener('click', () => {
     const minimized = panel.classList.toggle('is-minimized');
+    if (minimized) content.querySelector('.workspace-scroll').scrollTop = 0;
     toggle.textContent = minimized ? 'Open print settings' : 'Minimize panel';
     toggle.setAttribute('aria-expanded', String(!minimized));
   });
@@ -139,6 +186,7 @@
         }
         content.innerHTML = result.html;
         committedShopId = String(result.shop_id);
+        search.placeholder = select.selectedOptions[0]?.text || 'Search printing shops';
         committedHTML = content.innerHTML;
         activateFile(activeFile);
         expandPanel();
@@ -148,6 +196,7 @@
       } catch (issue) {
         if (version === revision) {
           select.value = committedShopId;
+          search.placeholder = select.selectedOptions[0]?.text || 'Search printing shops';
           document.dispatchEvent(new CustomEvent("pod:shop-highlight", { detail: { id: select.value } }));
           restoreCommittedShop();
           report(issue.message);

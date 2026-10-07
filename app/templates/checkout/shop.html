@@ -20,9 +20,17 @@
             </aside>
           </div>
           <div class="workspace-shop-picker" data-workspace-picker>
+            <div class="workspace-search" data-shop-search hidden>
+              <label for="shop-search">Search printing shops</label>
+              <input id="shop-search" type="search" placeholder="Search printing shops" autocomplete="off" aria-controls="shop-search-results" aria-expanded="false">
+              <div id="shop-search-results" class="shop-search-results" hidden></div>
+              <p class="hint" data-search-status role="status" hidden></p>
+            </div>
+            <div data-shop-select-fallback>
             <label for="workspace-shop">Printing shop</label>
             <select id="workspace-shop" name="shop_id" required><option value="">Select a printing shop</option>{% for item in shops %}<option value="{{ item.id }}" {% if item.id == selected_shop_id %}selected{% endif %}>{{ item.name }}</option>{% endfor %}</select>
             <button class="button button-secondary" type="submit" name="intent" value="select" formnovalidate data-load-shop>View shop</button>
+            </div>
           </div>
           <div class="map-toolbar"><button id="locate-me" type="button" class="button button-secondary" disabled>Use my location</button><p id="location-status" class="map-location-status" role="status">Location is off until you choose to share it.</p></div>
         </div>
