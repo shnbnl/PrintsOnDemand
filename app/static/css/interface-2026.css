@@ -95,6 +95,54 @@ h3 { font-weight: 710; letter-spacing: -.015em; }
 .landing-hero .page-lead { color: #e6eef8; }
 .landing-hero .page-eyebrow { color: #f3d78c; }
 .landing-hero-visual { filter: drop-shadow(0 18px 30px #00173366); }
+@media (min-width: 48.01rem) and (prefers-reduced-motion: no-preference) {
+  .landing-art-seal { view-transition-name: landing-login-logo; }
+  body.page-auth:has(#login-heading) .auth-shell > .auth-brand { view-transition-name: landing-login-logo; }
+  ::view-transition-group(landing-login-logo) {
+    animation-duration: 480ms;
+    animation-timing-function: var(--ease-out);
+  }
+  .landing-hero.is-login-exiting .landing-art-page--front {
+    animation: login-page-lift 620ms var(--ease-out) both;
+  }
+  .landing-hero.is-login-exiting .landing-art-page--back {
+    animation: login-page-follow 620ms var(--ease-out) both;
+  }
+  .landing-hero.is-login-exiting .landing-art-seal {
+    animation: login-seal-ready 620ms var(--ease-out) both;
+  }
+  .landing-art-seal::after {
+    content: "";
+    position: absolute;
+    inset: -.65rem;
+    border: 2px solid #f1ca74;
+    border-radius: 1.5rem;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .landing-hero.is-login-exiting .landing-art-seal::after {
+    animation: login-seal-ring 620ms ease-out both;
+  }
+}
+@keyframes login-page-lift {
+  0% { transform: translateY(0) rotate(0); opacity: 1; }
+  45% { transform: translateY(-.8rem) rotate(4deg); opacity: 1; }
+  100% { transform: translate(2rem, -5rem) rotate(10deg); opacity: .2; }
+}
+@keyframes login-page-follow {
+  from { transform: translate(2.2rem, -1.5rem) rotate(11deg); }
+  to { transform: translate(2.7rem, -2.2rem) rotate(14deg) scale(.97); }
+}
+@keyframes login-seal-ready {
+  0% { transform: rotate(6deg) scale(1); }
+  45% { transform: rotate(-12deg) scale(1.16); }
+  100% { transform: rotate(0) scale(1.08); }
+}
+@keyframes login-seal-ring {
+  20% { opacity: 0; transform: scale(.8); }
+  50% { opacity: .9; }
+  100% { opacity: 0; transform: scale(1.45); }
+}
 .landing-steps { gap: 1rem; }
 .landing-steps .content-card { border-top: 3px solid #b8cbe1; }
 .landing-steps .content-card h2 { margin-top: .45rem; }

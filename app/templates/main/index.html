@@ -22,7 +22,7 @@
             <a class="button button-primary" href="{{ url_for('access.admin') }}">Go to admin management</a>
           {% endif %}
         {% else %}
-          <a class="button button-primary" href="{{ url_for('auth.login') }}">Log-in</a>
+          <a class="button button-primary" href="{{ url_for('auth.login') }}" data-landing-login>Log-in</a>
           <a class="button button-secondary" href="{{ url_for('auth.register', account_type='STUDENT') }}">Create student account</a>
           <a class="button button-secondary" href="{{ url_for('auth.register', account_type='PROFESSOR') }}">Create professor account</a>
         {% endif %}
@@ -40,4 +40,5 @@
       <div class="content-card"><span class="action-icon" aria-hidden="true">03</span><h2>Track your order</h2><p>Review payment and shop status whenever you need to.</p></div>
     </div>
   </div>
+  <script src="{{ url_for('static', filename='js/landing-login-transition.js') }}" defer></script>
 {% endblock %}
