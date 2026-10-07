@@ -95,7 +95,7 @@ h3 { font-weight: 710; letter-spacing: -.015em; }
 .landing-hero .page-lead { color: #e6eef8; }
 .landing-hero .page-eyebrow { color: #f3d78c; }
 .landing-hero-visual { filter: drop-shadow(0 18px 30px #00173366); }
-@media (min-width: 48.01rem) and (prefers-reduced-motion: no-preference) {
+@media (prefers-reduced-motion: no-preference) {
   .landing-art-seal { view-transition-name: landing-login-logo; }
   body.page-auth .auth-shell > .auth-brand { view-transition-name: landing-login-logo; }
   ::view-transition-group(landing-login-logo) {
@@ -172,7 +172,7 @@ h3 { font-weight: 710; letter-spacing: -.015em; }
   .auth-shell > .auth-brand { align-self: start; }
   .auth-shell > .auth-heading { align-self: start; }
 }
-@media (min-width: 48.01rem) and (prefers-reduced-motion: no-preference) {
+@media (prefers-reduced-motion: no-preference) {
   .auth-shell.is-auth-warping > .auth-brand {
     position: relative;
     z-index: 12;
@@ -285,9 +285,32 @@ h3 { font-weight: 710; letter-spacing: -.015em; }
   .page-intro { margin-bottom: 1rem; }
   .page-intro h1 { font-size: clamp(1.9rem, 7.8vw, 2.65rem); }
   .content-card, .section-card { padding: 1rem; }
-  .landing-hero { min-height: 0; padding: 1.5rem; }
+  .landing-hero { position: relative; min-height: 0; padding: 1.5rem; }
+  .landing-hero .auth-brand { width: clamp(3rem, 15vw, 3.7rem); height: clamp(3rem, 15vw, 3.7rem); }
+  .landing-hero-visual {
+    position: absolute;
+    top: .8rem;
+    right: 1.1rem;
+    display: block;
+    width: clamp(4.6rem, 21vw, 5.5rem);
+    height: clamp(4.6rem, 21vw, 5.5rem);
+    min-height: 0;
+  }
+  .landing-art-page { border-radius: .4rem; }
+  .landing-art-page--back { transform: translate(.8rem, -.45rem) rotate(11deg); }
+  .landing-art-page--front { gap: .32rem; }
+  .landing-art-page--front span { height: .25rem; }
+  .landing-art-seal {
+    width: clamp(2rem, 8vw, 2.7rem);
+    height: clamp(2rem, 8vw, 2.7rem);
+    padding: .15rem;
+    border-width: .2rem;
+    border-radius: .7rem;
+  }
   .landing-hero h1 { font-size: clamp(2.4rem, 10vw, 3.25rem); }
   .landing-steps .content-card { padding: 1.15rem; }
+  .auth-shell > .auth-brand { width: clamp(3.1rem, 14vw, 3.75rem); height: clamp(3.1rem, 14vw, 3.75rem); }
+  .auth-heading h1 { font-size: clamp(2rem, 7.5vw, 2.5rem); }
   .desk-strip { padding: .9rem; }
   .action-grid .action-card { padding: 1.15rem; }
   .checkout-progress ol { gap: .2rem; }
@@ -297,6 +320,25 @@ h3 { font-weight: 710; letter-spacing: -.015em; }
   .workspace-map .map-stage { box-shadow: var(--shadow); }
   .workspace-panel { box-shadow: 0 10px 30px #08294d24; }
   .shop-card { gap: .2rem; }
+}
+@media (max-width: 48rem) and (prefers-reduced-motion: no-preference) {
+  .landing-hero.is-entry-exiting .landing-art-page--front { animation-name: login-page-lift-mobile; }
+  .landing-hero.is-entry-exiting .landing-art-page--back { animation-name: login-page-follow-mobile; }
+  .auth-shell.is-auth-warping > .auth-brand { animation-name: auth-logo-warp-mobile; }
+}
+@keyframes login-page-lift-mobile {
+  0% { transform: translateY(0) rotate(0); opacity: 1; }
+  45% { transform: translateY(-.3rem) rotate(4deg); opacity: 1; }
+  100% { transform: translate(.7rem, -1.6rem) rotate(10deg); opacity: .2; }
+}
+@keyframes login-page-follow-mobile {
+  from { transform: translate(.8rem, -.45rem) rotate(11deg); }
+  to { transform: translate(1.1rem, -.8rem) rotate(14deg) scale(.97); }
+}
+@keyframes auth-logo-warp-mobile {
+  0% { transform: scale(1); filter: blur(0); opacity: 1; }
+  55% { transform: scale(1.9); filter: blur(0); opacity: 1; }
+  100% { transform: scale(3.2); filter: blur(3px); opacity: 0; }
 }
 @media (prefers-reduced-motion: no-preference) {
   body.page-checkout .checkout-progress { view-transition-name: checkout-progress; }
@@ -366,6 +408,10 @@ h3 { font-weight: 710; letter-spacing: -.015em; }
   .button:not(:disabled):active, .form-actions > button:not(:disabled):active,
   .nav-logout:active { transform: translateY(0) scale(.985); }
   .shop-card:hover, .staff-metric:hover { transform: translateY(-3px); }
+}
+@media (prefers-reduced-motion: no-preference) and (hover: none) and (pointer: coarse) {
+  .button:not(:disabled):active, .form-actions > button:not(:disabled):active,
+  .nav-logout:active, .mobile-nav summary:active { transform: scale(.985); }
 }
 @keyframes interface-arrive {
   from { opacity: 0; transform: translateY(8px); }

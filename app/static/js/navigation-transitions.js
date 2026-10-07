@@ -37,8 +37,11 @@
 
   window.addEventListener("pagereveal", (event) => {
     const activation = window.navigation?.activation;
-    if (!event.viewTransition?.types || !activation) return;
-    const type = transitionType(activation.from, activation.entry);
+    if (!event.viewTransition?.types) return;
+    // Safari supports cross-document transitions before it supports Navigation API.
+    const type = activation
+      ? transitionType(activation.from, activation.entry)
+      : transitionType({ url: document.referrer }, { url: location.href });
     if (type) event.viewTransition.types.add(type);
   });
 })();

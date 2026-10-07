@@ -1,6 +1,6 @@
 "use strict";
 
-// The form still submits normally after this brief desktop-only visual cue.
+// The form still submits normally after this brief visual cue.
 (() => {
   const shell = document.querySelector("[data-auth-submit-shell]");
   const form = shell?.querySelector("form[method='post']");
@@ -8,7 +8,7 @@
   if (!form || !logo) return;
   const registering = shell.hasAttribute("data-auth-register-shell");
 
-  const motionAllowed = window.matchMedia("(min-width: 48.01rem) and (prefers-reduced-motion: no-preference)");
+  const motionAllowed = window.matchMedia("(prefers-reduced-motion: no-preference)");
   let resubmitting = false;
   let timer;
 

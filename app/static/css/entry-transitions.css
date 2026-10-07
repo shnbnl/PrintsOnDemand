@@ -26,10 +26,6 @@
   ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none; }
 }
 
-@media (hover: none) and (pointer: coarse) {
-  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none; }
-}
-
 /* Direction applies only when crossing between the two customer navigation tabs. */
 @media (prefers-reduced-motion: no-preference) {
   html:active-view-transition-type(tab-to-history) .site-header .brand,

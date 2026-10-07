@@ -698,7 +698,6 @@ form[aria-busy="true"] :is(button[type="submit"], input[type="submit"]) { box-sh
 }
 @media (hover: none) and (pointer: coarse) {
   a, button, summary, label, input, select { touch-action: manipulation; }
-  .mobile-nav[open] nav, .notice[role], .fulfillment-fields:not([hidden]) { animation: none; }
 }
 
 /* Checkout map and per-file print cards */

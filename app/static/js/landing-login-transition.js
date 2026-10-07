@@ -1,13 +1,13 @@
 "use strict";
 
-// Enhance desktop entry links without changing their native destinations.
+// Enhance entry links without changing their native destinations.
 (() => {
   const links = document.querySelectorAll("[data-landing-login], [data-landing-entry]");
   const hero = document.querySelector(".landing-hero");
   const visual = hero?.querySelector(".landing-hero-visual");
   if (!links.length || !hero || !visual) return;
 
-  const motionAllowed = window.matchMedia("(min-width: 48.01rem) and (prefers-reduced-motion: no-preference)");
+  const motionAllowed = window.matchMedia("(prefers-reduced-motion: no-preference)");
   let navigationTimer;
 
   links.forEach((link) => {
