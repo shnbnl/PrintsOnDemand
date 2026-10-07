@@ -131,6 +131,12 @@ h3 { font-weight: 710; letter-spacing: -.015em; }
 .price-cell { border-color: #d3dfeb; }
 .price-cell:has(input:checked) { border-color: var(--cobalt); background: #eaf2ff; }
 .checkout-fulfillment-form .destination-card { border-top: 3px solid var(--cobalt); }
+.checkout-payment-grid .form-stack { width: 100%; gap: .85rem; }
+.checkout-payment-method legend { margin-bottom: .55rem; font-size: 1.1rem; }
+.checkout-payment-options { margin: 0; padding: 1rem; gap: .75rem; }
+.checkout-payment-options .choice-card { min-height: 6.25rem; }
+.checkout-payment-grid .checkout-online-panel { margin: 0; }
+.checkout-payment-grid .form-actions { margin-top: .25rem; }
 
 /* Directory, history, settings, and shop operations share data styling. */
 .shop-card { display: flex; flex-direction: column; gap: .35rem; }
@@ -182,6 +188,8 @@ h3 { font-weight: 710; letter-spacing: -.015em; }
   .action-grid .action-card { padding: 1.15rem; }
   .checkout-progress ol { gap: .2rem; }
   .checkout-progress li > :is(a, span) { padding: .45rem .1rem; }
+  .checkout-payment-options { padding: .9rem; }
+  .checkout-payment-options .choice-card { min-height: 0; }
   .workspace-map .map-stage { box-shadow: var(--shadow); }
   .workspace-panel { box-shadow: 0 10px 30px #08294d24; }
   .shop-card { gap: .2rem; }

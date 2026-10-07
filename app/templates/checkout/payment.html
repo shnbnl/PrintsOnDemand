@@ -6,11 +6,11 @@
   {% if error %}<p class="notice notice-error" role="alert">{{ error }}</p>{% endif %}
   {% if quote.is_demo %}<p class="sample-label">Sample shop or rates — confirm with the shop before paying.</p>{% endif %}
   {% if no_method_available %}<p class="notice notice-warning" role="alert">No payment method is currently available for this shop. <a href="{{ url_for('checkout.shop') }}">Choose another shop</a>.</p>{% endif %}
-  <div class="checkout-grid"><div class="checkout-main">
+  <div class="checkout-grid checkout-payment-grid"><div class="checkout-main">
     {% if not no_method_available %}
     <form class="form-stack" method="post" action="{{ url_for('checkout.payment') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <fieldset class="content-card choice-fieldset"><legend>Payment method</legend><div class="checkout-payment-options">
+      <fieldset class="choice-fieldset checkout-payment-method"><legend>Payment method</legend><div class="content-card checkout-payment-options">
         {% if cash_available %}<label class="choice-card"><input type="radio" name="payment_method" value="ONSITE" {% if chosen == 'ONSITE' %}checked{% endif %} required><span><strong>Pay Onsite — Cash</strong><small>Pay {{ quote.shop.name }} in cash when you complete or pick up your order.</small></span></label>{% endif %}
         {% if online_details %}<label class="choice-card"><input type="radio" name="payment_method" value="ONLINE" {% if chosen == 'ONLINE' or fulfillment.destination.value == 'PROFESSOR' %}checked{% endif %} required><span><strong>Pay Online — InstaPay</strong><small>Use {{ quote.shop.name }}'s payment QR and submit your reference for verification.</small></span></label>{% endif %}
       </div>
