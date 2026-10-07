@@ -2,10 +2,11 @@
 
 // The form still submits normally after this brief desktop-only visual cue.
 (() => {
-  const shell = document.querySelector("[data-auth-login-shell]");
+  const shell = document.querySelector("[data-auth-submit-shell]");
   const form = shell?.querySelector("form[method='post']");
   const logo = shell?.querySelector(".auth-brand");
   if (!form || !logo) return;
+  const registering = shell.hasAttribute("data-auth-register-shell");
 
   const motionAllowed = window.matchMedia("(min-width: 48.01rem) and (prefers-reduced-motion: no-preference)");
   let resubmitting = false;
@@ -13,9 +14,21 @@
 
   form.addEventListener("submit", (event) => {
     if (resubmitting || event.defaultPrevented || !motionAllowed.matches) return;
-    const identity = form.querySelector("#email, #identifier, #name");
     const password = form.querySelector("#password");
-    if (!identity?.value.trim() || !password?.value) return;
+    if (registering) {
+      const name = form.querySelector("#name");
+      const email = form.querySelector("#email");
+      const confirmation = form.querySelector("#confirm_password");
+      const accountType = form.querySelector('input[name="account_type"]:checked');
+      const department = form.querySelector("#professor_department");
+      if (!name?.value.trim() || !email?.value.trim() || !password?.value ||
+          !confirmation?.value || password.value !== confirmation.value ||
+          !accountType || (accountType.value === "PROFESSOR" && !department?.value) ||
+          !form.checkValidity()) return;
+    } else {
+      const identity = form.querySelector("#email, #identifier, #name");
+      if (!identity?.value.trim() || !password?.value) return;
+    }
 
     event.preventDefault();
     if (timer) return;

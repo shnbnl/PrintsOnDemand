@@ -3,7 +3,7 @@
 {% block title %}Register | Prints On Demand{% endblock %}
 
 {% block content %}
-  <div class="auth-shell auth-shell--register">
+  <div class="auth-shell auth-shell--register" data-auth-submit-shell data-auth-register-shell>
     <img class="auth-brand" src="{{ url_for('static', filename='img/prints-on-demand-logo.png') }}" alt="" width="88" height="88">
     <header class="auth-heading">
       <p class="page-eyebrow">Prints On Demand</p>
@@ -49,4 +49,5 @@
     </section>
     <p class="auth-switch">Already registered? <a href="{{ url_for('auth.login') }}">Log-in</a></p>
   </div>
+  <script src="{{ url_for('static', filename='js/auth-login-transition.js') }}" defer></script>
 {% endblock %}
