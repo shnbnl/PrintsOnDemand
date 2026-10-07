@@ -3,7 +3,7 @@
 {% block title %}{{ 'Blue and Silver log-in' if blue_login else 'Log-in' }} | Prints On Demand{% endblock %}
 
 {% block content %}
-  <div class="auth-shell">
+  <div class="auth-shell" data-auth-login-shell>
     <img class="auth-brand" src="{{ url_for('static', filename='img/prints-on-demand-logo.png') }}" alt="" width="88" height="88">
     <header class="auth-heading">
       <p class="page-eyebrow">Prints On Demand</p>
@@ -42,4 +42,5 @@
       <p class="auth-switch">Need an account? <a href="{{ url_for('auth.register') }}">Register as a student or professor</a></p>
     {% endif %}
   </div>
+  <script src="{{ url_for('static', filename='js/auth-login-transition.js') }}" defer></script>
 {% endblock %}
