@@ -41,7 +41,7 @@ def detail_context(shop: PrintingShop) -> dict:
         key=lambda item: item.fee_type.value,
     )
     if ServiceType.RUSH_PRINTING.value in service_types:
-        fees.append(SimpleNamespace(fee_type=FeeType.RUSH_PRINTING, amount=0, is_demo=False))
+        fees.append(SimpleNamespace(fee_type=FeeType.RUSH_PRINTING, amount=20, is_demo=False))
     return {"shop": shop, "price_rows": rows, "price_map": prices, "services": services, "fees": fees}
 
 
@@ -91,7 +91,7 @@ def map_markers(query: str = "") -> list[dict]:
             ) if fulfillment[method]],
             "fees": [{
                 "label": item.fee_type.label,
-                "amount": "20% of printing subtotal" if item.fee_type == FeeType.RUSH_PRINTING else f"₱{item.amount:.2f}",
+                "amount": "₱20.00 per order" if item.fee_type == FeeType.RUSH_PRINTING else f"₱{item.amount:.2f}",
                 "is_sample": item.is_demo,
             } for item in context["fees"]],
             "prices": [{

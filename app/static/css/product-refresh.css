@@ -616,6 +616,11 @@ tbody tr:nth-child(even) { background: #fbfcfd; }
 }
 
 /* Compact rhythm shared by student, professor, and shop workspaces. */
+body:has(.checkout-fulfillment-form) .page-intro { margin-bottom: .7rem; }
+.checkout-fulfillment-form { gap: .35rem; }
+.checkout-fulfillment-form .destination-card { margin: 0; padding-block: 1.1rem; }
+.checkout-fulfillment-form .destination-card > .hint { margin-bottom: .55rem; }
+.checkout-fulfillment-form .form-actions { margin-top: .25rem; }
 .page { margin-top: clamp(1rem, 2vw, 1.75rem); }
 .page-intro, .home-intro { margin-bottom: 1.15rem; }
 .page-intro .page-lead { margin-top: .6rem; margin-bottom: 0; }

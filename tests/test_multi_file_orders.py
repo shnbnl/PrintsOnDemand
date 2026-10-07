@@ -67,8 +67,8 @@ def test_two_files_have_independent_settings_prices_and_atomic_snapshots(client,
     reviewed = multi_review(client, fields)
     assert reviewed.status_code == 200
     for expected in (b"Thesis.pdf", b"Poster.pdf", b"PHP 4.50", b"PHP 21.75",
-                     b"Subtotal: PHP 26.25", b"Rush printing fee: PHP 5.25",
-                     b"Total: PHP 31.50"):
+                     b"Subtotal: PHP 26.25", b"Rush printing fee: PHP 20.00",
+                     b"Total: PHP 46.25"):
         assert expected in reviewed.data
     response = multi_place(
         client, fields, unit_price="0.01", line_total="0.01", subtotal="0.01",
@@ -79,7 +79,7 @@ def test_two_files_have_independent_settings_prices_and_atomic_snapshots(client,
     assert detail.status_code == 200
     assert b"Print details (2 files)" in detail.data
     assert b"Thesis.pdf" in detail.data and b"Poster.pdf" in detail.data
-    assert b"PHP 31.50" in detail.data
+    assert b"PHP 46.25" in detail.data
     with test_app.app_context():
         order = db.session.scalar(select(Order))
         assert order.user_id == owner and order.shop_id == shop_id
@@ -92,7 +92,7 @@ def test_two_files_have_independent_settings_prices_and_atomic_snapshots(client,
         assert [item.unit_price for item in order.items] == [Decimal("2.25"), Decimal("7.25")]
         assert [item.line_total for item in order.items] == [Decimal("4.50"), Decimal("21.75")]
         assert (order.subtotal, order.rush_fee, order.fees_total, order.total) == (
-            Decimal("26.25"), Decimal("5.25"), Decimal("5.25"), Decimal("31.50"),
+            Decimal("26.25"), Decimal("20.00"), Decimal("20.00"), Decimal("46.25"),
         )
         assert all(type(item.line_total) is Decimal for item in order.items)
         # Checkout overrides do not change the student's reusable library defaults.
@@ -105,12 +105,12 @@ def test_two_rush_files_pay_one_order_level_rush_fee(client, test_app):
     fields[f"is_rush_{second}"] = "1"
     reviewed = multi_review(client, fields)
     assert reviewed.status_code == 200
-    assert b"Total: PHP 31.50" in reviewed.data
+    assert b"Total: PHP 46.25" in reviewed.data
     assert multi_place(client, fields).status_code == 302
     with test_app.app_context():
         order = db.session.scalar(select(Order))
         assert all(item.is_rush for item in order.items)
-        assert order.rush_fee == order.fees_total == Decimal("5.25")
+        assert order.rush_fee == order.fees_total == Decimal("20.00")
 
 
 def test_tampered_item_settings_are_rejected_server_side(client, test_app):

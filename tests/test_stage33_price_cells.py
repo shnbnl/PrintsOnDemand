@@ -76,14 +76,14 @@ def test_two_files_keep_independent_combined_choices_and_counts(client, test_app
         assert choices[str(first)] == dict(paper_size='LETTER', color_mode='COLOR', quantity=2, is_rush=False)
         assert choices[str(second)] == dict(paper_size='A4', color_mode='GRAYSCALE', quantity=3, is_rush=True)
     page = client.get('/checkout/shop').get_data(as_text=True)
-    assert 'PHP 25.50' in page
+    assert 'PHP 41.25' in page
     assert page.count('data-file-settings=') == 2
     assert post(client, '/checkout/fulfillment', pickup_fields()).status_code == 302
     assert post(client, '/checkout/payment', {'payment_method': 'ONSITE'}).status_code == 302
     assert post(client, '/checkout/place').status_code == 302
     with test_app.app_context():
         order = db.session.scalar(select(Order))
-        assert order.total == Decimal('25.50')
+        assert order.total == Decimal('41.25')
         items = {item.uploaded_file_id: item for item in order.items}
         assert (items[first].paper_size, items[first].color_mode, items[first].quantity, items[first].is_rush) == (PaperSize.LETTER, ColorMode.COLOR, 2, False)
         assert (items[second].paper_size, items[second].color_mode, items[second].quantity, items[second].is_rush) == (PaperSize.A4, ColorMode.GRAYSCALE, 3, True)

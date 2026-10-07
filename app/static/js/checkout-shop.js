@@ -38,7 +38,6 @@
       button.textContent = option.text;
       button.addEventListener('click', () => {
         selectShop(option.value);
-        expandPanel();
         search.value = '';
         search.placeholder = option.text;
         search.focus();
@@ -163,7 +162,6 @@
   function selectShop(id) {
     if (![...select.options].some((option) => option.value === String(id))) return;
     if (!pendingSelections && committedShopId === String(id)) return;
-    expandPanel();
     clearTimeout(timer);
     const version = ++revision;
     previewRevision += 1;
@@ -189,7 +187,6 @@
         search.placeholder = select.selectedOptions[0]?.text || 'Search printing shops';
         committedHTML = content.innerHTML;
         activateFile(activeFile);
-        expandPanel();
         requestAnimationFrame(() => content.classList.remove('is-switching'));
         document.dispatchEvent(new CustomEvent("pod:shop-highlight", { detail: { id: result.shop_id } }));
         report("");

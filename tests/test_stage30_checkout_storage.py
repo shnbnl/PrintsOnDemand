@@ -147,4 +147,4 @@ def test_configure_each_supported_size_color_count_and_rush_rule(client, test_ap
         db.session.commit()
     assert configure(rush=True).status_code == 302
     assert post(client, "/checkout/fulfillment", pickup_fields()).status_code == 302
-    assert b"PHP 0.45" in client.get("/checkout/payment").data
+    assert b"PHP 22.25" in client.get("/checkout/payment").data

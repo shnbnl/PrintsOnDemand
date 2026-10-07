@@ -91,7 +91,7 @@ def test_student_map_search_and_existing_shop_flow(client, test_app):
     }
     assert shops[0]["fulfillment"] == []
     assert shops[0]["fees"] == [{
-        "label": "Rush printing", "amount": "20% of printing subtotal", "is_sample": False,
+        "label": "Rush printing", "amount": "₱20.00 per order", "is_sample": False,
     }]
     assert "admin" not in response.get_data(as_text=True).lower()
     detail_url = shops[0]["detail_url"]

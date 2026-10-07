@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass
-from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from decimal import Decimal, InvalidOperation
 
 from sqlalchemy import select
 
@@ -187,7 +187,7 @@ def quote_order(
         )
         if rush_service is None:
             raise PricingError("Rush printing is not offered by this shop.")
-        rush_fee = money((line_total * Decimal("0.20")).quantize(CENT, rounding=ROUND_HALF_UP), "Rush fee")
+        rush_fee = Decimal("20.00")
 
     subtotal = line_total
     fees_total = rush_fee
@@ -210,7 +210,7 @@ def quote_cart(
     delivery_fee_is_demo: bool = False,
     verify_pdf: bool = False,
 ) -> CartQuote:
-    """Quote owned files; rush adds 20% of printing subtotal once per order."""
+    """Quote owned files; rush adds PHP 20 once per order."""
     if not file_ids:
         raise PricingError("Select at least one file for this order.")
     if len(file_ids) > max_files:
@@ -224,7 +224,7 @@ def quote_cart(
         verify_pdf=verify_pdf,
     ) for file_id in file_ids)
     subtotal = money(sum((item.line_total for item in items), Decimal("0.00")), "Order subtotal")
-    rush_fee = money((subtotal * Decimal("0.20")).quantize(CENT, rounding=ROUND_HALF_UP), "Rush fee") if any(item.is_rush for item in items) else Decimal("0.00")
+    rush_fee = Decimal("20.00") if any(item.is_rush for item in items) else Decimal("0.00")
     delivery_fee = money(delivery_fee, "Delivery fee")
     fees_total = money(rush_fee + delivery_fee, "Order fees")
     total = money(subtotal + fees_total, "Order total")

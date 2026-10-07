@@ -27,7 +27,7 @@ DEMO_PRICES = {
     PaperSize.A3: ("12.00", "20.00"),
     PaperSize.A2: ("18.00", "30.00"),
 }
-DEMO_FEES = {FeeType.RUSH_PRINTING: "25.00", FeeType.DELIVERY: "30.00"}
+DEMO_FEES = {FeeType.RUSH_PRINTING: "20.00", FeeType.DELIVERY: "30.00"}
 DEMO_ADDRESS = "Near Mapúa Malayan Colleges Laguna"
 # User-provided coordinates for these seeded sample-shop records.
 SHOP_PIN_CORRECTIONS = {

@@ -19,6 +19,19 @@ def workspace_post(client, shop_id, uploaded_id, intent="select", **overrides):
     })
 
 
+def test_blue_and_silver_is_initial_shop_but_saved_selection_wins(client, test_app):
+    _, existing_id, file_id = setup(client, test_app)
+    blue_id = shop(test_app, name="Blue and Silver Bookstore")
+    page = client.get("/checkout/shop")
+    assert page.status_code == 200
+    assert f'data-current-shop="{blue_id}"'.encode() in page.data
+    with client.session_transaction() as state:
+        assert state["checkout_draft"]["shop_id"] == blue_id
+    assert workspace_post(client, existing_id, file_id).status_code == 200
+    page = client.get("/checkout/shop")
+    assert f'data-current-shop="{existing_id}"'.encode() in page.data
+
+
 @pytest.mark.parametrize("professor", [False, True])
 def test_selection_stays_in_workspace_and_quote_is_read_only(client, test_app, professor):
     _, shop_id, file_id = setup(client, test_app, professor=professor)

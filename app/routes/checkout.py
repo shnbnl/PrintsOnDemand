@@ -296,6 +296,14 @@ def shop():
     if files is None:
         return redirect(url_for("checkout.upload"))
     if request.method == "GET":
+        if selected_shop(saved) is None:
+            blue_and_silver = db.session.scalar(select(PrintingShop).where(
+                PrintingShop.is_active.is_(True),
+                PrintingShop.name == "Blue and Silver Bookstore",
+            ))
+            if blue_and_silver is not None:
+                saved["shop_id"] = blue_and_silver.id
+                save(saved)
         return render_shop()
     if not FlaskForm().validate_on_submit():
         abort(400)

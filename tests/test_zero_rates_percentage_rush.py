@@ -1,4 +1,4 @@
-"""Unavailable rates and percentage rush are enforced by server quotations."""
+"""Unavailable rates and fixed rush fee are enforced by server quotations."""
 from decimal import Decimal
 
 import pytest
@@ -38,8 +38,8 @@ def test_zero_rate_is_unselectable_and_server_rejects_forged_choice(client, test
     assert response.status_code == 302, response.get_data(as_text=True)
 
 
-@pytest.mark.parametrize(('price', 'quantity', 'expected'), [('2.25', '4', '1.80'), ('0.03', '1', '0.01')])
-def test_rush_works_without_legacy_fee_and_rounds_currency(client, test_app, price, quantity, expected):
+@pytest.mark.parametrize(('price', 'quantity'), [('2.25', '4'), ('0.03', '1')])
+def test_rush_works_without_legacy_fee_at_any_printing_subtotal(client, test_app, price, quantity):
     owner, shop_id, file_id = setup(client, test_app)
     with test_app.app_context():
         rate = db.session.scalar(select(PrintPrice).where(PrintPrice.shop_id == shop_id))
@@ -51,5 +51,5 @@ def test_rush_works_without_legacy_fee_and_rounds_currency(client, test_app, pri
         **fields, 'intent': 'quote', 'csrf_token': token(client.get('/checkout/upload')),
     })
     assert response.status_code == 200
-    assert Decimal(response.json['rush_fee']) == Decimal(expected)
-    assert Decimal(response.json['total']) == Decimal(price) * int(quantity) + Decimal(expected)
+    assert Decimal(response.json['rush_fee']) == Decimal('20.00')
+    assert Decimal(response.json['total']) == Decimal(price) * int(quantity) + Decimal('20.00')

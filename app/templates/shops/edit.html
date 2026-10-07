@@ -82,8 +82,8 @@
   </section>
 
   <section class="section-card" id="shop-fees">
-    <h2>Additional fees</h2><p class="hint">Rush printing adds 20% of the printing subtotal when enabled and selected. Delivery is excluded.</p>
-    {% if fees %}<ul>{% for fee in fees %}<li>{{ fee.fee_type.label }} <strong>{% if fee.fee_type.value == 'RUSH_PRINTING' %}20% of printing subtotal{% else %}₱{{ '%.2f'|format(fee.amount) }}{% endif %}</strong>{% if fee.is_demo %} <span class="status-badge status-badge--warning">Sample</span>{% endif %}</li>{% endfor %}</ul>
+    <h2>Additional fees</h2><p class="hint">Rush printing adds ₱20 once per order when enabled and selected.</p>
+    {% if fees %}<ul>{% for fee in fees %}<li>{{ fee.fee_type.label }} <strong>{% if fee.fee_type.value == 'RUSH_PRINTING' %}₱20.00 per order{% else %}₱{{ '%.2f'|format(fee.amount) }}{% endif %}</strong>{% if fee.is_demo %} <span class="status-badge status-badge--warning">Sample</span>{% endif %}</li>{% endfor %}</ul>
     {% else %}<p class="hint">No additional fees configured.</p>{% endif %}
     <form class="account-form form-grid" method="post" action="{{ url_for('shop_admin.save_fee', shop_id=shop.id) }}" novalidate>
       {{ fee_form.hidden_tag() }}

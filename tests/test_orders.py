@@ -432,21 +432,21 @@ def test_order_quote_creation_and_model_snapshots(client, test_app):
         assert type(item.unit_price) is Decimal
 
 
-def test_rush_fee_is_twenty_percent_of_printing_subtotal(client, test_app):
+def test_rush_fee_is_flat_twenty_pesos(client, test_app):
     user_id = student(test_app)
     shop_id = shop(test_app, rush=True)
     file_id = file(test_app, user_id, quantity=4, rush=True)
     sign_in(client, user_id)
     page = review(client, file_id, shop_id)
-    assert b"Rush printing fee: PHP 1.80" in page.data
+    assert b"Rush printing fee: PHP 20.00" in page.data
     assert b"Subtotal: PHP 9.00" in page.data
-    assert b"Total: PHP 10.80" in page.data
+    assert b"Total: PHP 29.00" in page.data
     assert place(client, file_id, shop_id).status_code == 302
     with test_app.app_context():
         order = db.session.scalar(select(Order))
-        assert order.rush_fee == order.fees_total == Decimal("1.80")
+        assert order.rush_fee == order.fees_total == Decimal("20.00")
         assert order.subtotal == Decimal("9.00")
-        assert order.total == Decimal("10.80")
+        assert order.total == Decimal("29.00")
         assert order.items[0].is_rush
 
 
