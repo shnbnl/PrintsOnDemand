@@ -69,3 +69,161 @@
   from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* A successful submission prints a confirmation before revealing the receipt. */
+.order-print-transition {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: #f7f5ef;
+  animation: order-print-reveal 2.65s ease-in-out forwards;
+}
+
+.order-print-stage {
+  width: min(100%, 400px);
+  text-align: center;
+}
+
+.order-print-stage .page-eyebrow { margin: 8px 0; }
+.order-print-caption {
+  margin: 0;
+  color: #09294f;
+  font-size: clamp(1.25rem, 4vw, 1.6rem);
+  font-weight: 700;
+}
+
+.order-print-art {
+  position: relative;
+  width: min(100%, 310px);
+  height: 300px;
+  margin: auto;
+}
+
+.order-print-input,
+.order-print-output {
+  position: absolute;
+  left: 50%;
+  width: 132px;
+  height: 100px;
+  margin-left: -66px;
+  border: 2px solid #cbd8e5;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 8px 20px rgb(5 36 72 / 12%);
+}
+
+.order-print-input {
+  top: -8px;
+  z-index: 1;
+  padding: 26px 18px;
+  transform: translateY(-58px);
+  animation: order-paper-feed 950ms 180ms cubic-bezier(.55,.05,.45,1) forwards;
+}
+
+.order-print-input span,
+.order-print-output > span:not(.order-print-check) {
+  display: block;
+  height: 6px;
+  margin-bottom: 10px;
+  border-radius: 6px;
+  background: #ccd9e6;
+}
+.order-print-input span:last-child,
+.order-print-output > span:last-child { width: 65%; }
+
+.order-print-output {
+  top: 103px;
+  z-index: 1;
+  padding: 17px 18px;
+  transform: translateY(-20px);
+  animation: order-paper-finish 1s 1.02s cubic-bezier(.2,.75,.25,1) both;
+}
+
+.order-print-check {
+  display: block;
+  width: 25px;
+  height: 25px;
+  margin: 0 0 9px auto;
+  border-radius: 50%;
+  background: #176b49;
+  color: white;
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 25px;
+}
+
+.order-printer {
+  position: absolute;
+  top: 82px;
+  right: 22px;
+  left: 22px;
+  z-index: 2;
+  height: 112px;
+  filter: drop-shadow(0 18px 20px rgb(5 36 72 / 19%));
+  animation: order-printer-pulse 520ms 800ms ease-in-out both;
+}
+
+.order-printer-tray {
+  position: absolute;
+  top: -12px;
+  right: 24px;
+  left: 24px;
+  height: 30px;
+  border-radius: 10px 10px 0 0;
+  background: #244a71;
+}
+
+.order-printer-face {
+  position: absolute;
+  inset: 0 0 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px;
+  border: 2px solid #2c5279;
+  border-radius: 18px;
+  background: linear-gradient(145deg, #123961, #052448);
+}
+.order-printer-face img { width: 54px; height: 54px; object-fit: contain; }
+.order-printer-light {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #70d4a0;
+  box-shadow: 0 0 13px #70d4a0;
+  animation: order-printer-blink 300ms 3 850ms;
+}
+.order-printer-slot {
+  position: absolute;
+  right: 26px;
+  bottom: 4px;
+  left: 26px;
+  height: 12px;
+  border-radius: 0 0 9px 9px;
+  background: #041b34;
+}
+
+@keyframes order-paper-feed {
+  to { transform: translateY(115px); }
+}
+@keyframes order-paper-finish {
+  from { transform: translateY(-20px); }
+  to { transform: translateY(98px); }
+}
+@keyframes order-printer-pulse {
+  50% { transform: translateY(4px); }
+}
+@keyframes order-printer-blink {
+  50% { opacity: .25; }
+}
+@keyframes order-print-reveal {
+  0%, 82% { opacity: 1; visibility: visible; }
+  100% { opacity: 0; visibility: hidden; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .order-print-transition { display: none; }
+}

@@ -1,6 +1,26 @@
 {% extends "base.html" %}
 {% block title %}Order created | Prints On Demand{% endblock %}
 {% block content %}
+  {% if play_order_transition %}
+  <div class="order-print-transition" aria-hidden="true">
+    <div class="order-print-stage">
+      <div class="order-print-art">
+        <div class="order-print-input"><span></span><span></span><span></span></div>
+        <div class="order-print-output"><span class="order-print-check">✓</span><span></span><span></span></div>
+        <div class="order-printer">
+          <div class="order-printer-tray"></div>
+          <div class="order-printer-face">
+            <img src="{{ url_for('static', filename='img/prints-on-demand-logo.png') }}" alt="" width="54" height="54">
+            <span class="order-printer-light"></span>
+          </div>
+          <div class="order-printer-slot"></div>
+        </div>
+      </div>
+      <p class="page-eyebrow">Order placed</p>
+      <p class="order-print-caption">Preparing your confirmation…</p>
+    </div>
+  </div>
+  {% endif %}
   <header class="content-card success-panel"><span class="success-mark" aria-hidden="true">✓</span><div><p class="page-eyebrow">Print order submitted</p><h1>Order Created Successfully!</h1><p>Your printing order has been placed successfully. Keep the order number for payment and tracking.</p></div></header>
   <section class="content-card checkout-success-details"><dl class="detail-list"><div class="detail-row"><dt>Order Number</dt><dd><strong>{{ order.order_reference }}</strong></dd></div><div class="detail-row"><dt>Shop</dt><dd>{{ order.shop_name }}</dd></div><div class="detail-row"><dt>Files</dt><dd>{{ order.items|length }}</dd></div><div class="detail-row"><dt>Payment</dt><dd>{{ 'InstaPay' if order.payment.payment_method.value == 'ONLINE' else 'Pay Onsite — Cash' }}</dd></div><div class="detail-row"><dt>Payment status</dt><dd>{{ order.payment.payment_status.value|replace('_', ' ')|title }}</dd></div><div class="detail-row"><dt>Total</dt><dd><strong>{{ order.currency }} {{ order.total }}</strong></dd></div></dl>
     {% if order.payment.payment_method.value == 'ONLINE' %}<p class="hint">Online payment is verified by staff. A submitted reference does not mean the order is paid.</p>{% else %}<p class="hint">Present your order number and pay cash at the shop.</p>{% endif %}

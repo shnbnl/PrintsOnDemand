@@ -168,7 +168,9 @@ def test_student_cash_checkout_creates_order_payment_and_success(client, test_ap
     assert placed.status_code == 302 and "/checkout/success/" in placed.headers["Location"]
     confirmation = client.get(placed.headers["Location"])
     assert b"Order Created Successfully!" in confirmation.data
+    assert b'class="order-print-transition"' in confirmation.data
     assert b"PHP 4.50" in confirmation.data
+    assert b'class="order-print-transition"' not in client.get(placed.headers["Location"]).data
     with test_app.app_context():
         order = db.session.scalar(select(Order))
         assert order.user_id == owner and order.shop_id == shop_id
@@ -599,6 +601,7 @@ def test_review_rechecks_database_price_before_placement(client, test_app):
     changed = post(client, "/checkout/place", {"total": "4.50"})
     assert changed.status_code == 409
     assert b"PHP 18.00" in changed.data
+    assert b'class="order-print-transition"' not in changed.data
     with test_app.app_context():
         assert db.session.scalar(select(Order)) is None
     placed = post(client, "/checkout/place")

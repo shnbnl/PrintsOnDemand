@@ -599,6 +599,7 @@ def place():
         abort(500)
     session.pop("checkout_draft", None)
     session["checkout_last_order"] = order.order_reference
+    session["checkout_animate_success"] = order.order_reference
     return redirect(url_for("checkout.success", reference=order.order_reference))
 
 
@@ -612,4 +613,6 @@ def success(reference):
         abort(404)
     if order.payment is None:
         return redirect(url_for("orders.detail", order_reference=reference))
-    return render_template("checkout/success.html", order=order)
+    play_order_transition = session.pop("checkout_animate_success", None) == reference
+    return render_template("checkout/success.html", order=order,
+                           play_order_transition=play_order_transition)
