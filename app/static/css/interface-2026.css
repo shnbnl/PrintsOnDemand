@@ -144,7 +144,23 @@ h3 { font-weight: 710; letter-spacing: -.015em; }
   100% { opacity: 0; transform: scale(1.45); }
 }
 .landing-steps { gap: 1rem; }
-.landing-steps .content-card { border-top: 3px solid #b8cbe1; }
+.landing-steps .content-card {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-top: 3px solid #b8cbe1;
+}
+.landing-steps .content-card::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse 90% 95% at 50% 125%, rgb(36 83 166 / 42%), transparent 75%);
+  opacity: 0;
+  transform: translateY(18%);
+}
+.landing-steps .content-card > * { position: relative; z-index: 1; }
 .landing-steps .content-card h2 { margin-top: .45rem; }
 .auth-card { border-color: var(--border); border-top: 3px solid var(--cobalt); box-shadow: var(--shadow); }
 .auth-heading h1 { font-size: clamp(2.5rem, 4.6vw, 4rem); }
@@ -369,6 +385,12 @@ h3 { font-weight: 710; letter-spacing: -.015em; }
 
 /* The three printing-desk actions arrive in a deliberate sequence. */
 @media (prefers-reduced-motion: no-preference) {
+  .landing-steps[data-staggered-cards] > .content-card {
+    animation: desk-card-reveal 680ms var(--ease-out) backwards;
+  }
+  .landing-steps[data-staggered-cards] > .content-card:nth-child(1) { animation-delay: 100ms; }
+  .landing-steps[data-staggered-cards] > .content-card:nth-child(2) { animation-delay: 260ms; }
+  .landing-steps[data-staggered-cards] > .content-card:nth-child(3) { animation-delay: 420ms; }
   .action-grid[data-staggered-cards] > .action-card {
     animation: desk-card-reveal 680ms var(--ease-out) both;
   }
@@ -398,6 +420,34 @@ h3 { font-weight: 710; letter-spacing: -.015em; }
     pointer-events: none;
     background: linear-gradient(160deg, var(--navy), var(--navy-soft));
     animation: logout-curtain 520ms cubic-bezier(.3,.7,.2,1) both;
+  }
+}
+@media (hover: hover) and (pointer: fine) {
+  .landing-steps[data-staggered-cards] > .content-card:hover {
+    border-color: var(--cobalt);
+    border-top-color: #d6ac5b;
+    background: #f8fbff;
+    box-shadow: 0 17px 34px rgb(8 41 77 / 14%), 0 0 0 1px rgb(36 83 166 / 16%);
+  }
+  .landing-steps[data-staggered-cards] > .content-card:hover::before {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .landing-steps[data-staggered-cards] > .content-card:hover :is(h2, .action-icon) { color: var(--cobalt); }
+}
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .landing-steps[data-staggered-cards] > .content-card {
+    transition: transform 280ms var(--ease-out), border-color 280ms ease,
+      background-color 280ms ease, box-shadow 280ms ease;
+  }
+  .landing-steps[data-staggered-cards] > .content-card:hover {
+    transform: translateY(-5px) scale(1.012);
+  }
+  .landing-steps[data-staggered-cards] > .content-card::before {
+    transition: opacity 340ms ease, transform 340ms var(--ease-out);
+  }
+  .landing-steps[data-staggered-cards] > .content-card :is(h2, .action-icon) {
+    transition: color 280ms ease;
   }
 }
 @keyframes desk-card-reveal {
