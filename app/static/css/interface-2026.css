@@ -1,0 +1,194 @@
+/* 2026 interface layer: existing logo, light palette, and product flows. */
+:root {
+  --navy: #08294d;
+  --navy-soft: #123b65;
+  --cobalt: #2453a6;
+  --cream: #f5f4ef;
+  --surface: #fff;
+  --surface-muted: #f5f8fb;
+  --text: #122a43;
+  --muted: #52667b;
+  --border: #d7e0e9;
+  --line: #e1e8ef;
+  --radius-sm: .65rem;
+  --radius: .9rem;
+  --radius-lg: 1.2rem;
+  --shadow: 0 1px 2px rgb(8 41 77 / 3%), 0 10px 30px rgb(8 41 77 / 5%);
+  --shadow-raised: 0 15px 40px rgb(8 41 77 / 12%);
+  font-family: "Segoe UI Variable", "Aptos", "Segoe UI", Arial, sans-serif;
+}
+
+html { scroll-padding-top: 6rem; }
+body {
+  color: var(--text);
+  background:
+    radial-gradient(ellipse 48rem 30rem at 98% -8rem, #e4edf6 0, transparent 75%),
+    var(--cream);
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3 { color: var(--navy); font-family: inherit; }
+h1 { font-size: clamp(2rem, 3.6vw, 3.25rem); font-weight: 780; line-height: 1.07; letter-spacing: -.045em; }
+h2 { font-weight: 740; letter-spacing: -.025em; }
+h3 { font-weight: 710; letter-spacing: -.015em; }
+.page { margin-top: clamp(1.2rem, 2.5vw, 2.25rem); padding-bottom: 3rem; }
+.page-intro { max-width: 60rem; margin-bottom: 1.4rem; }
+.page-intro h1 { margin-bottom: .35em; }
+.page-intro .page-lead { max-width: 65ch; color: var(--muted); line-height: 1.55; }
+.page-eyebrow, .eyebrow { color: var(--cobalt); font-size: .7rem; font-weight: 800; letter-spacing: .13em; }
+.hint, small { line-height: 1.45; }
+
+/* The same original logo leads every role and screen. */
+.site-header { background: var(--navy); box-shadow: 0 1px 0 #ffffff1a, 0 8px 26px #08294d1a; }
+.site-header::after { content: ""; position: absolute; inset: auto 0 0; height: 1px; background: linear-gradient(90deg, #d6ac5b, transparent 45%); }
+.header-inner { width: min(100% - 2 * var(--gutter), 88rem); min-height: 4.5rem; }
+.brand { gap: .7rem; font-size: 1rem; letter-spacing: -.025em; }
+.brand-logo { width: 2.7rem; height: 2.7rem; padding: .12rem; border-radius: .65rem; background: white; }
+.desktop-nav { gap: .3rem; }
+.desktop-nav > a { min-height: 2.75rem; padding: .55rem .8rem; border-radius: .65rem; font-size: .84rem; }
+.desktop-nav > a[aria-current="page"] { background: #ffffff24; box-shadow: inset 0 -2px #f1ca74; }
+.nav-identity, .nav-logout, .auth-back { border-color: #ffffff40; border-radius: .7rem; }
+.desktop-nav .nav-identity-name { display: block; overflow: hidden; overflow-wrap: normal; text-overflow: ellipsis; white-space: nowrap; }
+.desktop-nav .nav-identity-name small { display: block; }
+.mobile-nav summary { border-radius: .7rem; }
+.mobile-nav nav { border-radius: 1rem; box-shadow: var(--shadow-raised); }
+
+/* Surfaces and controls form a consistent hierarchy across roles. */
+.content-card, .section-card, .form-card, .file-card, .order-card:not(tr),
+.shop-card, .empty-state, .success-panel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+.content-card, .section-card { padding: clamp(1.15rem, 2vw, 1.7rem); }
+.content-card > :last-child, .section-card > :last-child { margin-bottom: 0; }
+.card-grid, .detail-grid, .shop-detail-grid, .checkout-grid,
+.checkout-step-grid, .management-grid, .operations-grid { gap: 1rem; }
+.button, button, input[type="submit"] { font-weight: 700; }
+.button { min-height: 2.85rem; padding: .65rem 1rem; border-radius: .7rem; }
+.button-primary { background: var(--navy); border-color: var(--navy); }
+.button-primary:hover { background: var(--navy-soft); border-color: var(--navy-soft); }
+.button-secondary, .button-outline, .button-quiet { color: var(--navy); border-color: #b9cadb; background: white; }
+.button-secondary:hover, .button-outline:hover, .button-quiet:hover { color: var(--navy); background: #edf3fb; border-color: var(--cobalt); }
+:is(a, button, input, select, textarea, summary):focus-visible { outline: 3px solid #d39938; outline-offset: 3px; }
+.field input:not([type="checkbox"]):not([type="radio"]), .field select, .field textarea {
+  border: 1px solid #b9cadb; border-radius: .7rem; background: #fff;
+}
+.field :is(input, select, textarea):focus-visible { border-color: var(--cobalt); outline-color: #d39938; }
+.field > label, .field > legend { color: var(--navy); }
+.choice-card { border-color: var(--border); border-radius: .8rem; }
+.choice-card:has(input:checked), .choice-card.is-selected { border-color: var(--cobalt); background: #edf3ff; box-shadow: inset 3px 0 var(--cobalt); }
+.notice { border-radius: .75rem; }
+.status-badge { border-radius: .45rem; }
+
+/* Entry and desk views give the next action a clear place. */
+.landing-hero {
+  max-width: none;
+  width: 100%;
+  min-height: 28rem;
+  border: 1px solid #28496e;
+  border-radius: 1.35rem;
+  background: radial-gradient(circle at 75% 12%, #31557e 0, transparent 38%), linear-gradient(135deg, #08294d, #143a62);
+  box-shadow: 0 22px 48px #08294d24;
+}
+.landing-hero h1 { color: white; font-size: clamp(2.8rem, 5vw, 4.8rem); }
+.landing-hero .page-lead { color: #e6eef8; }
+.landing-hero .page-eyebrow { color: #f3d78c; }
+.landing-hero-visual { filter: drop-shadow(0 18px 30px #00173366); }
+.landing-steps { gap: 1rem; }
+.landing-steps .content-card { border-top: 3px solid #b8cbe1; }
+.landing-steps .content-card h2 { margin-top: .45rem; }
+.auth-card { border-color: var(--border); border-top: 3px solid var(--cobalt); box-shadow: var(--shadow); }
+.auth-heading h1 { font-size: clamp(2.5rem, 4.6vw, 4rem); }
+.home-intro { max-width: 56rem; }
+.home-intro h1 { font-size: clamp(2.35rem, 4vw, 3.55rem); }
+.desk-strip { border: 1px solid #cad9e7; border-left: 3px solid var(--cobalt); background: #ffffffc7; box-shadow: var(--shadow); }
+.action-grid .action-card { padding: 1.45rem; gap: .75rem; }
+.action-grid .action-card-primary { background: linear-gradient(150deg, var(--navy), var(--navy-soft)); }
+.action-grid .action-card:not(.action-card-primary) { background: #fff; }
+.action-grid .action-card:hover { border-color: #a7bfd7; box-shadow: var(--shadow-raised); transform: translateY(-2px); }
+.action-grid .action-card p { line-height: 1.5; }
+.action-icon { border-radius: .75rem; }
+
+/* Checkout progression stays legible while preserving the in-map panel. */
+.checkout-progress { margin-bottom: 1.25rem; }
+.checkout-progress ol { gap: .4rem; }
+.checkout-progress li > :is(a, span) { border-radius: .7rem; border-color: #cbd9e7; background: #fff; }
+.checkout-progress .is-complete a { background: #edf3fa; }
+.checkout-progress .is-current > span { background: var(--navy); box-shadow: 0 6px 18px #08294d20; }
+.checkout-step-grid > .content-card { margin: 0; }
+.upload-picker { background: #f7faff; border-color: #a8bfd9; }
+.upload-picker:focus-within { border-color: var(--cobalt); box-shadow: 0 0 0 3px #2453a620; }
+.checkout-staged-file { border-color: var(--line); }
+.checkout-config-file, .order-item-card { border: 1px solid var(--line); background: #f9fbfd; }
+.price-summary { border-top: 3px solid var(--cobalt) !important; background: #f8fbff; }
+.price-summary .summary-total { color: var(--navy); }
+.workspace-map .map-stage { border-color: #b4c8dc; box-shadow: var(--shadow-raised); }
+.workspace-panel { border-color: #d5e1ed; box-shadow: 0 16px 40px #08294d29; }
+.workspace-shop-summary { background: #fff; }
+.workspace-total { background: #f8fbff; border-top: 1px solid var(--line); }
+.workspace-search { border-color: #d0dce8; box-shadow: 0 12px 30px #08294d20; }
+.price-cell { border-color: #d3dfeb; }
+.price-cell:has(input:checked) { border-color: var(--cobalt); background: #eaf2ff; }
+.checkout-fulfillment-form .destination-card { border-top: 3px solid var(--cobalt); }
+
+/* Directory, history, settings, and shop operations share data styling. */
+.shop-card { display: flex; flex-direction: column; gap: .35rem; }
+.shop-card .button { margin-top: auto; }
+.shop-card:hover { border-color: #a6bfd8; box-shadow: var(--shadow-raised); }
+.shop-avatar { border: 1px solid #c8d6e4; }
+.search-form { border: 1px solid #ccd9e7; }
+.shop-view-switch { border-color: #bdcddd; }
+.history-summary { border-left: 3px solid var(--cobalt); background: #fff; }
+.history-filters { border-color: var(--border); }
+.order-list .order-card { border-top: 3px solid #a7c3e1; }
+.order-list .order-card:hover { border-color: #9eb9d7; box-shadow: var(--shadow-raised); }
+.tracking-step-current { background: #edf4fc; }
+.account-settings-card { border-top: 3px solid #bdd0e4; }
+.danger-zone { border-top: 3px solid var(--danger); }
+.staff-workspace, .staff-queue, .staff-recent { border-top: 3px solid var(--cobalt); }
+.staff-metric { border-color: #d1deea; background: #f7faff; }
+.staff-metric--attention { border-color: #abc3df; background: #eaf2ff; }
+.staff-metric:hover { border-color: var(--cobalt); }
+.operations-overview > div { border-color: var(--border); background: white; }
+.management-jump { background: #fff; border-color: var(--border); }
+.management-jump a:focus-visible, .management-jump a:hover { background: #eaf2ff; }
+.settings-column > .section-card { border-top: 2px solid #bfd1e5; }
+.summary-row, .detail-row { border-color: var(--line); }
+.table-scroll, .order-history-wrap { border: 1px solid var(--border); background: white; }
+.data-table thead th { color: var(--navy); background: #ecf2f8; }
+.data-table tbody tr:nth-child(even) { background: #f8fafc; }
+.data-table tbody tr:hover { background: #edf4fb; }
+
+@media (max-width: 60rem) {
+  .desktop-nav { display: none; }
+  .mobile-nav { display: block; }
+  .action-grid { grid-template-columns: 1fr; }
+  .action-grid .action-card-primary { min-height: 0; }
+}
+@media (max-width: 48rem) {
+  :root { --gutter: 1rem; }
+  .page { margin-top: 1.15rem; padding-bottom: 2.25rem; }
+  .header-inner { min-height: 4rem; }
+  .brand-logo { width: 2.4rem; height: 2.4rem; }
+  .brand { font-size: .9rem; }
+  .page-intro { margin-bottom: 1rem; }
+  .page-intro h1 { font-size: clamp(1.9rem, 7.8vw, 2.65rem); }
+  .content-card, .section-card { padding: 1rem; }
+  .landing-hero { min-height: 0; padding: 1.5rem; }
+  .landing-hero h1 { font-size: clamp(2.4rem, 10vw, 3.25rem); }
+  .landing-steps .content-card { padding: 1.15rem; }
+  .desk-strip { padding: .9rem; }
+  .action-grid .action-card { padding: 1.15rem; }
+  .checkout-progress ol { gap: .2rem; }
+  .checkout-progress li > :is(a, span) { padding: .45rem .1rem; }
+  .workspace-map .map-stage { box-shadow: var(--shadow); }
+  .workspace-panel { box-shadow: 0 10px 30px #08294d24; }
+  .shop-card { gap: .2rem; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .button, .choice-card, .price-cell, .action-card, .shop-card, .staff-metric {
+    transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease,
+      box-shadow 160ms ease, transform 160ms ease;
+  }
+}
