@@ -18,7 +18,8 @@
     <a href="#shop-information">Profile &amp; hours</a><a href="#shop-photo">Photo</a><a href="#shop-services">Services</a><a href="#shop-prices">Prices</a><a href="#delivery-settings">Delivery fee</a><a href="#payment-settings">Payments</a><a href="#shop-fees">Other fees</a>
   </nav>
 
-  <div class="management-grid">
+  <div class="management-grid shop-settings-grid">
+    <div class="settings-column">
     <section class="section-card" id="shop-information">
       <p class="page-eyebrow">Public details</p>
       <h2>Shop information</h2>
@@ -35,26 +36,6 @@
         <p class="hint">Contact an administrator to change the registered shop name or map coordinates.</p>
         <div class="form-actions">{{ details_form.submit(class_='button') }}</div>
       </form>
-    </section>
-
-    <section class="section-card" id="shop-photo">
-      <p class="page-eyebrow">Storefront image</p>
-      <h2>Shop photo</h2>
-      {% if shop.photo_digest %}
-        <div class="shop-photo-frame"><img class="shop-photo-preview" src="{{ url_for('shops.photo', shop_id=shop.id, v=shop.photo_digest[:12]) }}" alt="Current photo of {{ shop.name }}"><span>Current shop photo</span></div>
-      {% else %}<div class="shop-photo-placeholder"><strong>No shop photo yet</strong><p>Upload one to show your storefront on the shop page and map pin.</p></div>{% endif %}
-      <p class="hint">JPEG, PNG, or WebP, up to 5 MB. The image is resized and shown publicly on your shop page and map pin.</p>
-      <form class="account-form form-grid" method="post" action="{{ url_for('shop_staff.save_photo') }}" enctype="multipart/form-data" novalidate>
-        {{ photo_form.hidden_tag() }}
-        <div class="field field-wide">{{ photo_form.photo.label }} {{ photo_form.photo(accept='image/jpeg,image/png,image/webp') }}{{ errors(photo_form.photo) }}
-          {% if photo_error %}<p class="field-error" role="alert">{{ photo_error }}</p>{% endif %}
-        </div>
-        <div class="form-actions">{{ photo_form.submit(class_='button') }}</div>
-      </form>
-      {% if shop.photo_digest %}<form method="post" action="{{ url_for('shop_staff.remove_photo') }}">
-        {{ remove_photo_form.csrf_token }}
-        <button class="button button-secondary" type="submit">Remove photo</button>
-      </form>{% endif %}
     </section>
 
     <section class="section-card" id="shop-services">
@@ -85,6 +66,27 @@
         <div class="field">{{ price_form.price.label }} {{ price_form.price(min='0', step='0.01') }}{{ errors(price_form.price) }}</div>
         <div class="form-actions">{{ price_form.submit(class_='button') }}</div>
       </form>
+    </section>
+    </div>
+    <div class="settings-column">
+    <section class="section-card" id="shop-photo">
+      <p class="page-eyebrow">Storefront image</p>
+      <h2>Shop photo</h2>
+      {% if shop.photo_digest %}
+        <div class="shop-photo-frame"><img class="shop-photo-preview" src="{{ url_for('shops.photo', shop_id=shop.id, v=shop.photo_digest[:12]) }}" alt="Current photo of {{ shop.name }}"><span>Current shop photo</span></div>
+      {% else %}<div class="shop-photo-placeholder"><strong>No shop photo yet</strong><p>Upload one to show your storefront on the shop page and map pin.</p></div>{% endif %}
+      <p class="hint">JPEG, PNG, or WebP, up to 5 MB. The image is resized and shown publicly on your shop page and map pin.</p>
+      <form class="account-form form-grid" method="post" action="{{ url_for('shop_staff.save_photo') }}" enctype="multipart/form-data" novalidate>
+        {{ photo_form.hidden_tag() }}
+        <div class="field field-wide">{{ photo_form.photo.label }} {{ photo_form.photo(accept='image/jpeg,image/png,image/webp') }}{{ errors(photo_form.photo) }}
+          {% if photo_error %}<p class="field-error" role="alert">{{ photo_error }}</p>{% endif %}
+        </div>
+        <div class="form-actions">{{ photo_form.submit(class_='button') }}</div>
+      </form>
+      {% if shop.photo_digest %}<form method="post" action="{{ url_for('shop_staff.remove_photo') }}">
+        {{ remove_photo_form.csrf_token }}
+        <button class="button button-secondary" type="submit">Remove photo</button>
+      </form>{% endif %}
     </section>
 
     <section class="section-card" id="delivery-settings">
@@ -122,6 +124,7 @@
         <div class="form-actions">{{ payment_form.submit(class_='button') }}</div>
       </form>
     </section>
+
     <section class="section-card" id="shop-fees">
       <p class="page-eyebrow">Additional charges</p>
       <h2>Additional fees</h2><p class="hint">Rush printing adds 20% of the printing subtotal when enabled and selected. Delivery is excluded.</p>
@@ -134,5 +137,6 @@
         <div class="form-actions">{{ fee_form.submit(class_='button') }}</div>
       </form>{% endif %}
     </section>
+    </div>
   </div>
 {% endblock %}

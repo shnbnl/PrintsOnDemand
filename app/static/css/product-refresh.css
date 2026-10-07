@@ -588,3 +588,81 @@ tbody tr:nth-child(even) { background: #fbfcfd; }
 @media (prefers-reduced-motion: no-preference) {
   .button, .choice-card, .price-cell { transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease; }
 }
+
+/* Compact rhythm shared by student, professor, and shop workspaces. */
+.page { margin-top: clamp(1rem, 2vw, 1.75rem); }
+.page-intro, .home-intro { margin-bottom: 1.15rem; }
+.page-intro .page-lead { margin-top: .6rem; margin-bottom: 0; }
+.content-card, .section-card { padding: clamp(1rem, 1.8vw, 1.35rem); }
+.card-grid, .detail-grid, .shop-detail-grid, .checkout-grid,
+.checkout-step-grid, .management-grid, .operations-grid { gap: 1rem; }
+.form-stack, .form-grid { gap: .8rem 1rem; }
+.form-subheading { margin-block: .5rem .15rem; }
+.content-card > :last-child, .section-card > :last-child { margin-bottom: 0; }
+.checkout-progress { margin-bottom: 1.2rem; }
+.upload-picker { padding: 1rem; }
+.summary-row, .detail-row { padding-block: .6rem; }
+.operations-overview { margin-bottom: 1rem; }
+.operations-overview > div { min-height: 5rem; padding: .85rem 1rem; }
+.staff-metric { min-height: 6.5rem; padding: .85rem; }
+.staff-queue, .staff-recent { padding: 1.15rem; }
+.desk-strip { margin-bottom: 1rem; padding: .85rem 1rem; }
+.action-grid .action-card { padding: 1.25rem; }
+.action-grid .action-card-primary { grid-row: auto; justify-content: flex-start; }
+.action-grid .action-card-primary h2 { font-size: 1.5rem; }
+.action-grid .action-card-primary .button { margin-top: .35rem; }
+.action-grid .action-card:not(.action-card-primary) { display: flex; }
+.action-grid .action-card .button { margin-top: auto; }
+.action-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+/* Independent stacks avoid blank grid rows beneath shorter settings cards. */
+.shop-settings-grid { align-items: start; }
+.settings-column { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
+.settings-column > .section-card { margin: 0; min-width: 0; }
+.shop-settings-grid #shop-information { grid-row: auto; }
+.shop-settings-grid .form-subheading { grid-column: 1 / -1; }
+.shop-settings-grid .account-form > .hint { grid-column: 1 / -1; }
+.shop-settings-grid .shop-photo-frame { width: min(100%, 16rem); margin-bottom: .75rem; }
+.shop-settings-grid .shop-photo-preview { max-height: 10rem; object-fit: contain; }
+.shop-settings-grid .shop-payment-qr-preview { width: 8rem; height: 8rem; object-fit: contain; }
+.shop-settings-grid #shop-prices .account-form { margin-top: .75rem; }
+.shop-settings-grid .summary-list { margin-block: .5rem .75rem; }
+.shop-settings-grid .setting-toggle { padding: .5rem .75rem; }
+.shop-settings-grid #shop-photo > form + form { margin-top: .65rem; }
+.management-jump { margin-bottom: 1rem; padding: .35rem; gap: .2rem; }
+.management-jump a { min-height: 2.75rem; padding: .4rem .65rem; }
+
+@media (max-width: 60rem) {
+  .action-grid { grid-template-columns: 1fr; }
+  .action-grid .action-card-primary { min-height: 0; }
+  .action-grid .action-card { gap: .65rem; }
+  .shop-settings-grid { grid-template-columns: 1fr; }
+  .settings-column { display: contents; }
+  .shop-settings-grid #shop-information { order: 1; }
+  .shop-settings-grid #shop-photo { order: 2; }
+  .shop-settings-grid #shop-services { order: 3; }
+  .shop-settings-grid #shop-prices { order: 4; }
+  .shop-settings-grid #delivery-settings { order: 5; }
+  .shop-settings-grid #payment-settings { order: 6; }
+  .shop-settings-grid #shop-fees { order: 7; }
+}
+@media (max-width: 48rem) {
+  .page-intro, .home-intro { margin-bottom: 1rem; }
+  .home-intro h1 { font-size: 2rem; }
+  .action-grid .action-card { padding: 1.1rem; }
+  .management-jump { gap: .15rem; }
+  .management-jump a { font-size: .8rem; }
+  .shop-settings-grid .staff-pricing-table { table-layout: fixed; width: 100%; }
+  .shop-settings-grid .staff-pricing-table thead {
+    display: table-header-group; position: static; width: auto; height: auto;
+    margin: 0; overflow: visible; clip: auto; white-space: normal;
+  }
+  .shop-settings-grid .staff-pricing-table tbody { display: table-row-group; }
+  .shop-settings-grid .staff-pricing-table tr { display: table-row; border: 0; }
+  .shop-settings-grid .staff-pricing-table th,
+  .shop-settings-grid .staff-pricing-table td {
+    display: table-cell; width: auto; padding: .65rem .35rem;
+    font-size: .75rem; text-align: left; border-bottom: 1px solid var(--line);
+  }
+  .shop-settings-grid .staff-pricing-table td::before { display: none; }
+}
