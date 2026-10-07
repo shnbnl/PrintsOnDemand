@@ -7,6 +7,7 @@
     <title>{% block title %}Prints On Demand{% endblock %}</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/prints-on-demand-logo.png') }}">
     <style>@view-transition { navigation: auto; } @media (prefers-reduced-motion: reduce) { @view-transition { navigation: none; } }</style>
+    <script src="{{ url_for('static', filename='js/navigation-transitions.js') }}"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/entry-transitions.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/product-refresh.css') }}">

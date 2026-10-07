@@ -30,3 +30,42 @@
   ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none; }
 }
 
+/* Direction applies only when crossing between the two customer navigation tabs. */
+@media (prefers-reduced-motion: no-preference) {
+  html:active-view-transition-type(tab-to-history) .site-header .brand,
+  html:active-view-transition-type(tab-to-start) .site-header .brand,
+  html:active-view-transition-type(tab-to-history) body.page-checkout .checkout-progress,
+  html:active-view-transition-type(tab-to-start) body.page-checkout .checkout-progress,
+  html:active-view-transition-type(workspace-entry) body.page-checkout .checkout-progress {
+    view-transition-name: none;
+  }
+
+  html:active-view-transition-type(tab-to-history)::view-transition-old(root) {
+    animation: tab-push-out-left 460ms cubic-bezier(.25,.75,.2,1) both;
+  }
+  html:active-view-transition-type(tab-to-history)::view-transition-new(root) {
+    animation: tab-push-in-right 460ms cubic-bezier(.25,.75,.2,1) both;
+  }
+  html:active-view-transition-type(tab-to-start)::view-transition-old(root) {
+    animation: tab-push-out-right 460ms cubic-bezier(.25,.75,.2,1) both;
+  }
+  html:active-view-transition-type(tab-to-start)::view-transition-new(root) {
+    animation: tab-push-in-left 460ms cubic-bezier(.25,.75,.2,1) both;
+  }
+
+  html:active-view-transition-type(workspace-entry)::view-transition-old(root) {
+    animation: entry-leave 160ms ease-in both;
+  }
+  html:active-view-transition-type(workspace-entry)::view-transition-new(root) {
+    animation: workspace-show-in 380ms var(--ease-out, ease-out) both;
+  }
+}
+
+@keyframes tab-push-out-left { to { transform: translateX(-100vw); } }
+@keyframes tab-push-in-right { from { transform: translateX(100vw); } }
+@keyframes tab-push-out-right { to { transform: translateX(100vw); } }
+@keyframes tab-push-in-left { from { transform: translateX(-100vw); } }
+@keyframes workspace-show-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
