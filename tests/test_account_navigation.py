@@ -38,7 +38,7 @@ def test_retired_professor_page_redirects_and_preference_is_csrf_protected(clien
     assert client.post("/professor/settings", data={"accepts_student_deliveries": "y"}).status_code == 405
     account = client.get("/account")
     assert b"Verification" in account.data
-    assert b"Student print deliveries" in account.data
+    assert b"Student print deliveries" not in account.data
     assert client.post("/account/professor-preference", data={
         "department": "CCIS", "accepts_student_deliveries": "y",
     }).status_code == 400
@@ -55,13 +55,11 @@ def test_customer_dashboards_share_printing_actions_and_account_navigation(clien
     user_id = student(test_app, f"dashboard-{role.value.lower()}@example.edu", role)
     sign_in(client, user_id)
     page = client.get(path)
-    for label in (b"Start a print order", b"Pick a shop", b"My Orders",
-                  b"History &amp; tracking", b"Account settings"):
+    for label in (b"Start a print order", b"Pick a shop", b"My Orders"):
         assert label in page.data
+    assert b'class="desk-strip"' not in page.data
     assert page.data.count(b">Account</a>") == 2
     assert b">Printing Shops</a>" not in page.data
-    if role == UserRole.PROFESSOR:
-        assert b"Professor verification" in page.data
 
 
 @pytest.mark.parametrize(("role", "desk_path"), [

@@ -40,7 +40,7 @@ def test_registration_uses_exact_department_choices_and_rejects_arbitrary_values
         assert db.session.scalar(select(Professor)) is None
 
 
-def test_professor_settings_show_only_information_and_delivery_control(client, test_app):
+def test_professor_settings_show_information_without_delivery_control(client, test_app):
     profile_id = approved_professor(test_app, accepts=False, linked=False)
     assert register(client, account_type="PROFESSOR", name="Maria Santos",
                     email="maria.santos@example.edu", professor_department="CCIS").status_code == 302
@@ -51,7 +51,8 @@ def test_professor_settings_show_only_information_and_delivery_control(client, t
     assert b"Your account is ready" not in page.data
     assert b"has not linked" not in page.data
     assert b'id="department"' not in page.data
-    assert b'role="switch"' in page.data
+    assert b"Student print deliveries" not in page.data
+    assert b'role="switch"' not in page.data
     assert client.post("/account/professor-preference", data={
         "csrf_token": csrf_token(page), "accepts_student_deliveries": "y",
     }).status_code == 302
@@ -89,7 +90,7 @@ def test_existing_account_without_department_can_select_one_once(client, test_ap
     account_id = student(test_app, "legacy@example.edu", role=UserRole.PROFESSOR)
     sign_in(client, account_id)
     page = client.get("/account")
-    assert page.status_code == 200 and b'id="department"' in page.data
+    assert page.status_code == 200 and b'id="department"' not in page.data
     assert client.post("/account/professor-preference", data={
         "csrf_token": csrf_token(page), "accepts_student_deliveries": "y",
     }).status_code == 400

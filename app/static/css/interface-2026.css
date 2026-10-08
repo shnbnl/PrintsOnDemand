@@ -206,7 +206,6 @@ h3 { font-weight: 710; letter-spacing: -.015em; }
 }
 .home-intro { max-width: 56rem; }
 .home-intro h1 { font-size: clamp(2.35rem, 4vw, 3.55rem); }
-.desk-strip { border: 1px solid #cad9e7; border-left: 3px solid var(--cobalt); background: #ffffffc7; box-shadow: var(--shadow); }
 .action-grid .action-card { padding: 1.45rem; gap: .75rem; }
 .action-grid .action-card-primary { background: linear-gradient(150deg, var(--navy), var(--navy-soft)); }
 .action-grid .action-card:not(.action-card-primary) { background: #fff; }
@@ -312,7 +311,6 @@ h3 { font-weight: 710; letter-spacing: -.015em; }
   .landing-steps .content-card { padding: 1.15rem; }
   .auth-shell > .auth-brand { width: clamp(3.1rem, 14vw, 3.75rem); height: clamp(3.1rem, 14vw, 3.75rem); }
   .auth-heading h1 { font-size: clamp(2rem, 7.5vw, 2.5rem); }
-  .desk-strip { padding: .9rem; }
   .action-grid .action-card { padding: 1.15rem; }
   .checkout-progress ol { gap: .2rem; }
   .checkout-progress li > :is(a, span) { padding: .45rem .1rem; }
