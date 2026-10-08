@@ -74,6 +74,50 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* The shop views exchange places while the selected toggle pill travels with them. */
+.shop-view-switch [aria-current="page"] {
+  view-transition-name: shop-view-selection;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html:active-view-transition-type(shop-to-map) .site-header .brand,
+  html:active-view-transition-type(shop-to-list) .site-header .brand {
+    view-transition-name: none;
+  }
+
+  html:active-view-transition-type(shop-to-map)::view-transition-old(root),
+  html:active-view-transition-type(shop-to-list)::view-transition-old(root),
+  html:active-view-transition-type(shop-to-map)::view-transition-new(root),
+  html:active-view-transition-type(shop-to-list)::view-transition-new(root) {
+    animation-duration: 850ms;
+    animation-timing-function: cubic-bezier(.22,.7,.25,1);
+    animation-fill-mode: both;
+  }
+
+  html:active-view-transition-type(shop-to-map)::view-transition-old(root) { animation-name: shop-view-out-left; }
+  html:active-view-transition-type(shop-to-map)::view-transition-new(root) { animation-name: shop-view-in-right; }
+  html:active-view-transition-type(shop-to-list)::view-transition-old(root) { animation-name: shop-view-out-right; }
+  html:active-view-transition-type(shop-to-list)::view-transition-new(root) { animation-name: shop-view-in-left; }
+
+  html:active-view-transition-type(shop-to-map)::view-transition-group(shop-view-selection),
+  html:active-view-transition-type(shop-to-list)::view-transition-group(shop-view-selection) {
+    animation-duration: 850ms;
+    animation-timing-function: cubic-bezier(.22,.7,.25,1);
+  }
+  html:active-view-transition-type(shop-to-map)::view-transition-old(shop-view-selection),
+  html:active-view-transition-type(shop-to-map)::view-transition-new(shop-view-selection),
+  html:active-view-transition-type(shop-to-list)::view-transition-old(shop-view-selection),
+  html:active-view-transition-type(shop-to-list)::view-transition-new(shop-view-selection) {
+    animation-duration: 420ms;
+    animation-timing-function: ease-in-out;
+  }
+}
+
+@keyframes shop-view-out-left { to { opacity: 0; transform: translateX(-28px); } }
+@keyframes shop-view-in-right { from { opacity: 0; transform: translateX(28px); } }
+@keyframes shop-view-out-right { to { opacity: 0; transform: translateX(28px); } }
+@keyframes shop-view-in-left { from { opacity: 0; transform: translateX(-28px); } }
+
 /* A successful submission prints a confirmation before revealing the receipt. */
 .order-print-transition {
   position: fixed;

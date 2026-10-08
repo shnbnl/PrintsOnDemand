@@ -17,6 +17,9 @@
     const to = pathOf(toEntry);
     if (!from || !to || from === to) return null;
 
+    if (from === "/shops" && to === "/shops/map") return "shop-to-map";
+    if (from === "/shops/map" && to === "/shops") return "shop-to-list";
+
     const fromWorkspace = from === "/student" || from === "/professor";
     const fromCheckout = from.startsWith("/checkout/");
     const fromOrders = from === "/orders" || from.startsWith("/orders/");
