@@ -43,7 +43,7 @@
               <ul class="chip-list">{% for service in enabled_services %}<li>{{ service.service_type.label }}</li>{% endfor %}</ul>
             {% else %}<p class="hint">No services listed</p>{% endif %}
           </div>
-          <a class="button button-secondary button-block" href="{{ url_for('shops.detail', shop_id=shop.id) }}">View shop details <span aria-hidden="true">→</span></a>
+          <a class="button button-secondary button-block" href="{{ url_for('shops.detail', shop_id=shop.id) }}">View shop details</a>
         </li>
       {% endfor %}
     </ul>

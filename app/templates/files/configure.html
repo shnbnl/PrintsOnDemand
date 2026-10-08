@@ -3,7 +3,7 @@
 {% block title %}Configure print | Prints On Demand{% endblock %}
 
 {% block content %}
-  <a class="back-link" href="{{ url_for('files.detail', file_id=record.id) }}">← {{ record.original_filename }}</a>
+  <a class="back-link" href="{{ url_for('files.detail', file_id=record.id) }}">{{ record.original_filename }}</a>
   <header class="page-intro">
     <p class="page-eyebrow">Step 2 · Print options</p>
     <h1>Customize print</h1>

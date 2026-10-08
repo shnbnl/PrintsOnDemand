@@ -38,7 +38,7 @@
         <div class="field"><label for="delivery_slot">Delivery time (Philippine time)</label><select id="delivery_slot" name="delivery_slot"><option value="">Select a time slot</option>{% for value, label in delivery_slots %}<option value="{{ value }}" {% if fields.get('delivery_slot') == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
       </div>{% endif %}
     </section>
-    <div class="form-actions checkout-flow-actions"><a class="button button-secondary flow-back" href="{{ url_for('checkout.shop') }}">← Back to shop</a><button class="button button-primary flow-next" type="submit">Next: Choose Payment →</button></div>
+    <div class="form-actions checkout-flow-actions"><a class="button button-secondary flow-back" href="{{ url_for('checkout.shop') }}">Back to shop</a><button class="button button-primary flow-next" type="submit">Next: Choose Payment</button></div>
   </form>
   <script src="{{ url_for('static', filename='js/order-selection.js') }}" defer></script>
 {% endblock %}

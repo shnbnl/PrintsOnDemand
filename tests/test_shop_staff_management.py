@@ -83,6 +83,44 @@ def test_staff_edit_is_scoped_and_updates_student_view(client, test_app):
     }).status_code == 403
 
 
+def test_staff_bulk_prices_save_together_and_reject_partial_invalid_input(client, test_app):
+    shop_id = add_shop(test_app, "Bulk Rates")
+    actor = add_user(test_app, UserRole.SHOP_STAFF, "bulk@example.edu", shop_id=shop_id)
+    sign_in(client, actor)
+    page = client.get("/shop/manage")
+    assert b"Save all prices" in page.data
+    assert b'id="delivery-settings"' not in page.data
+    assert b'href="#delivery-settings"' not in page.data
+    assert page.data.count(b'data-service-toggle') == 3
+
+    rates = {f"price_{size.value}_{mode.value}": "0.00"
+             for size in PaperSize for mode in ColorMode}
+    rates["price_A4_COLOR"] = "8.75"
+    rates["price_A4_GRAYSCALE"] = "4.00"
+    saved = staff_post(client, "prices/bulk", rates)
+    assert saved.status_code == 302
+    with test_app.app_context():
+        prices = db.session.scalars(select(PrintPrice).where(PrintPrice.shop_id == shop_id)).all()
+        assert len(prices) == len(PaperSize) * len(ColorMode)
+        assert next(price.price for price in prices if price.paper_size == PaperSize.A4
+                    and price.color_mode == ColorMode.COLOR) == Decimal("8.75")
+
+    bad_rates = {**rates, "price_A4_COLOR": "12.00", "price_A3_COLOR": "-1"}
+    rejected = staff_post(client, "prices/bulk", bad_rates)
+    assert rejected.status_code == 400
+    assert b'value="12.00"' in rejected.data
+    with test_app.app_context():
+        assert db.session.scalar(select(PrintPrice.price).where(
+            PrintPrice.shop_id == shop_id, PrintPrice.paper_size == PaperSize.A4,
+            PrintPrice.color_mode == ColorMode.COLOR,
+        )) == Decimal("8.75")
+
+    assert staff_post(client, "services", {"service_type": "DELIVERY", "enabled": "y"}).status_code == 302
+    assert b'id="delivery-settings"' in client.get("/shop/manage").data
+    assert staff_post(client, "services", {"service_type": "DELIVERY"}).status_code == 302
+    assert b'id="delivery-settings"' not in client.get("/shop/manage").data
+
+
 def test_shop_photo_is_processed_and_used_by_map_and_pages(client, test_app):
     shop_id = add_shop(test_app, "Photo Prints")
     set_location(test_app, shop_id)

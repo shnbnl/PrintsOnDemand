@@ -4,7 +4,7 @@
 {% block title %}{{ shop.name }} | Prints On Demand{% endblock %}
 
 {% block content %}
-  {% if not staff_view %}<a class="back-link" href="{{ url_for('shops.index') }}">← Printing shops</a>{% endif %}
+  {% if not staff_view %}<a class="back-link" href="{{ url_for('shops.index') }}">Printing shops</a>{% endif %}
   <header class="content-card shop-detail-hero">
     <span class="shop-avatar shop-avatar-large" aria-hidden="true">{% if shop.photo_digest %}<img src="{{ url_for('shops.photo', shop_id=shop.id, v=shop.photo_digest[:12]) }}" alt="">{% else %}P{% endif %}</span>
     <div>
@@ -36,14 +36,14 @@
     <section class="staff-workspace" aria-labelledby="staff-workspace-heading">
       <div class="section-heading"><div><p class="page-eyebrow">Your operations</p><h2 id="staff-workspace-heading">Run this shop</h2></div></div>
       <div class="card-grid" data-staggered-cards>
-        <a class="action-card" href="{{ url_for('staff_orders.index') }}"><span class="eyebrow">01 / Production</span><h3>Shop orders</h3><p>Review incoming jobs and record printing progress.</p><span class="card-action">Open orders →</span></a>
-        <a class="action-card" href="{{ url_for('payment_verification.index') }}"><span class="eyebrow">02 / Payments</span><h3>Payment verification</h3><p>Review online references and confirm onsite cash once collected.</p><span class="card-action">Review payments →</span></a>
-        <a class="action-card" href="{{ url_for('shop_staff.index') }}"><span class="eyebrow">03 / Shop profile</span><h3>Edit shop details</h3><p>Update your services, prices, photo, fees, and payment settings.</p><span class="card-action">Manage shop →</span></a>
-        {% if shop.name == 'Blue and Silver Bookstore' %}<a class="action-card" href="{{ url_for('admin_management.professors') }}"><span class="eyebrow">04 / Recipients</span><h3>Professor management</h3><p>Review verified accounts and managed delivery profiles.</p><span class="card-action">Manage professors →</span></a>{% endif %}
+        <a class="action-card" href="{{ url_for('staff_orders.index') }}"><span class="eyebrow">01 / Production</span><h3>Shop orders</h3><p>Review incoming jobs and record printing progress.</p><span class="card-action">Open orders</span></a>
+        <a class="action-card" href="{{ url_for('payment_verification.index') }}"><span class="eyebrow">02 / Payments</span><h3>Payment verification</h3><p>Review online references and confirm onsite cash once collected.</p><span class="card-action">Review payments</span></a>
+        <a class="action-card" href="{{ url_for('shop_staff.index') }}"><span class="eyebrow">03 / Shop profile</span><h3>Edit shop details</h3><p>Update your services, prices, photo, fees, and payment settings.</p><span class="card-action">Manage shop</span></a>
+        {% if shop.name == 'Blue and Silver Bookstore' %}<a class="action-card" href="{{ url_for('admin_management.professors') }}"><span class="eyebrow">04 / Recipients</span><h3>Professor management</h3><p>Review verified accounts and managed delivery profiles.</p><span class="card-action">Manage professors</span></a>{% endif %}
       </div>
     </section>
     <section class="staff-recent" aria-labelledby="staff-recent-heading">
-      <div class="section-heading"><div><p class="page-eyebrow">Order history</p><h2 id="staff-recent-heading">Recent jobs</h2></div><a class="button button-primary flow-next staff-recent-all" href="{{ url_for('staff_orders.index') }}">All shop orders <span aria-hidden="true">→</span></a></div>
+      <div class="section-heading"><div><p class="page-eyebrow">Order history</p><h2 id="staff-recent-heading">Recent jobs</h2></div><a class="button button-primary flow-next staff-recent-all" href="{{ url_for('staff_orders.index') }}">All shop orders</a></div>
       {% if recent_orders %}<ul class="staff-recent-list">{% for order in recent_orders %}<li><div><strong><a href="{{ url_for('staff_orders.detail', order_reference=order.order_reference) }}">{{ order.order_reference }}</a></strong><span>{{ order.user.name }} · <time datetime="{{ order.created_at.isoformat() }}">{{ order.created_at.strftime('%Y-%m-%d %H:%M UTC') }}</time></span></div><div class="status-group">{{ order_badge(order) }}{{ payment_badge(order.payment) }}</div><a class="staff-recent-open" href="{{ url_for('staff_orders.detail', order_reference=order.order_reference) }}">View order</a></li>{% endfor %}</ul>
       {% else %}<p class="hint">No orders have been placed for your shop yet.</p>{% endif %}
     </section>
@@ -87,7 +87,7 @@
   {% if not staff_view %}
     <section class="content-card action-panel">
       <div><h2>Ready to continue?</h2><p>Add your files, configure printing, and review the live price before placing an order.</p></div>
-      <a class="button button-primary flow-next" href="{{ url_for('checkout.upload', shop_id=shop.id) }}">Start Order <span aria-hidden="true">→</span></a>
+      <a class="button button-primary flow-next" href="{{ url_for('checkout.upload', shop_id=shop.id) }}">Start Order</a>
     </section>
   {% endif %}
 {% endblock %}

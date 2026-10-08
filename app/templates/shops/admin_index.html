@@ -10,7 +10,7 @@
       <h1>Manage printing shops</h1>
       <p class="page-lead">Update shop availability, services, prices, and staff from one place.</p>
     </div>
-    <a class="button" href="{{ url_for('shop_admin.create') }}">Create printing shop <span aria-hidden="true">→</span></a>
+    <a class="button" href="{{ url_for('shop_admin.create') }}">Create printing shop</a>
   </header>
 
   {% if shops %}
@@ -21,7 +21,7 @@
           <h2><a href="{{ url_for('shop_admin.edit', shop_id=shop.id) }}">{{ shop.name }}</a></h2>
           <p><span class="status-badge status-badge--{{ 'success' if shop.is_active else 'muted' }}">{{ 'Active' if shop.is_active else 'Inactive' }}</span>{% if shop.is_demo %} <span class="status-badge status-badge--warning">Sample shop</span>{% endif %}</p>
           <p>{{ shop.address }}</p>
-          <a class="card-action" href="{{ url_for('shop_admin.edit', shop_id=shop.id) }}">Manage shop <span aria-hidden="true">→</span></a>
+          <a class="card-action" href="{{ url_for('shop_admin.edit', shop_id=shop.id) }}">Manage shop</a>
         </li>
       {% endfor %}
     </ul>

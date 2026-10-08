@@ -16,7 +16,7 @@
   </header>
 
   <nav class="management-jump" aria-label="Shop settings sections">
-    <a href="#shop-information">Profile &amp; hours</a><a href="#shop-photo">Photo</a><a href="#shop-services">Services</a><a href="#shop-prices">Prices</a><a href="#delivery-settings">Delivery fee</a><a href="#payment-settings">Payments</a><a href="#shop-fees">Other fees</a>
+    <a href="#shop-information">Profile &amp; hours</a><a href="#shop-photo">Photo</a><a href="#shop-services">Services</a><a href="#shop-prices">Prices</a>{% if delivery_enabled %}<a href="#delivery-settings">Delivery fee</a>{% endif %}<a href="#payment-settings">Payments</a><a href="#shop-fees">Other fees</a>
   </nav>
 
   <div class="management-grid shop-settings-grid">
@@ -42,30 +42,41 @@
     <section class="section-card" id="shop-services">
       <p class="page-eyebrow">Availability</p>
       <h2>Services offered</h2>
-      {% if services %}<ul class="summary-list">{% for service in services %}<li class="summary-row"><span>{{ service.service_type.label }}</span><span class="status-badge status-badge--{{ 'success' if service.enabled else 'muted' }}">{{ 'On' if service.enabled else 'Off' }}</span></li>{% endfor %}</ul>
-      {% else %}<p class="hint">No services configured.</p>{% endif %}
-      <form class="account-form form-grid" method="post" action="{{ url_for('shop_staff.save_service') }}" novalidate>
-        {{ service_form.hidden_tag() }}
-        <div class="field">{{ service_form.service_type.label }} {{ service_form.service_type() }}{{ errors(service_form.service_type) }}</div>
-        <div class="checkbox-field">{{ service_form.enabled() }} {{ service_form.enabled.label }}</div>
-        <div class="form-actions">{{ save_button(service_form.submit) }}</div>
-      </form>
+      <p class="hint">Switch a service on or off to update its availability.</p>
+      {% if service_form.service_type.errors %}{{ errors(service_form.service_type) }}{% endif %}
+      <div class="shop-service-list">
+        {% for service_type, service in service_rows %}
+          <form class="shop-service-row" method="post" action="{{ url_for('shop_staff.save_service') }}" data-service-toggle>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="service_type" value="{{ service_type.value }}">
+            <span id="service-name-{{ service_type.value }}">{{ service_type.label }}</span>
+            <label class="service-switch">
+              <input type="checkbox" name="enabled" value="y" aria-labelledby="service-name-{{ service_type.value }}" {% if service and service.enabled %}checked{% endif %}>
+              <span class="service-switch-track" aria-hidden="true"></span>
+              <span class="service-switch-status">{{ 'On' if service and service.enabled else 'Off' }}</span>
+            </label>
+            <noscript><button class="button button-secondary" type="submit">Save</button></noscript>
+          </form>
+        {% endfor %}
+      </div>
     </section>
 
     <section class="section-card" id="shop-prices">
       <p class="page-eyebrow">Current rates</p>
-      <h2>Print prices</h2><p class="hint">Set a price to 0 to mark that paper and color combination as not offered.</p>
-      {% if prices %}<div class="table-scroll" role="region" aria-label="Print prices" tabindex="0"><table class="data-table pricing-table staff-pricing-table">
-        <thead><tr><th scope="col">Paper size</th><th scope="col">Grayscale / page</th><th scope="col">Color / page</th></tr></thead>
-        <tbody>{% for size, grayscale, color in price_rows %}<tr><th scope="row">{{ size.label }}</th><td data-label="Grayscale / page">{{ '₱%.2f'|format(grayscale.price) if grayscale and grayscale.price > 0 else '—' }}</td><td data-label="Color / page">{{ '₱%.2f'|format(color.price) if color and color.price > 0 else '—' }}</td></tr>{% endfor %}</tbody>
-      </table></div>{% else %}<p class="hint">No prices configured.</p>{% endif %}
-      <h3 class="form-subheading">Update a rate</h3>
-      <form class="account-form form-grid" method="post" action="{{ url_for('shop_staff.save_price') }}" novalidate>
-        {{ price_form.hidden_tag() }}
-        <div class="field">{{ price_form.paper_size.label }} {{ price_form.paper_size() }}{{ errors(price_form.paper_size) }}</div>
-        <div class="field">{{ price_form.color_mode.label }} {{ price_form.color_mode() }}{{ errors(price_form.color_mode) }}</div>
-        <div class="field">{{ price_form.price.label }} {{ price_form.price(min='0', step='0.01') }}{{ errors(price_form.price) }}</div>
-        <div class="form-actions">{{ save_button(price_form.submit) }}</div>
+      <h2>Print prices</h2><p class="hint">Edit any rates below, then save them all together. Set a rate to 0 when that paper and color combination is not offered.</p>
+      <form method="post" action="{{ url_for('shop_staff.save_prices_bulk') }}" novalidate>
+        {{ bulk_price_form.csrf_token(id='bulk_prices_csrf_token') }}
+        {% if price_errors.get('all') %}<p class="field-error" role="alert">{{ price_errors['all'] }}</p>{% endif %}
+        <div class="table-scroll" role="region" aria-label="Edit print prices" tabindex="0"><table class="data-table pricing-table staff-pricing-table staff-pricing-editor">
+          <thead><tr><th scope="col">Paper size</th><th scope="col">Grayscale / page</th><th scope="col">Color / page</th></tr></thead>
+          <tbody>{% for size, grayscale, color in price_rows %}<tr><th scope="row">{{ size.label }}</th>
+            {% for mode, price in [('GRAYSCALE', grayscale), ('COLOR', color)] %}
+              {% set key = 'price_' ~ size.value ~ '_' ~ mode %}
+              <td data-label="{{ 'Grayscale' if mode == 'GRAYSCALE' else 'Color' }} / page"><label class="price-input" for="{{ key }}"><span aria-hidden="true">₱</span><input id="{{ key }}" name="{{ key }}" type="number" min="0" max="99999999.99" step="0.01" inputmode="decimal" value="{{ price_values.get(key, '%.2f'|format(price.price) if price else '0.00') }}" aria-label="{{ size.label }} {{ 'grayscale' if mode == 'GRAYSCALE' else 'color' }} price per page" {% if price_errors.get(key) %}aria-invalid="true" aria-describedby="{{ key }}_error"{% endif %}></label>{% if price_errors.get(key) %}<p class="field-error" id="{{ key }}_error" role="alert">{{ price_errors[key] }}</p>{% endif %}</td>
+            {% endfor %}
+          </tr>{% endfor %}</tbody>
+        </table></div>
+        <div class="form-actions"><button class="button button-primary flow-next" type="submit">Save all prices</button></div>
       </form>
     </section>
     </div>
@@ -90,7 +101,7 @@
       </form>{% endif %}
     </section>
 
-    <section class="section-card" id="delivery-settings">
+    {% if delivery_enabled %}<section class="section-card" id="delivery-settings">
       <p class="page-eyebrow">Fulfillment charges</p>
       <h2>Delivery Fee</h2>
       <p class="summary-row"><span>Delivery service</span><span class="status-badge status-badge--{{ 'success' if delivery_enabled else 'muted' }}">{{ 'Enabled' if delivery_enabled else 'Disabled' }}</span></p>
@@ -103,7 +114,7 @@
         </div>
         <div class="form-actions"><button class="button button-primary flow-next" type="submit">Save delivery fee</button></div>
       </form>
-    </section>
+    </section>{% endif %}
 
     <section class="section-card" id="payment-settings">
       <p class="page-eyebrow">Checkout methods</p>
@@ -140,4 +151,5 @@
     </section>
     </div>
   </div>
+  <script src="{{ url_for('static', filename='js/shop-settings.js') }}" defer></script>
 {% endblock %}

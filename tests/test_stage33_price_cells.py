@@ -22,7 +22,7 @@ def test_every_price_cell_matches_stored_rate_and_configuration(client, test_app
     file_id = upload_checkout_file(client, test_app, owner)
     assert post(client, '/checkout/shop', {'shop_id': shop_id, **print_fields(file_id)}).status_code == 302
     page = client.get('/checkout/shop').get_data(as_text=True)
-    assert page.index('class="workspace-panel"') < page.index('data-pin-preview')
+    assert page.index('class="workspace-panel is-minimized"') < page.index('data-pin-preview')
     assert 'Print prices &amp; fees' not in page and 'Rating not available' not in page
     assert 'Sample shop based on' not in page.split('<script id="map-shop-data"')[0]
     assert 'type="radio" name="paper_size_' not in page

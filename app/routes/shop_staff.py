@@ -1,6 +1,7 @@
 """Assigned-shop editing for staff accounts."""
 
-from flask import Blueprint, abort, flash, redirect, render_template, send_file, url_for
+from flask import Blueprint, abort, flash, redirect, render_template, request, send_file, url_for
+from decimal import Decimal, InvalidOperation
 from io import BytesIO
 from flask_login import current_user
 from flask_wtf import FlaskForm
@@ -27,7 +28,8 @@ def assigned_shop():
 
 
 def editor(*, details_form=None, service_form=None, price_form=None, fee_form=None,
-           photo_form=None, photo_error=None, payment_form=None, payment_error=None, status=200):
+           photo_form=None, photo_error=None, payment_form=None, payment_error=None,
+           price_values=None, price_errors=None, status=200):
     shop = assigned_shop()
     service_form = service_form or ServiceForm(formdata=None)
     if shop.name != PROFESSOR_DELIVERY_SHOP:
@@ -44,11 +46,17 @@ def editor(*, details_form=None, service_form=None, price_form=None, fee_form=No
     fee_form.fee_type.choices = [choice for choice in fee_form.fee_type.choices
                                if choice[0] != FeeType.DELIVERY.value]
     price_map = {(price.paper_size, price.color_mode): price for price in shop.prices}
+    service_map = {service.service_type: service for service in shop.services}
+    service_types = [service_type for service_type in ServiceType
+                     if service_type != ServiceType.DIRECT_TO_PROFESSOR
+                     or shop.name == PROFESSOR_DELIVERY_SHOP]
     return render_template(
         "shops/manage.html", shop=shop,
         details_form=details_form or ShopStaffDetailsForm(formdata=None, obj=shop),
         service_form=service_form,
         price_form=price_form or PriceForm(formdata=None),
+        bulk_price_form=FlaskForm(formdata=None),
+        price_values=price_values or {}, price_errors=price_errors or {},
         fee_form=fee_form, delivery_fee_form=delivery_fee_form,
         delivery_enabled=any(service.service_type == ServiceType.DELIVERY and service.enabled
                              for service in shop.services),
@@ -57,6 +65,7 @@ def editor(*, details_form=None, service_form=None, price_form=None, fee_form=No
         payment_form=payment_form or ShopPaymentForm(formdata=None, obj=shop),
         payment_error=payment_error,
         services=sorted(shop.services, key=lambda item: item.service_type.value),
+        service_rows=[(service_type, service_map.get(service_type)) for service_type in service_types],
         prices=sorted(shop.prices, key=lambda item: (item.paper_size.value, item.color_mode.value)),
         price_rows=[(size, price_map.get((size, ColorMode.GRAYSCALE)),
                      price_map.get((size, ColorMode.COLOR))) for size in PaperSize],
@@ -119,7 +128,7 @@ def save_service():
         service.enabled = bool(form.enabled.data)
         if commit_or_error(form, "service_type"):
             flash("Service updated.", "success")
-            return redirect(url_for("shop_staff.index"))
+            return redirect(url_for("shop_staff.index", _anchor="shop-services"))
     return editor(service_form=form, status=400)
 
 
@@ -144,6 +153,51 @@ def save_price():
             flash("Price updated.", "success")
             return redirect(url_for("shop_staff.index"))
     return editor(price_form=form, status=400)
+
+
+@shop_staff_bp.post("/prices/bulk")
+@roles_required(UserRole.SHOP_STAFF)
+def save_prices_bulk():
+    shop = assigned_shop()
+    if not FlaskForm().validate_on_submit():
+        abort(400)
+    values = {}
+    errors = {}
+    for size in PaperSize:
+        for mode in ColorMode:
+            key = f"price_{size.value}_{mode.value}"
+            raw = request.form.get(key)
+            values[key] = raw if raw is not None else ""
+            try:
+                if raw is None or not raw.strip():
+                    raise ValueError
+                amount = Decimal(raw)
+                if (not amount.is_finite() or amount < 0
+                        or amount > Decimal("99999999.99")
+                        or amount != amount.quantize(Decimal("0.01"))):
+                    raise ValueError
+                values[key] = amount
+            except (InvalidOperation, ValueError):
+                errors[key] = "Enter an amount from ₱0.00 to ₱99,999,999.99 with up to two decimals."
+    if errors:
+        return editor(price_values=values, price_errors=errors, status=400)
+    existing = {(price.paper_size, price.color_mode): price for price in shop.prices}
+    for size in PaperSize:
+        for mode in ColorMode:
+            price = existing.get((size, mode))
+            if price is None:
+                price = PrintPrice(shop=shop, paper_size=size, color_mode=mode)
+                db.session.add(price)
+            price.price = values[f"price_{size.value}_{mode.value}"]
+            price.is_demo = False
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        return editor(price_values=values,
+                      price_errors={"all": "Unable to save prices. Please try again."}, status=400)
+    flash("All print prices updated.", "success")
+    return redirect(url_for("shop_staff.index", _anchor="shop-prices"))
 
 
 @shop_staff_bp.post("/fees")

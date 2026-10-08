@@ -14,20 +14,20 @@
       <span class="eyebrow">Shops &amp; pricing</span>
       <h2>Printing shops, services, and pricing</h2>
       <p>Manage shop details, available services, print prices, and fees.</p>
-      <span class="card-action">Manage shops <span aria-hidden="true">→</span></span>
+      <span class="card-action">Manage shops</span>
     </a>
     <a class="action-card" href="{{ url_for('admin_management.staff_index') }}">
       <span class="eyebrow">Team</span>
       <h2>Staff assignments</h2>
       <p>See which Shop Staff account is assigned to each shop.</p>
-      <span class="card-action">View staff <span aria-hidden="true">→</span></span>
+      <span class="card-action">View staff</span>
     </a>
     <a class="action-card" href="{{ url_for('admin_management.payment') }}">
         <span class="eyebrow">Shop payment overview</span>
       <h2>Payment configuration</h2>
         <p>View each shop's payment availability. Assigned staff manage their own details and QR.</p>
-        <span class="card-action">View methods <span aria-hidden="true">→</span></span>
+        <span class="card-action">View methods</span>
     </a>
-    <a class="action-card" href="{{ url_for('payment_verification.index') }}"><span class="eyebrow">Manual review</span><h2>Payment verification</h2><p>Review online references and confirm onsite cash collected by a shop.</p><span class="card-action">Review payments <span aria-hidden="true">→</span></span></a>
+    <a class="action-card" href="{{ url_for('payment_verification.index') }}"><span class="eyebrow">Manual review</span><h2>Payment verification</h2><p>Review online references and confirm onsite cash collected by a shop.</p><span class="card-action">Review payments</span></a>
   </div>
 {% endblock %}
