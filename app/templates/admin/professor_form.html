@@ -17,9 +17,19 @@
         {% for error in field.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
       </div>
     {% endfor %}
-    <div class="checkbox-field">{{ form.is_active() }} {{ form.is_active.label }}</div>
-    <div class="checkbox-field">{{ form.direct_send_approved() }} {{ form.direct_send_approved.label }}</div>
-    <div class="checkbox-field">{{ form.accepts_student_deliveries() }} {{ form.accepts_student_deliveries.label }}</div>
+    <div class="professor-toggle-list field-wide">
+      {% for field in [form.is_active, form.direct_send_approved, form.accepts_student_deliveries] %}
+        <div class="shop-service-row professor-toggle-row">
+          <label id="{{ field.id }}_label" for="{{ field.id }}">{{ field.label.text }}</label>
+          <label class="service-switch">
+            {{ field(role='switch', aria_labelledby=field.id ~ '_label') }}
+            <span class="service-switch-track" aria-hidden="true"></span>
+            <span class="service-switch-status service-switch-status--off">Off</span>
+            <span class="service-switch-status service-switch-status--on">On</span>
+          </label>
+        </div>
+      {% endfor %}
+    </div>
     <div class="form-actions">{{ form.submit(class_='button') }}</div>
   </form>
 {% endblock %}
