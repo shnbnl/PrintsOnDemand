@@ -8,14 +8,13 @@
   --line: #e3e8ed;
   --ink: #10283f;
   --gold: #f3d78c;
-  font-family: "Aptos", "Segoe UI", Arial, sans-serif;
 }
 
 body {
   color: var(--ink);
   background: radial-gradient(ellipse 70rem 32rem at 90% -12rem, #e4eaf1 0%, transparent 70%), var(--cream);
 }
-h1, h2 { font-family: "Aptos Display", "Segoe UI", Arial, sans-serif; letter-spacing: -.035em; }
+h1, h2 { letter-spacing: -.035em; }
 h1 { font-size: clamp(2rem, 3.4vw, 2.9rem); }
 h2 { font-size: clamp(1.2rem, 1.7vw, 1.55rem); }
 p { line-height: 1.65; }
@@ -354,7 +353,6 @@ tbody tr:hover { background: #f1f5fa; }
   --border: #dfe5eb;
   --shadow: 0 2px 5px rgb(5 36 72 / 3%), 0 10px 28px rgb(5 36 72 / 3%);
   --shadow-raised: 0 16px 42px rgb(5 36 72 / 15%);
-  font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Arial, sans-serif;
 }
 body { background: var(--cream); color: var(--text); }
 h1, h2 { font-family: inherit; font-weight: 750; }

@@ -35,14 +35,14 @@
   --motion-base: 180ms;
   --motion-page: 220ms;
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
-  font-family: "Segoe UI", Arial, sans-serif;
+  --font-ui: "Plus Jakarta Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
   color: var(--text);
   background: var(--cream);
 }
 
 *, *::before, *::after { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
-body { min-width: 280px; margin: 0; line-height: 1.55; }
+body { min-width: 280px; margin: 0; line-height: 1.55; font-family: var(--font-ui); }
 img, svg { max-width: 100%; }
 button, input, select, textarea { font: inherit; }
 a { color: var(--cobalt); text-underline-offset: 0.2em; }
@@ -52,7 +52,7 @@ a:hover { color: var(--navy); }
 .skip-link:focus { top: 0.5rem; }
 
 h1, h2, h3, h4 { margin: 0 0 0.55em; color: var(--navy); line-height: 1.16; }
-h1, h2 { font-family: "Arial Narrow", "Segoe UI", sans-serif; letter-spacing: -0.03em; font-weight: 800; }
+h1, h2 { font-family: inherit; letter-spacing: -0.03em; font-weight: 800; }
 h1 { font-size: clamp(1.8rem, 3.5vw, 2.5rem); overflow-wrap: anywhere; }
 h2 { font-size: clamp(1.25rem, 2.2vw, 1.6rem); }
 h3 { font-size: 1.18rem; }

@@ -15,7 +15,6 @@
   --radius-lg: 1.2rem;
   --shadow: 0 1px 2px rgb(8 41 77 / 3%), 0 10px 30px rgb(8 41 77 / 5%);
   --shadow-raised: 0 15px 40px rgb(8 41 77 / 12%);
-  font-family: "Segoe UI Variable", "Aptos", "Segoe UI", Arial, sans-serif;
 }
 
 html { scroll-padding-top: 6rem; }
@@ -716,6 +715,58 @@ h3 { font-weight: 710; letter-spacing: -.015em; }
 .staff-recent-all { flex: none; }
 @media (hover: hover) and (pointer: fine) {
   .staff-workspace .action-card:hover .card-action { box-shadow: 0 10px 22px rgb(5 36 72 / 20%); }
+}
+
+/* Customer workspace cards echo the staff dashboard's reveal and hover treatment. */
+.workspace-actions .action-card { position: relative; overflow: hidden; }
+.workspace-actions .action-card-primary {
+  border-color: var(--navy);
+  background: linear-gradient(145deg, var(--navy), #174774);
+}
+.workspace-actions .action-card:not(.action-card-primary) .button {
+  border-color: #174774;
+  color: #fff;
+  background: linear-gradient(120deg, var(--navy), #174774);
+  box-shadow: 0 7px 18px rgb(5 36 72 / 12%);
+}
+.workspace-actions .action-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(110deg, transparent 25%, rgb(36 83 166 / 10%) 50%, transparent 75%);
+  transform: translateX(-90%);
+}
+.workspace-actions .action-card-primary::after {
+  background: linear-gradient(110deg, transparent 25%, rgb(255 255 255 / 13%) 50%, transparent 75%);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .workspace-actions[data-staggered-cards] > .action-card {
+    animation: desk-card-reveal 1000ms cubic-bezier(.22,.82,.24,1) backwards;
+  }
+  .workspace-actions[data-staggered-cards] > .action-card:nth-child(1) { animation-delay: 120ms; }
+  .workspace-actions[data-staggered-cards] > .action-card:nth-child(2) { animation-delay: 320ms; }
+  .workspace-actions[data-staggered-cards] > .action-card:nth-child(3) { animation-delay: 520ms; }
+  .workspace-actions .action-card,
+  .workspace-actions .action-card .button {
+    transition: transform 300ms var(--ease-out), border-color 300ms ease,
+      background-color 300ms ease, box-shadow 300ms ease;
+  }
+  .workspace-actions .action-card::after { transition: opacity 340ms ease, transform 650ms var(--ease-out); }
+}
+@media (hover: hover) and (pointer: fine) {
+  .workspace-actions .action-card:hover,
+  .workspace-actions .action-card:focus-within {
+    transform: translateY(-5px) scale(1.012);
+    border-color: var(--cobalt);
+    box-shadow: 0 17px 34px rgb(8 41 77 / 15%);
+  }
+  .workspace-actions .action-card:hover::after,
+  .workspace-actions .action-card:focus-within::after { opacity: 1; transform: translateX(90%); }
+  .workspace-actions .action-card:not(.action-card-primary):hover .button {
+    box-shadow: 0 10px 22px rgb(5 36 72 / 20%);
+  }
 }
 
 /* Let the short order cards fill the space beside the taller print job. */
