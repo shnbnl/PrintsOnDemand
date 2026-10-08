@@ -608,6 +608,14 @@ tbody tr:nth-child(even) { background: #fbfcfd; }
 [data-shop-workspace] .workspace-panel.is-minimized .workspace-total,
 [data-shop-workspace] .workspace-panel.is-minimized .chip-list { display: none; }
 [data-shop-workspace] .workspace-panel.is-minimized .workspace-shop-summary { border-bottom: 0; }
+@media (prefers-reduced-motion: no-preference) {
+  [data-shop-workspace] .workspace-panel.is-resizing {
+    transition: height 720ms cubic-bezier(.22,.76,.22,1), box-shadow 720ms ease;
+  }
+  [data-shop-workspace] .workspace-map-viewport {
+    transition: padding-top 720ms cubic-bezier(.22,.76,.22,1);
+  }
+}
 @media (max-width: 900px) {
   [data-shop-workspace] .workspace-shop-picker { top: .75rem; left: 3.75rem; right: .75rem; width: auto; }
   [data-shop-workspace] .workspace-panel.is-minimized { top: auto; bottom: auto; }

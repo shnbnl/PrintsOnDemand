@@ -432,17 +432,17 @@ h3 { font-weight: 710; letter-spacing: -.015em; }
 /* The three printing-desk actions arrive in a deliberate sequence. */
 @media (prefers-reduced-motion: no-preference) {
   .landing-steps[data-staggered-cards] > .content-card {
-    animation: desk-card-reveal 680ms var(--ease-out) backwards;
+    animation: desk-card-reveal 1000ms cubic-bezier(.22,.82,.24,1) backwards;
   }
-  .landing-steps[data-staggered-cards] > .content-card:nth-child(1) { animation-delay: 100ms; }
-  .landing-steps[data-staggered-cards] > .content-card:nth-child(2) { animation-delay: 260ms; }
-  .landing-steps[data-staggered-cards] > .content-card:nth-child(3) { animation-delay: 420ms; }
+  .landing-steps[data-staggered-cards] > .content-card:nth-child(1) { animation-delay: 140ms; }
+  .landing-steps[data-staggered-cards] > .content-card:nth-child(2) { animation-delay: 390ms; }
+  .landing-steps[data-staggered-cards] > .content-card:nth-child(3) { animation-delay: 640ms; }
   .action-grid[data-staggered-cards] > .action-card {
-    animation: desk-card-reveal 680ms var(--ease-out) both;
+    animation: desk-card-reveal 1000ms cubic-bezier(.22,.82,.24,1) both;
   }
-  .action-grid[data-staggered-cards] > .action-card:nth-child(1) { animation-delay: 100ms; }
-  .action-grid[data-staggered-cards] > .action-card:nth-child(2) { animation-delay: 260ms; }
-  .action-grid[data-staggered-cards] > .action-card:nth-child(3) { animation-delay: 420ms; }
+  .action-grid[data-staggered-cards] > .action-card:nth-child(1) { animation-delay: 140ms; }
+  .action-grid[data-staggered-cards] > .action-card:nth-child(2) { animation-delay: 390ms; }
+  .action-grid[data-staggered-cards] > .action-card:nth-child(3) { animation-delay: 640ms; }
   body.page-checkout .checkout-progress {
     animation: checkout-step-arrive 420ms var(--ease-out) both;
   }

@@ -62,16 +62,49 @@
   });
   document.addEventListener('pointerdown', event => { if (!searchBox.contains(event.target)) closeSearch(); });
   searchBox.addEventListener('focusout', event => { if (!searchBox.contains(event.relatedTarget)) closeSearch(); });
+  let panelResizeRevision = 0;
+  function stopPanelResize() {
+    panelResizeRevision += 1;
+    panel.style.height = '';
+    panel.classList.remove('is-resizing');
+  }
   function expandPanel() {
+    stopPanelResize();
     panel.classList.remove('is-minimized');
     toggle.textContent = 'Minimize panel';
     toggle.setAttribute('aria-expanded', 'true');
   }
-  toggle.addEventListener('click', () => {
+  function togglePanel() {
     const minimized = panel.classList.toggle('is-minimized');
     if (minimized) content.querySelector('.workspace-scroll').scrollTop = 0;
     toggle.textContent = minimized ? 'Open print settings' : 'Minimize panel';
     toggle.setAttribute('aria-expanded', String(!minimized));
+  }
+  toggle.addEventListener('click', () => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      stopPanelResize();
+      togglePanel();
+      return;
+    }
+    const revision = ++panelResizeRevision;
+    const startHeight = panel.getBoundingClientRect().height;
+    panel.classList.remove('is-resizing');
+    panel.style.height = '';
+    togglePanel();
+    const endHeight = panel.getBoundingClientRect().height;
+    panel.style.height = `${startHeight}px`;
+    panel.classList.add('is-resizing');
+    // Commit the starting height before transitioning to the new layout.
+    void panel.offsetHeight;
+    requestAnimationFrame(() => {
+      if (revision !== panelResizeRevision) return;
+      panel.style.height = `${endHeight}px`;
+    });
+    window.setTimeout(() => {
+      if (revision !== panelResizeRevision) return;
+      panel.style.height = '';
+      panel.classList.remove('is-resizing');
+    }, 760);
   });
   function activateFile(id, recalculate = true) {
     const selector = content.querySelector('[data-file-selector]');
