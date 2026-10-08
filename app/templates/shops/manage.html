@@ -122,12 +122,20 @@
       <p class="hint">These methods and details appear only for your assigned shop. Online references still require staff verification.</p>
       <form class="account-form form-grid" method="post" action="{{ url_for('shop_staff.save_payment') }}" enctype="multipart/form-data" novalidate>
         {{ payment_form.hidden_tag() }}
-        <div class="checkbox-field setting-toggle">{{ payment_form.cash_enabled() }} {{ payment_form.cash_enabled.label }}</div>
-        <div class="checkbox-field setting-toggle">{{ payment_form.online_enabled() }} {{ payment_form.online_enabled.label }}</div>
-        <h3 class="form-subheading">Online account and instructions</h3>
+        <div class="shop-payment-toggle-list field-wide">
+          {% for field in [payment_form.cash_enabled, payment_form.online_enabled] %}
+            <div class="shop-service-row" data-payment-toggle>
+              <span id="{{ field.id }}_label">{{ field.label.text }}</span>
+              <label class="service-switch">
+                {{ field(aria_labelledby=field.id ~ '_label') }}
+                <span class="service-switch-track" aria-hidden="true"></span>
+                <span class="service-switch-status">{{ 'On' if field.data else 'Off' }}</span>
+              </label>
+            </div>
+          {% endfor %}
+        </div>
+        <h3 class="form-subheading">Online payment account</h3>
         <div class="field field-wide">{{ payment_form.online_account_name.label }} {{ payment_form.online_account_name() }}{{ errors(payment_form.online_account_name) }}</div>
-        <div class="field field-wide">{{ payment_form.online_account_reference.label }} {{ payment_form.online_account_reference() }}{{ errors(payment_form.online_account_reference) }}</div>
-        <div class="field field-wide">{{ payment_form.online_instructions.label }} {{ payment_form.online_instructions() }}{{ errors(payment_form.online_instructions) }}</div>
         <div class="field field-wide">{{ payment_form.payment_qr.label }} {{ payment_form.payment_qr(accept='image/png,image/jpeg,image/webp') }}{{ errors(payment_form.payment_qr) }}
           {% if payment_error %}<p class="field-error" role="alert">{{ payment_error }}</p>{% endif %}
           <p class="hint">PNG, JPEG, or WebP, up to 5 MB. Replace this image with your shop's actual payment QR before accepting transfers.</p>

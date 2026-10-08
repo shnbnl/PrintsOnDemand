@@ -65,6 +65,32 @@ def test_each_staff_edits_only_assigned_shop_and_replaces_qr(client, test_app, i
     assert client.get(f"/shop/manage/{ids[(index + 1) % 4]}/payment").status_code == 404
 
 
+def test_payment_switches_preserve_removed_fields(client, test_app):
+    ids, staff = setup_shops(test_app)
+    sign_in(client, staff[0])
+    with test_app.app_context():
+        record = db.session.get(PrintingShop, ids[0])
+        record.online_account_name = "Campus account"
+        record.online_account_reference = "Saved reference"
+        record.online_instructions = "Saved instructions"
+        db.session.commit()
+
+    page = client.get("/shop/manage")
+    assert page.data.count(b'data-payment-toggle') == 2
+    assert b'name="online_account_reference"' not in page.data
+    assert b'name="online_instructions"' not in page.data
+    response = client.post("/shop/manage/payment", data={
+        "csrf_token": token(page), "online_enabled": "y",
+        "online_account_name": "Campus account",
+    })
+    assert response.status_code == 302
+    with test_app.app_context():
+        record = db.session.get(PrintingShop, ids[0])
+        assert record.online_enabled and not record.cash_enabled
+        assert record.online_account_reference == "Saved reference"
+        assert record.online_instructions == "Saved instructions"
+
+
 @pytest.mark.parametrize("role", [UserRole.STUDENT, UserRole.PROFESSOR, UserRole.ADMIN])
 def test_nonstaff_cannot_edit_shop_payment(client, test_app, role):
     user_id = student(test_app, f"{role.value.lower()}@example.edu", role)

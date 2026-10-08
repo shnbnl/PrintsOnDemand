@@ -273,8 +273,10 @@ def save_payment():
     shop.cash_enabled = bool(form.cash_enabled.data)
     shop.online_enabled = bool(form.online_enabled.data)
     shop.online_account_name = form.online_account_name.data or ""
-    shop.online_account_reference = form.online_account_reference.data or ""
-    shop.online_instructions = form.online_instructions.data or ""
+    if "online_account_reference" in request.form:
+        shop.online_account_reference = form.online_account_reference.data or ""
+    if "online_instructions" in request.form:
+        shop.online_instructions = form.online_instructions.data or ""
     db.session.commit()
     flash("Payment settings updated.", "success")
     return redirect(url_for("shop_staff.index", _anchor="payment-settings"))

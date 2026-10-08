@@ -789,6 +789,7 @@ h3 { font-weight: 710; letter-spacing: -.015em; }
 
 /* Shop settings: direct service switches and one editable rate table. */
 .shop-service-list { display: grid; gap: .65rem; margin-top: 1rem; }
+.shop-payment-toggle-list { display: grid; gap: .65rem; }
 .shop-service-row {
   display: flex; align-items: center; justify-content: space-between; gap: 1rem;
   padding: .8rem 1rem; border: 1px solid #d5e0eb; border-radius: .8rem;
