@@ -58,6 +58,10 @@ def staff_assignment(staff_id):
         except ManagementError as error:
             form.shop_id.errors.append(str(error))
         else:
+            current_app.logger.warning(
+                "Staff shop assignment changed: actor_id=%s staff_id=%s shop_id=%s",
+                current_user.id, user.id, form.shop_id.data or None,
+            )
             flash("Staff assignment updated.", "success")
             return redirect(url_for("admin_management.staff_index"))
     elif request.method == "GET":
@@ -91,6 +95,7 @@ def verify_professor_account(account_id):
         abort(400)
     account.professor_verification_status = ProfessorVerificationStatus.VERIFIED
     db.session.commit()
+    current_app.logger.warning("Professor account verified: actor_id=%s account_id=%s", current_user.id, account.id)
     flash("Professor account verified. Link it to a managed profile to enable delivery.", "success")
     return redirect(url_for("admin_management.professors"))
 
@@ -105,6 +110,7 @@ def reject_professor_account(account_id):
         abort(400)
     account.professor_verification_status = ProfessorVerificationStatus.REJECTED
     db.session.commit()
+    current_app.logger.warning("Professor account rejected: actor_id=%s account_id=%s", current_user.id, account.id)
     flash("Professor request rejected.", "success")
     return redirect(url_for("admin_management.professors"))
 
@@ -214,6 +220,7 @@ def delete_professor_account(account_id):
             current_app.logger.exception("Professor account deletion failed")
             return confirm_deletion(**page, error="The account could not be deleted. Try again.", status=503)
         else:
+            current_app.logger.warning("Professor account deleted: actor_id=%s account_id=%s", current_user.id, account_id)
             flash("Verified Professor account and its owned data deleted.", "success")
         return redirect(url_for("admin_management.professors"))
     return confirm_deletion(**page)

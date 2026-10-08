@@ -13,6 +13,7 @@ from app.authorization import roles_required
 from app.extensions import db
 from app.file_forms import PrintConfigurationForm, UploadForm
 from app.models import ColorMode, PaperSize, PrintConfiguration, UploadedFile, UserRole
+from app.security_limits import enforce_limit
 from app.storage import StorageError, get_storage
 from app.storage.validation import ALLOWED_EXTENSIONS, UploadValidationError, validate_upload
 
@@ -55,6 +56,7 @@ def index():
 def upload():
     form = UploadForm()
     if form.validate_on_submit():
+        enforce_limit("file-upload", str(current_user.id), attempts=100, seconds=86400)
         try:
             validated = validate_upload(form.file.data, current_app.config["UPLOAD_MAX_SIZE"])
         except UploadValidationError as error:

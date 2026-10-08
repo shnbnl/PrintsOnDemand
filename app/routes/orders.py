@@ -17,6 +17,7 @@ from app.models import (
 from app.order_forms import PlaceOrderForm, SelectProfessorForm
 from app.payment_forms import PaymentMethodForm, PaymentReferenceForm
 from app.services.orders import create_order
+from app.security_limits import enforce_limit
 from app.services.fulfillment import (
     FIELDS, FulfillmentError, availability, slot_options, today, validate_fulfillment,
 )
@@ -295,6 +296,7 @@ def create():
     form = PlaceOrderForm()
     if not form.validate_on_submit():
         return render_selection(error="Review a valid order before submitting.", status=400)
+    enforce_limit("order-place", str(current_user.id), attempts=30, seconds=86400)
     shop_id = positive_id(form.shop_id.data)
     try:
         file_ids, options = parse_files(request.form)
