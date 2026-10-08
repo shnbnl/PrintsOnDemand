@@ -37,16 +37,16 @@
   }
 
   html:active-view-transition-type(tab-to-history)::view-transition-old(root) {
-    animation: tab-push-out-left 820ms cubic-bezier(.22,.72,.22,1) both;
+    animation: tab-push-out-left 1350ms cubic-bezier(.45,0,.2,1) both;
   }
   html:active-view-transition-type(tab-to-history)::view-transition-new(root) {
-    animation: tab-push-in-right 820ms cubic-bezier(.22,.72,.22,1) both;
+    animation: tab-push-in-right 1350ms cubic-bezier(.45,0,.2,1) both;
   }
   html:active-view-transition-type(tab-to-start)::view-transition-old(root) {
-    animation: tab-push-out-right 820ms cubic-bezier(.22,.72,.22,1) both;
+    animation: tab-push-out-right 1350ms cubic-bezier(.45,0,.2,1) both;
   }
   html:active-view-transition-type(tab-to-start)::view-transition-new(root) {
-    animation: tab-push-in-left 820ms cubic-bezier(.22,.72,.22,1) both;
+    animation: tab-push-in-left 1350ms cubic-bezier(.45,0,.2,1) both;
   }
 
   html:active-view-transition-type(workspace-entry)::view-transition-old(root) {
