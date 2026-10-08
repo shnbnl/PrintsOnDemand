@@ -53,7 +53,7 @@
       </table>
     </div>
   {% elif orders.total == 0 and not status and not payment_status %}
-    <section class="content-card empty-state"><h2>No orders yet.</h2><p>When you place an order, its progress will appear here.</p><a class="button button-primary" href="{{ url_for('shops.index') }}">Browse printing shops</a></section>
+    <section class="content-card empty-state"><h2>No orders yet.</h2><p>When you place an order, its progress will appear here.</p><a class="button button-primary flow-next" href="{{ url_for('shops.index') }}">Browse printing shops</a></section>
   {% elif orders.total == 0 %}
     <section class="content-card empty-state"><h2>No orders match these filters.</h2><p>Try another status to see more of your orders.</p><a class="button button-secondary" href="{{ url_for('orders.index') }}">Clear filters</a></section>
   {% else %}

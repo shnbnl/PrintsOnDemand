@@ -33,7 +33,7 @@
         {% if not blue_login %}<div class="checkbox-field">
           {{ form.remember_me() }} {{ form.remember_me.label }}
         </div>{% endif %}
-        {{ form.submit(class_="button button-primary button-block") }}
+        <button class="button button-primary button-block flow-next" id="{{ form.submit.id }}" name="{{ form.submit.name }}" type="submit">{{ form.submit.label.text }}</button>
       </form>
     </section>
     {% if blue_login %}
