@@ -15,7 +15,7 @@
     </p>
   </header>
 
-  <div class="operations-grid">
+  <div class="operations-grid staff-order-grid">
   <section class="section-card processing-focus">
     <p class="page-eyebrow">Next step</p><h2>Processing</h2>
     <p>Current status: {{ order_badge(order) }}</p>
@@ -36,7 +36,7 @@
       <p class="notice notice-warning">Processing is unavailable until payment is recorded as paid by an authorized process.</p>
     {% endif %}
   </section>
-  <section class="section-card">
+  <section class="section-card staff-order-customer">
     <h2>Order and customer</h2>
     <dl class="summary-list">
       <div class="summary-row"><dt>Created</dt><dd><time datetime="{{ order.created_at.isoformat() }}">{{ order.created_at.strftime('%Y-%m-%d %H:%M UTC') }}</time></dd></div>
@@ -79,7 +79,7 @@
     </dl>
   </section>
 
-  <section class="section-card">
+  <section class="section-card staff-order-payment">
     <h2>Payment</h2>
     {% if order.payment %}
       <dl class="summary-list">
@@ -93,7 +93,7 @@
     {% else %}<p class="hint">No payment method selected. Payment has not been recorded as paid.</p>{% endif %}
   </section>
 
-  <section class="section-card">
+  <section class="section-card staff-order-fulfillment">
     <h2>Fulfillment</h2>
     <dl class="summary-list">
       <div class="summary-row"><dt>Type</dt><dd>{{ order.destination.label if order.destination else 'Not selected' }}</dd></div>

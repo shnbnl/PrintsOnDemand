@@ -120,8 +120,7 @@
 
 /* Staff navigation follows the same calm, linked motion as customer tabs. */
 @media (prefers-reduced-motion: no-preference) {
-  html:is(:active-view-transition-type(staff-entry), :active-view-transition-type(staff-home),
-    :active-view-transition-type(staff-forward), :active-view-transition-type(staff-backward)) .site-header .brand {
+  html:is(:active-view-transition-type(staff-forward), :active-view-transition-type(staff-backward)) .site-header .brand {
     view-transition-name: none;
   }
   html:is(:active-view-transition-type(staff-forward), :active-view-transition-type(staff-backward))::view-transition-old(root),
@@ -134,12 +133,6 @@
   html:active-view-transition-type(staff-forward)::view-transition-new(root) { animation-name: tab-push-in-right; }
   html:active-view-transition-type(staff-backward)::view-transition-old(root) { animation-name: tab-push-out-right; }
   html:active-view-transition-type(staff-backward)::view-transition-new(root) { animation-name: tab-push-in-left; }
-  html:is(:active-view-transition-type(staff-entry), :active-view-transition-type(staff-home))::view-transition-old(root) {
-    animation: entry-leave 180ms ease-in both;
-  }
-  html:is(:active-view-transition-type(staff-entry), :active-view-transition-type(staff-home))::view-transition-new(root) {
-    animation: workspace-show-in 480ms var(--ease-out, ease-out) both;
-  }
 }
 
 /* A successful submission prints a confirmation before revealing the receipt. */

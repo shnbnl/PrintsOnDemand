@@ -31,8 +31,6 @@
     const staffFrom = staffSection(from);
     const staffTo = staffSection(to);
     if (staffFrom !== null && staffTo !== null && staffFrom !== staffTo) {
-      if (staffFrom === 0) return "staff-entry";
-      if (staffTo === 0) return "staff-home";
       return staffTo > staffFrom ? "staff-forward" : "staff-backward";
     }
 

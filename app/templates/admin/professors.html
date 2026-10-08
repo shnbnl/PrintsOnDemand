@@ -3,6 +3,7 @@
 {% block title %}Professors | Prints On Demand{% endblock %}
 
 {% block content %}
+  <div class="professor-management">
   {% set back_url = url_for('access.shop') %}{% set back_label = 'Back to shop dashboard' %}{% include '_vector_back.html' %}
   <header class="page-intro page-intro--with-action">
     <div>
@@ -10,7 +11,7 @@
       <h1>Professor Management</h1>
       <p class="page-lead">Verify Professor accounts, then link them to managed profiles for deliveries.</p>
     </div>
-    <a class="button" href="{{ url_for('admin_management.new_professor') }}">Add professor <span aria-hidden="true">→</span></a>
+    <a class="button button-primary flow-next" href="{{ url_for('admin_management.new_professor') }}">Add professor <span aria-hidden="true">→</span></a>
   </header>
 
   <div class="operations-overview" aria-label="Professor management overview">
@@ -30,8 +31,8 @@
             <td data-label="Department">{{ account.professor_department or 'Not supplied' }}</td>
             <td data-label="Email">{{ account.email }}</td>
             <td data-label="Decision"><div class="form-actions">
-              <form class="inline-form" method="post" action="{{ url_for('admin_management.verify_professor_account', account_id=account.id) }}">{{ verification_form.csrf_token }}<button type="submit">Verify Professor</button></form>
-              <form class="inline-form" method="post" action="{{ url_for('admin_management.reject_professor_account', account_id=account.id) }}">{{ verification_form.csrf_token }}<button class="button-danger" type="submit">Reject</button></form>
+              <form class="inline-form" method="post" action="{{ url_for('admin_management.verify_professor_account', account_id=account.id) }}">{{ verification_form.csrf_token }}<button class="button button-primary flow-next professor-action" type="submit">Verify Professor</button></form>
+              <form class="inline-form" method="post" action="{{ url_for('admin_management.reject_professor_account', account_id=account.id) }}">{{ verification_form.csrf_token }}<button class="button button-danger flow-next professor-action" type="submit">Reject</button></form>
             </div></td>
           </tr>{% endfor %}</tbody>
         </table>
@@ -50,8 +51,8 @@
             <td data-label="Department">{{ account.professor_department or 'Not supplied' }}</td>
             <td data-label="Email">{{ account.email }}</td>
             <td data-label="Student deliveries">{{ 'Accepted' if account.professor and account.professor.accepts_student_deliveries else 'Off' }}</td>
-            <td data-label="Account link">{% if account.professor %}<a href="{{ url_for('admin_management.edit_professor', professor_id=account.professor_id) }}">Manage profile</a>{% else %}<a href="{{ url_for('admin_management.new_professor', account_id=account.id) }}">Create and link profile</a>{% endif %}</td>
-            <td data-label="Action"><a class="text-danger" href="{{ url_for('admin_management.delete_professor_account', account_id=account.id) }}">Delete account</a></td>
+            <td data-label="Account link">{% if account.professor %}<a class="professor-action" href="{{ url_for('admin_management.edit_professor', professor_id=account.professor_id) }}">Manage profile</a>{% else %}<a class="professor-action" href="{{ url_for('admin_management.new_professor', account_id=account.id) }}">Create and link profile</a>{% endif %}</td>
+            <td data-label="Action"><a class="professor-action professor-action--danger" href="{{ url_for('admin_management.delete_professor_account', account_id=account.id) }}">Delete account</a></td>
           </tr>{% endfor %}</tbody>
         </table>
       </div>
@@ -81,7 +82,7 @@
                 <td data-label="Active"><span class="status-badge status-badge--{{ 'success' if professor.is_active else 'muted' }}">{{ 'Yes' if professor.is_active else 'No' }}</span></td>
                 <td data-label="Direct-to-Professor approval"><span class="status-badge status-badge--{{ 'success' if professor.direct_send_approved else 'muted' }}">{{ 'Approved' if professor.direct_send_approved else 'Not approved' }}</span></td>
                 <td data-label="Accept student deliveries"><span class="status-badge status-badge--{{ 'success' if professor.accepts_student_deliveries else 'muted' }}">{{ 'On' if professor.accepts_student_deliveries else 'Off' }}</span></td>
-                <td data-label="Action"><div class="form-actions"><a href="{{ url_for('admin_management.edit_professor', professor_id=professor.id) }}">Edit</a><a class="text-danger" href="{{ url_for('admin_management.delete_professor', professor_id=professor.id) }}">Delete profile</a></div></td>
+                <td data-label="Action"><div class="form-actions"><a class="professor-action" href="{{ url_for('admin_management.edit_professor', professor_id=professor.id) }}">Edit</a><a class="professor-action professor-action--danger" href="{{ url_for('admin_management.delete_professor', professor_id=professor.id) }}">Delete profile</a></div></td>
               </tr>
             {% endfor %}
           </tbody>
@@ -92,7 +93,8 @@
     <div class="empty-state">
       <h2>No professors yet</h2>
       <p>Add a professor to manage future Direct-to-Professor selections.</p>
-      <a class="button" href="{{ url_for('admin_management.new_professor') }}">Add professor</a>
+      <a class="button button-primary flow-next" href="{{ url_for('admin_management.new_professor') }}">Add professor</a>
     </div>
   {% endif %}
+  </div>
 {% endblock %}

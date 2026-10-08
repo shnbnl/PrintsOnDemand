@@ -704,3 +704,85 @@ h3 { font-weight: 710; letter-spacing: -.015em; }
   .staff-workspace .action-card { min-height: 0; }
   .staff-operation-list .card-action { width: 100%; justify-content: center; }
 }
+
+/* Staff dashboard actions read as buttons while the whole tile stays clickable. */
+.staff-workspace .action-card:not(:first-child) .card-action {
+  color: #fff;
+  border-color: #174774;
+  background: linear-gradient(120deg, var(--navy), #174774);
+  box-shadow: 0 7px 18px rgb(5 36 72 / 12%);
+}
+.staff-recent .section-heading { gap: .75rem; }
+.staff-recent-all { flex: none; }
+@media (hover: hover) and (pointer: fine) {
+  .staff-workspace .action-card:hover .card-action { box-shadow: 0 10px 22px rgb(5 36 72 / 20%); }
+}
+
+/* Let the short order cards fill the space beside the taller print job. */
+.page-staff_orders .staff-order-grid {
+  grid-template-areas:
+    "processing processing"
+    "customer printjob"
+    "payment printjob"
+    "fulfillment printjob";
+  grid-template-rows: repeat(4, auto);
+  align-items: start;
+}
+.page-staff_orders .staff-order-grid > .processing-focus { grid-area: processing; }
+.page-staff_orders .staff-order-grid > .staff-order-customer { grid-area: customer; }
+.page-staff_orders .staff-order-grid > .print-job { grid-area: printjob; }
+.page-staff_orders .staff-order-grid > .staff-order-payment { grid-area: payment; }
+.page-staff_orders .staff-order-grid > .staff-order-fulfillment { grid-area: fulfillment; }
+@media (max-width: 60rem) {
+  .page-staff_orders .staff-order-grid {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "processing" "customer" "printjob" "payment" "fulfillment";
+    grid-template-rows: none;
+  }
+}
+
+/* Professor actions use compact, consistent controls inside dense tables. */
+.professor-management .professor-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.6rem;
+  padding: .5rem .75rem;
+  border: 1px solid #b9cadb;
+  border-radius: .75rem;
+  color: var(--navy);
+  background: #f8fbff;
+  font-weight: 750;
+  line-height: 1.2;
+  text-align: center;
+  text-decoration: none;
+  white-space: normal;
+}
+.professor-management .professor-action--danger {
+  border-color: #dfaab7;
+  color: var(--danger);
+  background: #fff5f7;
+}
+.professor-management .form-actions { display: flex; flex-wrap: wrap; gap: .45rem; }
+.professor-management .form-actions > :is(a, form) { margin: 0; }
+.professor-management .form-actions .professor-action { width: 100%; }
+.professor-management .form-actions .button.professor-action { color: #fff; }
+@media (prefers-reduced-motion: no-preference) {
+  .professor-management .professor-action {
+    transition: transform 260ms var(--ease-out), border-color 260ms ease,
+      background-color 260ms ease, box-shadow 260ms ease;
+  }
+}
+@media (hover: hover) and (pointer: fine) {
+  .professor-management .professor-action:hover {
+    transform: translateY(-2px);
+    border-color: var(--cobalt);
+    background: #eaf2ff;
+    box-shadow: 0 8px 18px rgb(5 36 72 / 11%);
+  }
+  .professor-management .professor-action--danger:hover {
+    border-color: var(--danger);
+    background: #ffe9ee;
+    box-shadow: 0 8px 18px rgb(142 30 56 / 12%);
+  }
+}

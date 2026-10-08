@@ -43,7 +43,7 @@
       </div>
     </section>
     <section class="staff-recent" aria-labelledby="staff-recent-heading">
-      <div class="section-heading"><div><p class="page-eyebrow">Order history</p><h2 id="staff-recent-heading">Recent jobs</h2></div><a href="{{ url_for('staff_orders.index') }}">All shop orders</a></div>
+      <div class="section-heading"><div><p class="page-eyebrow">Order history</p><h2 id="staff-recent-heading">Recent jobs</h2></div><a class="button button-primary flow-next staff-recent-all" href="{{ url_for('staff_orders.index') }}">All shop orders <span aria-hidden="true">→</span></a></div>
       {% if recent_orders %}<ul class="staff-recent-list">{% for order in recent_orders %}<li><div><strong><a href="{{ url_for('staff_orders.detail', order_reference=order.order_reference) }}">{{ order.order_reference }}</a></strong><span>{{ order.user.name }} · <time datetime="{{ order.created_at.isoformat() }}">{{ order.created_at.strftime('%Y-%m-%d %H:%M UTC') }}</time></span></div><div class="status-group">{{ order_badge(order) }}{{ payment_badge(order.payment) }}</div><a class="staff-recent-open" href="{{ url_for('staff_orders.detail', order_reference=order.order_reference) }}">View order</a></li>{% endfor %}</ul>
       {% else %}<p class="hint">No orders have been placed for your shop yet.</p>{% endif %}
     </section>
