@@ -1,23 +1,19 @@
 """Student and professor registration and account sessions."""
 
-import secrets
 from urllib.parse import urlsplit
 
-from flask import Blueprint, current_app, flash, g, make_response, redirect, render_template, request, session, url_for
+from flask import Blueprint, flash, make_response, redirect, render_template, request, url_for
 from flask_login import current_user, login_user, logout_user
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
-from werkzeug.security import check_password_hash, generate_password_hash
 
 from app.extensions import db
 from app.forms import BlueStaffLoginForm, LoginForm, RegistrationForm, ShopStaffLoginForm
 from app.models import PrintingShop, User, UserRole
-from app.security_limits import client_address, enforce_limit
 from app.services.professors import PROFESSOR_DELIVERY_SHOP
 
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
-DUMMY_PASSWORD_HASH = generate_password_hash(secrets.token_urlsafe(32))
 
 
 def role_home(role: UserRole) -> str:
@@ -54,7 +50,6 @@ def register():
     }:
         form.account_type.data = request.args["account_type"]
     if form.validate_on_submit():
-        enforce_limit("registration-ip", client_address(), attempts=10, seconds=3600)
         email = User.normalize_email(form.email.data)
         existing = db.session.scalar(select(User).where(User.email == email))
         if existing:
@@ -72,7 +67,6 @@ def register():
                 db.session.rollback()
                 form.email.errors.append("Unable to create account with these details.")
             else:
-                current_app.logger.info("Customer account registered: user_id=%s role=%s", user.id, user.role.value)
                 if user.role == UserRole.PROFESSOR:
                     flash("Account created. Please log in. An active linked profile enables Deliver to Me; Blue and Silver approval is also needed before students can select you.", "success")
                 else:
@@ -90,9 +84,6 @@ def login():
     blue_login = request.args.get("blue") == "1"
     form = BlueStaffLoginForm() if blue_login else LoginForm()
     if form.validate_on_submit():
-        identifier = form.name.data.casefold() if blue_login else User.normalize_email(form.email.data)
-        enforce_limit("login-ip", client_address(), attempts=60, seconds=900)
-        enforce_limit("login-identity", identifier, attempts=10, seconds=900)
         if blue_login:
             candidates = db.session.scalars(
                 select(User).join(PrintingShop, User.shop_id == PrintingShop.id).where(
@@ -106,13 +97,9 @@ def login():
         else:
             email = User.normalize_email(form.email.data)
             user = db.session.scalar(select(User).where(User.email == email))
-        password_matches = (user.check_password(form.password.data) if user else
-                            check_password_hash(DUMMY_PASSWORD_HASH, form.password.data))
-        if user and user.is_active and password_matches:
+        if user and user.is_active and user.check_password(form.password.data):
             login_user(user, remember=bool(form.remember_me.data) if not blue_login else False)
-            current_app.logger.info("Authentication succeeded: user_id=%s", user.id)
             return redirect(safe_next_url(request.args.get("next")) or role_home(user.role))
-        current_app.logger.warning("Authentication failed: route=login")
         form.password.errors.append("Invalid name or password." if blue_login else "Invalid email or password.")
 
     return render_template("auth/login.html", form=form, blue_login=blue_login)
@@ -127,8 +114,6 @@ def shop_login():
     form = ShopStaffLoginForm()
     if form.validate_on_submit():
         identifier = form.identifier.data.casefold()
-        enforce_limit("login-ip", client_address(), attempts=60, seconds=900)
-        enforce_limit("login-identity", identifier, attempts=10, seconds=900)
         if "@" in identifier:
             user = db.session.scalar(select(User).where(
                 User.role == UserRole.SHOP_STAFF,
@@ -140,13 +125,12 @@ def shop_login():
             )).all()
             matches = [user for user in candidates if user.name.casefold() == identifier]
             user = matches[0] if len(matches) == 1 else None
-        password_matches = (user.check_password(form.password.data) if user else
-                            check_password_hash(DUMMY_PASSWORD_HASH, form.password.data))
-        if user and password_matches and user.is_active and user.shop_id is not None and user.shop is not None:
+        if (
+            user and user.check_password(form.password.data)
+            and user.is_active and user.shop_id is not None and user.shop is not None
+        ):
             login_user(user, remember=False)
-            current_app.logger.info("Authentication succeeded: user_id=%s", user.id)
             return redirect(safe_next_url(request.args.get("next")) or role_home(user.role))
-        current_app.logger.warning("Authentication failed: route=shop-login")
         form.password.errors.append(
             "Unable to sign in. Check your staff email or name and password, "
             "or contact your administrator about account access."
@@ -160,9 +144,5 @@ def shop_login():
 def logout():
     if current_user.is_authenticated:
         logout_user()
-    session.clear()
-    # Flask-WTF caches the generated token on the request context as well.
-    g.pop("csrf_token", None)
-    session["_remember"] = "clear"
     flash("You have logged out.", "success")
     return redirect(url_for("main.index"))

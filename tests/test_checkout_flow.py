@@ -6,7 +6,6 @@ from io import BytesIO
 import zipfile
 
 import pytest
-from PIL import Image
 
 from sqlalchemy import select
 
@@ -19,12 +18,6 @@ from test_orders import (
     PDF, pdf_bytes, approved_professor, file, offer_professor_service, pickup_fields,
     shop, sign_in, student, token,
 )
-
-
-def image_bytes(format):
-    output = BytesIO()
-    Image.new("RGB", (2, 2), "navy").save(output, format=format)
-    return output.getvalue()
 
 
 def post(client, path, data=None):
@@ -117,8 +110,8 @@ def test_upload_progress_requests_keep_validation_and_store_files(client, test_a
 
 @pytest.mark.parametrize(("name", "content", "mime"), [
     ("sample.pdf", PDF, "application/pdf"),
-    ("sample.jpg", image_bytes("JPEG"), "image/jpeg"),
-    ("sample.png", image_bytes("PNG"), "image/png"),
+    ("sample.jpg", b"\xff\xd8\xffphoto\xff\xd9", "image/jpeg"),
+    ("sample.png", b"\x89PNG\r\n\x1a\nimage", "image/png"),
 ])
 def test_progress_upload_accepts_pdf_jpeg_and_png(client, test_app, name, content, mime):
     owner = student(test_app)

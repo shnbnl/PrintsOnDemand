@@ -17,7 +17,6 @@ from app.models import (
     PrintingShop, ServiceType, UploadedFile, UserRole,
 )
 from app.models.user import utc_now
-from app.security_limits import enforce_limit
 from app.routes.orders import parse_files, positive_id, quote_for, review_state
 from app.services.fulfillment import (
     FulfillmentError, availability, service_available, slot_options, today, validate_fulfillment,
@@ -145,7 +144,6 @@ def upload():
 def upload_files():
     if not FlaskForm().validate_on_submit():
         abort(400)
-    enforce_limit("file-upload", str(current_user.id), attempts=100, seconds=86400)
     asynchronous = request.headers.get("Accept") == "application/json"
 
     def upload_error(message, status):
@@ -567,7 +565,6 @@ def review():
 def place():
     if not FlaskForm().validate_on_submit():
         abort(400)
-    enforce_limit("order-place", str(current_user.id), attempts=30, seconds=86400)
     if "checkout_draft" not in session:
         last = session.get("checkout_last_order")
         if last and db.session.scalar(select(Order.id).where(

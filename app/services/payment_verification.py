@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from flask import current_app
 from sqlalchemy import and_, exists, or_, select, update
 from sqlalchemy.orm import selectinload
 
@@ -116,10 +115,6 @@ def decide_payment(actor, payment_id: int, *, reject: bool, reason: str = "") ->
             db.session.rollback()
             raise VerificationError("The order changed during review. Reload the page.", 409)
     db.session.commit()
-    current_app.logger.warning(
-        "Online payment reviewed: actor_id=%s payment_id=%s decision=%s",
-        actor.id, payment_id, "reject" if reject else "approve",
-    )
     return db.session.get(Payment, payment_id, populate_existing=True)
 
 
@@ -164,5 +159,4 @@ def confirm_onsite_cash(actor, payment_id: int) -> Payment:
         db.session.rollback()
         raise VerificationError("The order changed during review. Reload the page.", 409)
     db.session.commit()
-    current_app.logger.warning("Onsite cash confirmed: actor_id=%s payment_id=%s", actor.id, payment_id)
     return db.session.get(Payment, payment_id, populate_existing=True)

@@ -9,7 +9,6 @@ from wtforms.validators import DataRequired, ValidationError
 from app.authorization import roles_required
 from app.extensions import db
 from app.models import Faculty, UserRole
-from app.security_limits import enforce_limit
 from app.services.account_deletion import (
     AccountDeletionCleanupError, AccountDeletionError, delete_customer_account,
 )
@@ -93,11 +92,7 @@ def professor_preference():
 def delete_account():
     form = DeleteAccountForm()
     if form.is_submitted():
-        valid = form.validate()
-        if valid:
-            enforce_limit("account-delete", str(current_user.id), attempts=5, seconds=3600)
-        if valid and current_user.check_password(form.password.data):
-            user_id = current_user.id
+        if form.validate() and current_user.check_password(form.password.data):
             try:
                 delete_customer_account(current_user.id)
             except AccountDeletionCleanupError:
@@ -117,7 +112,6 @@ def delete_account():
             session.clear()
             session["_remember"] = "clear"  # Also clear Flask-Login's remember cookie.
             session["play_account_delete_transition"] = True
-            current_app.logger.warning("Customer account deleted: user_id=%s", user_id)
             flash("Your account and associated data were permanently deleted.", "success")
             return redirect(url_for("main.index"))
         if form.password.data and not form.password.errors and form.confirm.data:

@@ -3,12 +3,10 @@
 import hashlib
 import io
 import re
-import subprocess
 import zipfile
 from pathlib import Path
 
 import pytest
-from PIL import Image
 from flask import g
 from sqlalchemy import event
 from sqlalchemy import select
@@ -23,12 +21,6 @@ from app.storage.validation import count_word_document_pages
 
 from test_orders import PDF, pdf_bytes
 PASSWORD = "A-strong-password-123"
-
-
-def image_bytes(format):
-    output = io.BytesIO()
-    Image.new("RGB", (2, 2), "navy").save(output, format=format)
-    return output.getvalue()
 
 
 def token(response):
@@ -110,9 +102,9 @@ def test_upload_metadata_listing_detail_and_download(client, test_app):
 
 
 @pytest.mark.parametrize("name,content,mime", [
-    ("scan.JPG", image_bytes("JPEG"), "image/jpeg"),
-    ("scan.jpeg", image_bytes("JPEG"), "image/jpeg"),
-    ("image.png", image_bytes("PNG"), "image/png"),
+    ("scan.JPG", b"\xff\xd8\xffphoto\xff\xd9", "image/jpeg"),
+    ("scan.jpeg", b"\xff\xd8\xffphoto\xff\xd9", "image/jpeg"),
+    ("image.png", b"\x89PNG\r\n\x1a\nimage", "image/png"),
     ("essay.doc", bytes.fromhex("d0cf11e0a1b11ae1") + b"legacy", "application/msword"),
     ("slides.ppt", bytes.fromhex("d0cf11e0a1b11ae1") + b"legacy", "application/vnd.ms-powerpoint"),
 ])
@@ -494,8 +486,7 @@ def test_docx_renderer_overrides_stale_one_page_metadata(monkeypatch, client, te
     monkeypatch.setattr("app.storage.validation.shutil.which",
                         lambda name: "/usr/bin/soffice" if name == "soffice" else None)
 
-    def convert(command, *, cwd, stdout, stderr, timeout, check):
-        assert stdout == stderr == subprocess.DEVNULL
+    def convert(command, *, cwd, capture_output, timeout, check):
         assert command[0] == "/usr/bin/soffice"
         assert command[command.index("--convert-to") + 1] == "pdf:writer_pdf_Export"
         (cwd / "document.pdf").write_bytes(pdf_bytes(2))
@@ -521,8 +512,7 @@ def test_doc_uses_abiword_rendered_pdf_when_available(monkeypatch):
     monkeypatch.setattr("app.storage.validation.shutil.which",
                         lambda name: "/usr/bin/abiword" if name == "abiword" else None)
 
-    def convert(command, *, cwd, stdout, stderr, timeout, check):
-        assert stdout == stderr == subprocess.DEVNULL
+    def convert(command, *, cwd, capture_output, timeout, check):
         assert command[:2] == ["/usr/bin/abiword", "--to=pdf"]
         (cwd / "document.pdf").write_bytes(pdf_bytes(6))
 
@@ -538,8 +528,7 @@ def test_word_renderer_finds_default_windows_libreoffice_path(monkeypatch, tmp_p
     monkeypatch.delenv("WORD_CONVERTER_PATH", raising=False)
     monkeypatch.setattr("app.storage.validation.shutil.which", lambda name: None)
 
-    def convert(command, *, cwd, stdout, stderr, timeout, check):
-        assert stdout == stderr == subprocess.DEVNULL
+    def convert(command, *, cwd, capture_output, timeout, check):
         assert command[0] == str(executable)
         (cwd / "document.pdf").write_bytes(pdf_bytes(2))
 

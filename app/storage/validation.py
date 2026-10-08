@@ -12,7 +12,6 @@ import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 
-from PIL import Image, UnidentifiedImageError
 from werkzeug.datastructures import FileStorage
 from werkzeug.utils import secure_filename
 
@@ -36,7 +35,6 @@ OOXML_MAIN_TYPES = {
     "docx": b"application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml",
     "pptx": b"application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml",
 }
-MAX_IMAGE_PIXELS = 20_000_000
 
 
 class UploadValidationError(ValueError):
@@ -75,19 +73,6 @@ def _matches_signature(data: bytes, extension: str) -> bool:
                 expected = "word/document.xml" if extension == "docx" else "ppt/presentation.xml"
                 if "[Content_Types].xml" not in names or expected not in names:
                     return False
-                entries = archive.infolist()
-                if len(entries) > 1000 or len(names) != len(entries) or any(
-                    entry.flag_bits & 1
-                    or entry.filename.startswith("/")
-                    or "\\" in entry.filename
-                    or ":" in entry.filename
-                    or ".." in Path(entry.filename).parts
-                    or entry.file_size > 64 * 1024 * 1024
-                    for entry in entries
-                ):
-                    return False
-                if sum(entry.file_size for entry in entries) > 64 * 1024 * 1024:
-                    return False
                 if any(name.endswith("vbaProject.bin") for name in names):
                     return False
                 content_types = archive.getinfo("[Content_Types].xml")
@@ -113,21 +98,6 @@ def count_pdf_pages(data: bytes) -> int:
         raise
     except Exception as error:
         raise UploadValidationError("Unable to read this PDF. Please upload a valid PDF.") from error
-
-
-def validate_image(data: bytes, extension: str) -> None:
-    expected = "PNG" if extension == "png" else "JPEG"
-    try:
-        with Image.open(io.BytesIO(data)) as image:
-            if image.format != expected or image.width * image.height > MAX_IMAGE_PIXELS:
-                raise UploadValidationError("File content does not match its extension.")
-            image.verify()
-        with Image.open(io.BytesIO(data)) as image:
-            image.load()
-    except UploadValidationError:
-        raise
-    except (UnidentifiedImageError, Image.DecompressionBombError, OSError, ValueError) as error:
-        raise UploadValidationError("File content does not match its extension.") from error
 
 
 def word_converters() -> list[tuple[str, str]]:
@@ -182,8 +152,7 @@ def _render_word_document_pages(data: bytes, extension: str) -> int | None:
                                "--nodefault", "--norestore", "--convert-to", "pdf:writer_pdf_Export",
                                "--outdir", str(root), str(source)]
                 try:
-                    subprocess.run(command, cwd=root, stdout=subprocess.DEVNULL,
-                                   stderr=subprocess.DEVNULL, timeout=30, check=False)
+                    subprocess.run(command, cwd=root, capture_output=True, timeout=30, check=False)
                     if target.is_file() and target.stat().st_size <= 64 * 1024 * 1024:
                         return count_pdf_pages(target.read_bytes())
                 except (OSError, subprocess.TimeoutExpired, UploadValidationError):
@@ -217,8 +186,6 @@ def validate_upload(upload: FileStorage | None, max_size: int) -> ValidatedUploa
         raise UploadValidationError("File is too large.", 413)
     if not data or not _matches_signature(data, extension):
         raise UploadValidationError("File content does not match its extension.")
-    if extension in {"png", "jpg", "jpeg"}:
-        validate_image(data, extension)
     page_count = (count_pdf_pages(data) if extension == "pdf" else
                   count_word_document_pages(data, extension) if extension in {"doc", "docx"} else None)
     return ValidatedUpload(

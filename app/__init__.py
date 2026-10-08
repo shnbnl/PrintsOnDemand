@@ -2,7 +2,7 @@
 
 import sqlite3
 
-from flask import Flask, g, render_template, request
+from flask import Flask, render_template, request
 from dotenv import load_dotenv
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
@@ -80,21 +80,12 @@ def create_app(config_object: object | None = None) -> Flask:
         """Apply low-risk browser protections to every application response."""
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
-        response.headers["Permissions-Policy"] = "camera=(), microphone=()"
-        if app.config["ENV_NAME"] == "production":
-            response.headers["Strict-Transport-Security"] = "max-age=31536000"
         # Google Maps website-restricted browser keys require the site's origin
         # on cross-origin API requests; keep the stricter default elsewhere.
         response.headers["Referrer-Policy"] = (
             "strict-origin-when-cross-origin"
             if request.endpoint == "shops.map_view" else "same-origin"
         )
-        if request.blueprint in {
-            "access", "account", "admin_management", "checkout", "files", "orders",
-            "payment_verification", "professor_settings", "shop_admin", "shop_staff",
-            "staff_orders",
-        }:
-            response.headers["Cache-Control"] = "private, no-store"
         return response
 
     from app.cli import register_commands
@@ -112,15 +103,6 @@ def create_app(config_object: object | None = None) -> Flask:
     @app.errorhandler(500)
     def internal_error(error):
         return render_template("main/error.html", message="Something went wrong."), 500
-
-    @app.errorhandler(429)
-    def too_many_requests(error):
-        response = app.make_response((render_template(
-            "main/error.html", message="Too many attempts. Please try again later."
-        ), 429))
-        response.headers["Retry-After"] = str(getattr(g, "rate_limit_retry_after", 60))
-        response.headers["Cache-Control"] = "private, no-store"
-        return response
 
     @app.cli.command("check-db")
     def check_db() -> None:

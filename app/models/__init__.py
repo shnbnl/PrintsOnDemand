@@ -7,7 +7,6 @@ from app.models.order import Order, OrderDestination, OrderItem, OrderStatus
 from app.models.professor import Faculty, Professor
 from app.models.payment import Payment, PaymentMethod, PaymentStatus
 from app.models.payment_settings import PaymentSettings
-from app.models.rate_limit import RateLimitBucket
 
 __all__ = [
     "ColorMode",
@@ -21,7 +20,6 @@ __all__ = [
     "PaymentMethod",
     "PaymentStatus",
     "PaymentSettings",
-    "RateLimitBucket",
     "PaperSize",
     "PrintPrice",
     "Professor",
