@@ -111,6 +111,7 @@ def delete_account():
             logout_user()
             session.clear()
             session["_remember"] = "clear"  # Also clear Flask-Login's remember cookie.
+            session["play_account_delete_transition"] = True
             flash("Your account and associated data were permanently deleted.", "success")
             return redirect(url_for("main.index"))
         if form.password.data and not form.password.errors and form.confirm.data:

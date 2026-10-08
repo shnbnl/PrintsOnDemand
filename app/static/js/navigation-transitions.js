@@ -20,12 +20,16 @@
     const fromWorkspace = from === "/student" || from === "/professor";
     const fromCheckout = from.startsWith("/checkout/");
     const fromOrders = from === "/orders" || from.startsWith("/orders/");
+    const fromAccount = from === "/account" || from.startsWith("/account/");
     const toHistory = to === "/orders";
     const toStart = to === "/checkout/upload";
+    const toAccount = to === "/account";
 
     if (fromCheckout && toHistory) return "tab-to-history";
-    if (fromOrders && toStart) return "tab-to-start";
-    if (fromWorkspace && (toStart || toHistory || to === "/account")) return "workspace-entry";
+    if ((fromCheckout || fromOrders) && toAccount) return "tab-to-account";
+    if (fromAccount && toHistory) return "tab-from-account";
+    if ((fromOrders || fromAccount) && toStart) return "tab-to-start";
+    if (fromWorkspace && (toStart || toHistory || toAccount)) return "workspace-entry";
     return null;
   };
 

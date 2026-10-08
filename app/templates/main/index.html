@@ -3,6 +3,16 @@
 {% block title %}Prints On Demand | Print with confidence{% endblock %}
 
 {% block content %}
+  {% if play_account_delete_transition %}
+    <div class="account-crumple-transition" aria-hidden="true">
+      <div class="account-crumple-stage">
+        <div class="account-crumple-paper"><span></span><span></span><span></span><span></span></div>
+        <div class="account-crumple-shadow"></div>
+        <p class="page-eyebrow">Account deleted</p>
+        <p class="account-crumple-caption">A fresh page is ready.</p>
+      </div>
+    </div>
+  {% endif %}
   <div class="landing-shell">
     <header class="page-intro landing-hero">
       <div class="landing-hero-copy">

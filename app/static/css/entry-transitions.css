@@ -30,22 +30,30 @@
 @media (prefers-reduced-motion: no-preference) {
   html:active-view-transition-type(tab-to-history) .site-header .brand,
   html:active-view-transition-type(tab-to-start) .site-header .brand,
+  html:active-view-transition-type(tab-to-account) .site-header .brand,
+  html:active-view-transition-type(tab-from-account) .site-header .brand,
   html:active-view-transition-type(tab-to-history) body.page-checkout .checkout-progress,
   html:active-view-transition-type(tab-to-start) body.page-checkout .checkout-progress,
+  html:active-view-transition-type(tab-to-account) body.page-checkout .checkout-progress,
+  html:active-view-transition-type(tab-from-account) body.page-checkout .checkout-progress,
   html:active-view-transition-type(workspace-entry) body.page-checkout .checkout-progress {
     view-transition-name: none;
   }
 
-  html:active-view-transition-type(tab-to-history)::view-transition-old(root) {
+  html:active-view-transition-type(tab-to-history)::view-transition-old(root),
+  html:active-view-transition-type(tab-to-account)::view-transition-old(root) {
     animation: tab-push-out-left 1350ms cubic-bezier(.45,0,.2,1) both;
   }
-  html:active-view-transition-type(tab-to-history)::view-transition-new(root) {
+  html:active-view-transition-type(tab-to-history)::view-transition-new(root),
+  html:active-view-transition-type(tab-to-account)::view-transition-new(root) {
     animation: tab-push-in-right 1350ms cubic-bezier(.45,0,.2,1) both;
   }
-  html:active-view-transition-type(tab-to-start)::view-transition-old(root) {
+  html:active-view-transition-type(tab-to-start)::view-transition-old(root),
+  html:active-view-transition-type(tab-from-account)::view-transition-old(root) {
     animation: tab-push-out-right 1350ms cubic-bezier(.45,0,.2,1) both;
   }
-  html:active-view-transition-type(tab-to-start)::view-transition-new(root) {
+  html:active-view-transition-type(tab-to-start)::view-transition-new(root),
+  html:active-view-transition-type(tab-from-account)::view-transition-new(root) {
     animation: tab-push-in-left 1350ms cubic-bezier(.45,0,.2,1) both;
   }
 
@@ -220,6 +228,75 @@
   100% { opacity: 0; visibility: hidden; }
 }
 
+/* Successful account deletion crumples the paper before revealing the landing page. */
+.account-crumple-transition {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  background: #f7f5ef;
+  animation: account-crumple-reveal 3.4s ease-in-out forwards;
+}
+.account-crumple-stage { width: min(100%, 24rem); text-align: center; }
+.account-crumple-paper {
+  position: relative;
+  width: 11.5rem;
+  height: 14rem;
+  margin: 0 auto 1.5rem;
+  padding: 3rem 1.5rem;
+  overflow: hidden;
+  border: 1px solid #9eb7d0;
+  border-radius: .7rem;
+  background: linear-gradient(145deg, #fff 0 38%, #d8e5f2 48%, #f8fbff 58%, #cbdceb 100%);
+  box-shadow: 0 20px 40px rgb(5 36 72 / 23%);
+  animation: account-paper-crumple 2.75s cubic-bezier(.42,0,.35,1) both;
+}
+.account-crumple-paper::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background: repeating-linear-gradient(130deg, transparent 0 1.8rem, rgb(5 36 72 / 28%) 1.9rem 2rem),
+              repeating-linear-gradient(45deg, transparent 0 2.5rem, rgb(5 36 72 / 20%) 2.6rem 2.7rem);
+  animation: account-paper-creases 2.75s ease-in both;
+}
+.account-crumple-paper span {
+  display: block;
+  height: .48rem;
+  margin-bottom: .9rem;
+  border-radius: 1rem;
+  background: #c8d7e5;
+}
+.account-crumple-paper span:nth-child(2) { width: 78%; }
+.account-crumple-paper span:nth-child(3) { width: 90%; }
+.account-crumple-paper span:nth-child(4) { width: 58%; }
+.account-crumple-shadow {
+  width: 9rem;
+  height: .8rem;
+  margin: 0 auto 1.5rem;
+  border-radius: 50%;
+  background: rgb(5 36 72 / 12%);
+  filter: blur(.55rem);
+  animation: account-shadow-shrink 2.75s ease-in-out both;
+}
+.account-crumple-stage .page-eyebrow { margin-bottom: .25rem; }
+.account-crumple-caption { margin: 0; color: #09294f; font-size: clamp(1.2rem, 4vw, 1.6rem); font-weight: 750; }
+@keyframes account-paper-crumple {
+  0%, 12% { transform: scale(1) rotate(0); border-radius: .7rem; }
+  34% { transform: scale(.82, .9) rotate(-8deg) skew(5deg, -5deg); border-radius: 1.5rem; }
+  58% { transform: scale(.58, .66) rotate(13deg) skew(-12deg, 9deg); border-radius: 35%; }
+  78% { transform: scale(.32) rotate(-20deg); border-radius: 48%; }
+  100% { transform: scale(.12) rotate(25deg); border-radius: 50%; opacity: 0; }
+}
+@keyframes account-paper-creases { 0%, 20% { opacity: 0; } 48%, 100% { opacity: 1; } }
+@keyframes account-shadow-shrink { to { transform: scale(.2); opacity: .25; } }
+@keyframes account-crumple-reveal {
+  0%, 83% { opacity: 1; visibility: visible; }
+  100% { opacity: 0; visibility: hidden; }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .order-print-transition { display: none; }
+  .order-print-transition, .account-crumple-transition { display: none; }
 }
