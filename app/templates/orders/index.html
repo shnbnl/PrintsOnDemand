@@ -8,9 +8,8 @@
   {% set back_url = url_for(desk_endpoint) %}
   {% set back_label = 'Back to Printing Desk' %}
   {% include "_vector_back.html" %}
-  <header class="page-intro page-intro-actions">
+  <header class="page-intro">
     <div><p class="page-eyebrow">Your print journey</p><h1>Order History</h1><p class="page-lead">Find a previous order and check its payment and shop progress.</p></div>
-    <a class="button button-secondary" href="{{ url_for('shops.index') }}">Browse printing shops</a>
   </header>
   <div class="history-summary"><span class="history-summary-icon" aria-hidden="true">↗</span><p><strong>{{ orders.total }} {{ 'order' if orders.total == 1 else 'orders' }}</strong> {{ 'match the selected filters.' if status or payment_status else 'in your history.' }}{% if orders.total %} Open an order to review its current payment and printing status.{% endif %}</p></div>
   <form class="content-card history-filters" method="get" action="{{ url_for('orders.index') }}">

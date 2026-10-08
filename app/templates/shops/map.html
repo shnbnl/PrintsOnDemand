@@ -12,10 +12,16 @@
   {% endif %}
   {% set back_label = 'Back to Printing Desk' %}
   {% include "_vector_back.html" %}
-  <header class="page-intro">
-    <p class="page-eyebrow">Find your place to print</p>
-    <h1>Explore printing shops</h1>
-    <p class="page-lead">Select a shop pin to view its hours, services, and current rates.</p>
+  <header class="page-intro page-intro--with-action map-discovery-intro">
+    <div>
+      <p class="page-eyebrow">Find your place to print</p>
+      <h1>Explore printing shops</h1>
+      <p class="page-lead">Select a shop pin to view its hours, services, and current rates.</p>
+    </div>
+    <nav class="shop-view-switch" aria-label="Shop discovery view">
+      <a href="{{ url_for('shops.index', q=query) }}">List view</a>
+      <span aria-current="page">Map view</span>
+    </nav>
   </header>
 
   <div class="shop-workspace-layout map-discovery-workspace" data-shop-workspace data-map-discovery-workspace>
@@ -38,8 +44,7 @@
             <a class="button button-secondary" href="{{ url_for('shops.index', q=query) }}">View all shops</a>
           </div>
 
-          <aside class="workspace-panel{% if not markers %} is-minimized{% endif %}" aria-label="Selected shop details">
-            <button class="workspace-toggle" type="button" data-panel-toggle aria-expanded="{{ 'true' if markers else 'false' }}">{{ 'Minimize details' if markers else 'Browse shops' }}</button>
+          <aside class="workspace-panel" aria-label="Selected shop details">
             <div class="workspace-pin-preview" data-pin-preview role="status" aria-live="polite" hidden></div>
             <div data-workspace-content data-current-shop="{{ markers[0].id if markers else '' }}" aria-live="polite">
               <div class="workspace-scroll shop-discovery-scroll">

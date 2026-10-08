@@ -73,8 +73,9 @@ def test_student_map_search_and_existing_shop_flow(client, test_app):
     assert response.headers["Referrer-Policy"] == "strict-origin-when-cross-origin"
     assert b"View all shops" in response.data
     assert b"Proceed" in response.data
-    assert b"List view" not in response.data
-    assert b"Map view" not in response.data
+    assert b'href="/shops?q="' in response.data
+    assert b'aria-current="page">Map view</span>' in response.data
+    assert b'data-panel-toggle' not in response.data
     assert b"map-search" not in response.data
     assert b'class="workspace-panel' in response.data
     assert b'data-discovery-panel=' in response.data
@@ -104,6 +105,7 @@ def test_student_map_search_and_existing_shop_flow(client, test_app):
 
     searched = client.get("/shops/map?q=MaPpEd")
     assert [shop["id"] for shop in map_data(searched)] == [mapped]
+    assert b'href="/shops?q=MaPpEd"' in searched.data
     assert map_data(client.get("/shops/map?q=%25")) == []
     assert map_data(client.get("/shops/map?q=inactive")) == []
     assert map_data(client.get("/shops/map?q=No+Location")) == []

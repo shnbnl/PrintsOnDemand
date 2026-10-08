@@ -249,6 +249,7 @@ h3 { font-weight: 710; letter-spacing: -.015em; }
 .shop-avatar { border: 1px solid #c8d6e4; }
 .search-form { border: 1px solid #ccd9e7; }
 .shop-view-switch { border-color: #bdcddd; }
+.map-discovery-intro { max-width: none; }
 .history-summary { border-left: 3px solid var(--cobalt); background: #fff; }
 .history-filters { border-color: var(--border); }
 .order-list .order-card { border-top: 3px solid #a7c3e1; }

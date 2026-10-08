@@ -80,6 +80,6 @@ def test_order_history_account_and_shop_map_use_role_aware_vector_back_links(
         assert b'aria-label="Back to Printing Desk"' in page.data
         assert b'<svg ' in page.data
     map_page = client.get("/shops/map")
-    assert b"List view" not in map_page.data
-    assert b"Map view" not in map_page.data
+    assert b'aria-label="Shop discovery view"' in map_page.data
+    assert b'aria-current="page">Map view</span>' in map_page.data
     assert b"map-search" not in map_page.data

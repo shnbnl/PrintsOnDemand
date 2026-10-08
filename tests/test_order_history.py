@@ -27,7 +27,7 @@ def test_empty_history_and_role_boundaries(client, test_app):
     page = client.get("/orders")
     assert page.status_code == 200
     assert b"No orders yet" in page.data
-    assert b"Browse printing shops" in page.data
+    assert page.data.count(b"Browse printing shops") == 1
     assert b"Order History" in client.get("/student").data
     assert b'href="/orders"' in client.get("/student").data
     for actor, home in ((staff, "/shop"), (admin, "/admin")):

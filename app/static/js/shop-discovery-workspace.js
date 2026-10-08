@@ -3,19 +3,11 @@
   const workspace = document.querySelector("[data-map-discovery-workspace]");
   if (!workspace) return;
 
-  const panel = workspace.querySelector(".workspace-panel");
-  const toggle = workspace.querySelector("[data-panel-toggle]");
   const content = workspace.querySelector("[data-workspace-content]");
   const shopPanels = [...workspace.querySelectorAll("[data-discovery-panel]")];
   let switchTimer;
   let settleTimer;
   let committedShopId = content.dataset.currentShop;
-
-  toggle.addEventListener("click", () => {
-    const minimized = panel.classList.toggle("is-minimized");
-    toggle.setAttribute("aria-expanded", String(!minimized));
-    toggle.textContent = minimized ? "Open shop details" : "Minimize details";
-  });
 
   function displayShop(id) {
     const selectedId = String(id);
