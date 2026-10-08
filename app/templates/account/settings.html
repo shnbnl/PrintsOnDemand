@@ -29,7 +29,7 @@
         {{ preference_form.hidden_tag() }}
         {% if needs_department %}<div class="field">{{ preference_form.department.label }} {{ preference_form.department() }}{% for error in preference_form.department.errors %}<p class="field-error" role="alert">{{ error }}</p>{% endfor %}</div>{% endif %}
         <div class="checkbox-field">{{ preference_form.accepts_student_deliveries(role='switch') }} {{ preference_form.accepts_student_deliveries.label }}</div>
-        {{ preference_form.submit(class_='button button-secondary') }}
+        <button class="button button-primary flow-next" id="{{ preference_form.submit.id }}" name="{{ preference_form.submit.name }}" type="submit">{{ preference_form.submit.label.text }}</button>
       </form>
     </section>
   {% endif %}
@@ -37,6 +37,6 @@
     <p class="page-eyebrow">Permanent action</p>
     <h2 id="delete-account-heading">Delete Account</h2>
     <p>Deleting your account permanently removes your account, private uploads, print settings, orders, and their payment information. This cannot be undone.</p>
-    <a class="button button-danger" href="{{ url_for('account.delete_account') }}">Delete Account</a>
+    <a class="button button-danger flow-next" href="{{ url_for('account.delete_account') }}">Delete Account</a>
   </section>
 {% endblock %}

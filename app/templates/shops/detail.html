@@ -87,7 +87,7 @@
   {% if not staff_view %}
     <section class="content-card action-panel">
       <div><h2>Ready to continue?</h2><p>Add your files, configure printing, and review the live price before placing an order.</p></div>
-      <a class="button button-primary" href="{{ url_for('checkout.upload', shop_id=shop.id) }}">Start Order <span aria-hidden="true">→</span></a>
+      <a class="button button-primary flow-next" href="{{ url_for('checkout.upload', shop_id=shop.id) }}">Start Order <span aria-hidden="true">→</span></a>
     </section>
   {% endif %}
 {% endblock %}

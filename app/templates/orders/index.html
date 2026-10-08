@@ -28,7 +28,7 @@
         {% for value in payment_statuses %}<option value="{{ value.value }}"{% if payment_status == value.value %} selected{% endif %}>{{ {'PENDING': 'Payment pending', 'SUBMITTED': 'Awaiting payment verification', 'PAID': 'Paid', 'REJECTED': 'Payment rejected'}[value.value] }}</option>{% endfor %}
       </select>
     </div>
-    <button class="button button-primary" type="submit">Filter orders</button>
+    <button class="button button-primary flow-next" type="submit">Filter orders</button>
     {% if status or payment_status %}<a class="button button-quiet" href="{{ url_for('orders.index') }}">Clear filters</a>{% endif %}
   </form>
 

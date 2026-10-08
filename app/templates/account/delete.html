@@ -28,7 +28,7 @@
       </div>
       {% for message in form.confirm.errors %}<p class="field-error" role="alert">{{ message }}</p>{% endfor %}
       <div class="form-actions">
-        {{ form.submit(class_="button button-danger") }}
+        <button class="button button-danger flow-next" id="{{ form.submit.id }}" name="{{ form.submit.name }}" type="submit">{{ form.submit.label.text }}</button>
         <a class="button button-secondary" href="{{ url_for('account.settings') }}">Cancel</a>
       </div>
     </form>

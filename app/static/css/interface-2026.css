@@ -519,7 +519,7 @@ h3 { font-weight: 710; letter-spacing: -.015em; }
 
 /* Customer flow actions have one consistent, responsive interaction language. */
 .checkout-flow-actions { gap: .7rem; margin-top: .85rem; }
-.checkout-flow-actions .button {
+.checkout-flow-actions .button, .button.flow-next {
   position: relative;
   min-height: 3.15rem;
   padding: .78rem 1.2rem;
@@ -528,17 +528,37 @@ h3 { font-weight: 710; letter-spacing: -.015em; }
   font-weight: 760;
   box-shadow: 0 7px 18px rgb(5 36 72 / 9%);
 }
-.checkout-flow-actions .flow-next {
+.button.flow-next {
+  color: #fff;
   background: linear-gradient(120deg, var(--navy), #174774);
   border-color: #174774;
 }
-.checkout-flow-actions .flow-next::before {
+.button.flow-next::before {
   content: "";
   position: absolute;
   inset: 0;
   pointer-events: none;
   background: linear-gradient(100deg, transparent 30%, rgb(255 255 255 / 18%) 50%, transparent 70%);
   transform: translateX(-130%);
+}
+.button.button-danger.flow-next {
+  border-color: var(--danger);
+  background: linear-gradient(120deg, var(--danger), #be3854);
+  box-shadow: 0 7px 18px rgb(142 30 56 / 16%);
+}
+.button.flow-next:disabled { box-shadow: none; }
+.upload-picker input.flow-file::file-selector-button {
+  min-height: 3.15rem;
+  padding: .78rem 1.2rem;
+  border: 1px solid #174774;
+  border-radius: .9rem;
+  color: #fff;
+  background-image: linear-gradient(100deg, transparent 30%, rgb(255 255 255 / 18%) 50%, transparent 70%),
+                    linear-gradient(120deg, var(--navy), #174774);
+  background-size: 220% 100%, 100% 100%;
+  background-position: -130% 0, 0 0;
+  box-shadow: 0 7px 18px rgb(5 36 72 / 9%);
+  font-weight: 760;
 }
 .checkout-flow-actions .flow-back { background: #fff; border-color: #b9cadb; }
 .review-edit-action, .order-history-table .order-card-link,
@@ -585,13 +605,25 @@ h3 { font-weight: 710; letter-spacing: -.015em; }
   }
 }
 @media (prefers-reduced-motion: no-preference) {
-  .checkout-flow-actions .button, .review-edit-action,
+  .checkout-flow-actions .button, .button.flow-next, .review-edit-action,
   .order-history-table .order-card-link, .order-detail-back, .order-tracking-link {
     transition: transform 260ms cubic-bezier(.22,.76,.22,1), box-shadow 260ms ease,
       border-color 260ms ease, background-color 260ms ease;
   }
-  .checkout-flow-actions .flow-next::before { transition: transform 680ms cubic-bezier(.22,.76,.22,1); }
-  .checkout-flow-actions .flow-next:hover::before { transform: translateX(130%); }
+  .button.flow-next::before { transition: transform 680ms cubic-bezier(.22,.76,.22,1); }
+  .button.flow-next:hover:not(:disabled)::before { transform: translateX(130%); }
+  .button.flow-next:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 12px 24px rgb(5 36 72 / 17%); }
+  .button.button-danger.flow-next:hover { box-shadow: 0 12px 24px rgb(142 30 56 / 24%); }
+  .upload-picker input.flow-file::file-selector-button {
+    transition: transform 260ms cubic-bezier(.22,.76,.22,1), box-shadow 260ms ease,
+      background-position 680ms cubic-bezier(.22,.76,.22,1);
+  }
+  .upload-picker input.flow-file:hover::file-selector-button,
+  .upload-picker input.flow-file:focus-visible::file-selector-button {
+    transform: translateY(-2px);
+    background-position: 130% 0, 0 0;
+    box-shadow: 0 12px 24px rgb(5 36 72 / 17%);
+  }
   .review-edit-action:hover, .order-history-table .order-card-link:hover,
   .order-detail-back:hover, .order-tracking-link:hover { transform: translateY(-2px); }
 }

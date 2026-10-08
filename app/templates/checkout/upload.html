@@ -15,7 +15,7 @@
       <p class="hint">Supported: {{ extensions|sort|join(', ')|upper }}. Each file may be up to {{ (config.UPLOAD_MAX_SIZE / 1048576)|round(1) }} MiB. Add fewer files at a time if the combined upload is too large.</p>
       <form class="form-stack" action="{{ url_for('checkout.upload_files') }}" method="post" enctype="multipart/form-data" data-checkout-upload data-max-file-bytes="{{ config.UPLOAD_MAX_SIZE }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <div class="field upload-picker"><label for="checkout-files">Files to upload</label><input id="checkout-files" name="files" type="file" accept="{{ accept_types }}" multiple required><p class="hint upload-selection" data-upload-selection role="status" aria-live="polite">Choose files from your device to add to this order.</p></div>
+        <div class="field upload-picker"><label for="checkout-files">Files to upload</label><input id="checkout-files" class="flow-file" name="files" type="file" accept="{{ accept_types }}" multiple required><p class="hint upload-selection" data-upload-selection role="status" aria-live="polite">Choose files from your device to add to this order.</p></div>
         <button class="button button-secondary" type="submit">Upload selected files</button>
         <div class="upload-progress" data-upload-progress hidden>
           <progress max="100" value="0" aria-label="File upload progress"></progress>
@@ -30,7 +30,7 @@
           <li class="checkout-staged-file"><input type="hidden" name="file_id" value="{{ record.id }}"><span><strong>{{ record.original_filename }}</strong><small>{{ record.file_extension|upper }} · {{ record.file_size }} bytes{% if record.pdf_page_count %} · {{ record.pdf_page_count }} {{ 'page' if record.pdf_page_count == 1 else 'pages' }}{% elif record.file_extension in ('doc', 'docx') %} · Page count unavailable; export as PDF{% endif %}</small></span><button class="button button-secondary" type="submit" name="remove_file_id" value="{{ record.id }}" aria-label="Remove {{ record.original_filename }} from this order">Remove</button></li>
         {% endfor %}</ul>
         <p class="hint">Removing a file takes it out of this checkout. Unused staged copies expire automatically.</p>
-        <button class="button button-primary" type="submit">Next: Pick a Shop →</button>
+        <button class="button button-primary flow-next" type="submit">Next: Pick a Shop →</button>
       </form>{% else %}<p>No files uploaded yet. Use the upload form to start.</p>{% endif %}
     </section>
   </div>
