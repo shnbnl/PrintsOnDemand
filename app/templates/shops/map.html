@@ -76,7 +76,7 @@
                     {% if marker.fees %}
                       <div class="map-panel-fees">
                         <h3>Applicable fees</h3>
-                        <ul class="summary-list">{% for fee in marker.fees %}<li class="summary-row"><span>{{ fee.label }}{% if fee.is_sample %} (sample){% endif %}</span><strong>{{ fee.amount }}</strong></li>{% endfor %}</ul>
+                        <ul class="summary-list">{% for fee in marker.fees %}<li class="summary-row"><span>{{ fee.label }}</span><strong>{{ fee.amount }}</strong></li>{% endfor %}</ul>
                       </div>
                     {% endif %}
                     <div class="map-panel-prices">

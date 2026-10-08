@@ -30,7 +30,7 @@
     {% if action %}
       <form class="form-actions" method="post" action="{{ url_for('staff_orders.advance', order_reference=order.order_reference) }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button class="button" type="submit" name="action" value="{{ action }}">{% if action == 'start_processing' %}Start processing{% elif action == 'mark_ready' %}Mark ready{% elif action == 'mark_delivered' %}Mark delivered to Faculty{% else %}Complete order{% endif %}</button>
+        <button class="button button-primary flow-next" type="submit" name="action" value="{{ action }}">{% if action == 'start_processing' %}Start processing{% elif action == 'mark_ready' %}Mark ready{% elif action == 'mark_delivered' %}Mark delivered to Faculty{% else %}Complete order{% endif %}</button>
       </form>
     {% elif order.status.value == 'PENDING_PAYMENT' %}
       <p class="notice notice-warning">Processing is unavailable until payment is recorded as paid by an authorized process.</p>

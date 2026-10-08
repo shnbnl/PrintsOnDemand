@@ -20,6 +20,22 @@
     if (from === "/shops" && to === "/shops/map") return "shop-to-map";
     if (from === "/shops/map" && to === "/shops") return "shop-to-list";
 
+    const staffSection = (path) => {
+      if (path === "/shop") return 0;
+      if (path === "/staff/orders" || path.startsWith("/staff/orders/")) return 1;
+      if (path === "/payments/verification" || path.startsWith("/payments/verification/")) return 2;
+      if (path === "/shop/manage") return 3;
+      if (path === "/admin/professors" || path.startsWith("/admin/professors/")) return 4;
+      return null;
+    };
+    const staffFrom = staffSection(from);
+    const staffTo = staffSection(to);
+    if (staffFrom !== null && staffTo !== null && staffFrom !== staffTo) {
+      if (staffFrom === 0) return "staff-entry";
+      if (staffTo === 0) return "staff-home";
+      return staffTo > staffFrom ? "staff-forward" : "staff-backward";
+    }
+
     const fromWorkspace = from === "/student" || from === "/professor";
     const fromCheckout = from.startsWith("/checkout/");
     const fromOrders = from === "/orders" || from.startsWith("/orders/");

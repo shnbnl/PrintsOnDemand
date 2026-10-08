@@ -15,7 +15,7 @@
     <p>Check online transfers independently. For onsite orders, confirm the cash received at the counter.</p>
   </div>
   {% if payments %}
-    <ul class="order-list">
+    <ul class="order-list staff-operation-list" data-staggered-cards>
       {% for payment in payments %}
         <li class="section-card order-card">
           <div class="card-heading">

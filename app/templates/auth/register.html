@@ -44,7 +44,7 @@
           <div class="password-input">{{ form.confirm_password(autocomplete="new-password", placeholder="Confirm your password") }}<button type="button" class="password-toggle" data-password-toggle aria-label="Show password confirmation" aria-pressed="false">Show</button></div>
           {% for error in form.confirm_password.errors %}<p class="field-error" role="alert">{{ error }}</p>{% endfor %}
         </div>
-        {{ form.submit(class_="button button-primary button-block") }}
+        <button class="button button-primary button-block flow-next" id="{{ form.submit.id }}" name="{{ form.submit.name }}" type="submit">{{ form.submit.label.text }}</button>
       </form>
     </section>
     <p class="auth-switch">Already registered? <a href="{{ url_for('auth.login') }}">Log-in</a></p>

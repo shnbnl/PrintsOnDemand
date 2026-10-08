@@ -143,6 +143,28 @@ def test_custom_panel_uses_registered_shop_services_fees_and_existing_proceed(cl
     assert map_data(client.get("/shops/map"))[0]["fees"][0]["amount"] == "₱42.00"
 
 
+def test_map_panels_show_demo_rates_without_sample_suffix(client, test_app):
+    mapped = add_shop(test_app, "Demo Rate Shop")
+    set_location(test_app, mapped)
+    with test_app.app_context():
+        db.session.add_all([
+            ShopService(shop_id=mapped, service_type=ServiceType.DELIVERY, enabled=True),
+            PrintPrice(shop_id=mapped, paper_size=PaperSize.A4,
+                       color_mode=ColorMode.COLOR, price=Decimal("12.00"), is_demo=True),
+            ShopFee(shop_id=mapped, fee_type=FeeType.DELIVERY,
+                    amount=Decimal("30.00"), is_demo=True),
+        ])
+        db.session.commit()
+    add_user(test_app, UserRole.STUDENT, "demo.rates@example.com")
+    login(client, "demo.rates@example.com")
+
+    response = client.get("/shops/map")
+    marker = map_data(response)[0]
+    assert marker["prices"][2]["color"] == "₱12.00"
+    assert marker["fees"][0]["is_sample"] is True
+    assert "(sample)" not in response.get_data(as_text=True)
+
+
 def test_map_authorization_matches_existing_shop_policy(client, test_app):
     anonymous = client.get("/shops/map")
     assert anonymous.status_code == 302

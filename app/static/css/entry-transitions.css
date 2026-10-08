@@ -118,6 +118,30 @@
 @keyframes shop-view-out-right { to { opacity: 0; transform: translateX(28px); } }
 @keyframes shop-view-in-left { from { opacity: 0; transform: translateX(-28px); } }
 
+/* Staff navigation follows the same calm, linked motion as customer tabs. */
+@media (prefers-reduced-motion: no-preference) {
+  html:is(:active-view-transition-type(staff-entry), :active-view-transition-type(staff-home),
+    :active-view-transition-type(staff-forward), :active-view-transition-type(staff-backward)) .site-header .brand {
+    view-transition-name: none;
+  }
+  html:is(:active-view-transition-type(staff-forward), :active-view-transition-type(staff-backward))::view-transition-old(root),
+  html:is(:active-view-transition-type(staff-forward), :active-view-transition-type(staff-backward))::view-transition-new(root) {
+    animation-duration: 1150ms;
+    animation-timing-function: cubic-bezier(.45,0,.2,1);
+    animation-fill-mode: both;
+  }
+  html:active-view-transition-type(staff-forward)::view-transition-old(root) { animation-name: tab-push-out-left; }
+  html:active-view-transition-type(staff-forward)::view-transition-new(root) { animation-name: tab-push-in-right; }
+  html:active-view-transition-type(staff-backward)::view-transition-old(root) { animation-name: tab-push-out-right; }
+  html:active-view-transition-type(staff-backward)::view-transition-new(root) { animation-name: tab-push-in-left; }
+  html:is(:active-view-transition-type(staff-entry), :active-view-transition-type(staff-home))::view-transition-old(root) {
+    animation: entry-leave 180ms ease-in both;
+  }
+  html:is(:active-view-transition-type(staff-entry), :active-view-transition-type(staff-home))::view-transition-new(root) {
+    animation: workspace-show-in 480ms var(--ease-out, ease-out) both;
+  }
+}
+
 /* A successful submission prints a confirmation before revealing the receipt. */
 .order-print-transition {
   position: fixed;

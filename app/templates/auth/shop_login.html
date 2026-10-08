@@ -3,7 +3,7 @@
 {% block title %}Printing shop log-in | Prints On Demand{% endblock %}
 
 {% block content %}
-  <div class="auth-shell">
+  <div class="auth-shell" data-auth-submit-shell>
     <img class="auth-brand" src="{{ url_for('static', filename='img/prints-on-demand-logo.png') }}" alt="" width="88" height="88">
     <header class="auth-heading">
       <p class="page-eyebrow">Prints On Demand</p>
@@ -24,9 +24,10 @@
           <div class="password-input">{{ form.password(autocomplete="current-password", placeholder="Enter your password") }}<button type="button" class="password-toggle" data-password-toggle aria-label="Show password" aria-pressed="false">Show</button></div>
           {% for error in form.password.errors %}<p class="field-error" role="alert">{{ error }}</p>{% endfor %}
         </div>
-        {{ form.submit(class_="button button-primary button-block") }}
+        <button class="button button-primary button-block flow-next" id="{{ form.submit.id }}" name="{{ form.submit.name }}" type="submit">{{ form.submit.label.text }}</button>
       </form>
       <p class="hint">Ask your system administrator for a staff account if your shop has not been set up yet.</p>
     </section>
   </div>
+  <script src="{{ url_for('static', filename='js/auth-login-transition.js') }}" defer></script>
 {% endblock %}

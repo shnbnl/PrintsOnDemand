@@ -17,7 +17,7 @@
   <p><a class="button button-secondary" href="{{ url_for('payment_verification.index') }}">Review payments and onsite cash</a></p>
 
   {% if orders %}
-    <ul class="order-list">
+    <ul class="order-list staff-operation-list" data-staggered-cards>
       {% for order in orders %}
         <li class="section-card order-card">
           <div class="card-heading">

@@ -98,12 +98,10 @@ def map_markers(query: str = "") -> list[dict]:
                 "size": row["size"].label,
                 "grayscale": (
                     f"₱{row['grayscale'].price:.2f}"
-                    f"{' (sample)' if row['grayscale'].is_demo else ''}"
                     if row["grayscale"] else "—"
                 ),
                 "color": (
                     f"₱{row['color'].price:.2f}"
-                    f"{' (sample)' if row['color'].is_demo else ''}"
                     if row["color"] else "—"
                 ),
             } for row in context["price_rows"]],

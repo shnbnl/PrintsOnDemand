@@ -3,6 +3,7 @@
 {% macro errors(field) %}
   {% for error in field.errors %}<p class="field-error" role="alert">{{ error }}</p>{% endfor %}
 {% endmacro %}
+{% macro save_button(field) %}<button class="button button-primary flow-next" id="{{ field.id }}" name="{{ field.name }}" type="submit">{{ field.label.text }}</button>{% endmacro %}
 
 {% block title %}Manage {{ shop.name }} | Prints On Demand{% endblock %}
 
@@ -34,7 +35,7 @@
           <div class="field">{{ field.label }} {{ field() }}{{ errors(field) }}</div>
         {% endfor %}
         <p class="hint">Contact an administrator to change the registered shop name or map coordinates.</p>
-        <div class="form-actions">{{ details_form.submit(class_='button') }}</div>
+        <div class="form-actions">{{ save_button(details_form.submit) }}</div>
       </form>
     </section>
 
@@ -47,7 +48,7 @@
         {{ service_form.hidden_tag() }}
         <div class="field">{{ service_form.service_type.label }} {{ service_form.service_type() }}{{ errors(service_form.service_type) }}</div>
         <div class="checkbox-field">{{ service_form.enabled() }} {{ service_form.enabled.label }}</div>
-        <div class="form-actions">{{ service_form.submit(class_='button') }}</div>
+        <div class="form-actions">{{ save_button(service_form.submit) }}</div>
       </form>
     </section>
 
@@ -64,7 +65,7 @@
         <div class="field">{{ price_form.paper_size.label }} {{ price_form.paper_size() }}{{ errors(price_form.paper_size) }}</div>
         <div class="field">{{ price_form.color_mode.label }} {{ price_form.color_mode() }}{{ errors(price_form.color_mode) }}</div>
         <div class="field">{{ price_form.price.label }} {{ price_form.price(min='0', step='0.01') }}{{ errors(price_form.price) }}</div>
-        <div class="form-actions">{{ price_form.submit(class_='button') }}</div>
+        <div class="form-actions">{{ save_button(price_form.submit) }}</div>
       </form>
     </section>
     </div>
@@ -81,7 +82,7 @@
         <div class="field field-wide">{{ photo_form.photo.label }} {{ photo_form.photo(accept='image/jpeg,image/png,image/webp') }}{{ errors(photo_form.photo) }}
           {% if photo_error %}<p class="field-error" role="alert">{{ photo_error }}</p>{% endif %}
         </div>
-        <div class="form-actions">{{ photo_form.submit(class_='button') }}</div>
+        <div class="form-actions">{{ save_button(photo_form.submit) }}</div>
       </form>
       {% if shop.photo_digest %}<form method="post" action="{{ url_for('shop_staff.remove_photo') }}">
         {{ remove_photo_form.csrf_token }}
@@ -100,7 +101,7 @@
         <div class="field field-wide"><label for="delivery_fee_amount">Delivery Fee (₱)</label>
           {{ delivery_fee_form.amount(id='delivery_fee_amount', min='0', max='99999999.99', step='0.01', inputmode='decimal') }}{{ errors(delivery_fee_form.amount) }}{{ errors(delivery_fee_form.fee_type) }}
         </div>
-        <div class="form-actions"><button class="button" type="submit">Save delivery fee</button></div>
+        <div class="form-actions"><button class="button button-primary flow-next" type="submit">Save delivery fee</button></div>
       </form>
     </section>
 
@@ -121,7 +122,7 @@
           <p class="hint">PNG, JPEG, or WebP, up to 5 MB. Replace this image with your shop's actual payment QR before accepting transfers.</p>
           {% if shop.payment_qr_digest %}<img class="shop-payment-qr-preview" src="{{ url_for('shop_staff.payment_qr', v=shop.payment_qr_digest[:12]) }}" alt="Current payment QR for {{ shop.name }}" width="180" height="180">{% endif %}
         </div>
-        <div class="form-actions">{{ payment_form.submit(class_='button') }}</div>
+        <div class="form-actions">{{ save_button(payment_form.submit) }}</div>
       </form>
     </section>
 
@@ -134,7 +135,7 @@
         {{ fee_form.hidden_tag() }}
         <div class="field">{{ fee_form.fee_type.label }} {{ fee_form.fee_type() }}{{ errors(fee_form.fee_type) }}</div>
         <div class="field">{{ fee_form.amount.label }} {{ fee_form.amount(min='0', step='0.01') }}{{ errors(fee_form.amount) }}</div>
-        <div class="form-actions">{{ fee_form.submit(class_='button') }}</div>
+        <div class="form-actions">{{ save_button(fee_form.submit) }}</div>
       </form>{% endif %}
     </section>
     </div>

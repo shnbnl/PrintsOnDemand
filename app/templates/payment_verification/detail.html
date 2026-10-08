@@ -44,18 +44,18 @@
         <form class="form-stack" method="post" action="{{ url_for('payment_verification.confirm_onsite', payment_id=payment.id) }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <label class="cash-confirmation"><input type="checkbox" name="cash_received" value="yes" required> I received the full cash amount from the customer.</label>
-          <button class="button button-primary" type="submit">Confirm cash received and start printing</button>
+          <button class="button button-primary flow-next" type="submit">Confirm cash received and start printing</button>
         </form>
       {% elif payment.payment_method.value == 'ONLINE' and payment.payment_status.value == 'SUBMITTED' and payment.payment_reference and payment.amount == payment.order.total and payment.currency == payment.order.currency and payment.order.status.value == 'PENDING_PAYMENT' %}
         <p>Check the submitted reference and independently confirm receipt of funds before verifying. The QR display and reference alone do not prove payment.</p>
         <form class="form-stack" method="post" action="{{ url_for('payment_verification.verify', payment_id=payment.id) }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button class="button button-primary" type="submit">Verify payment as paid</button>
+          <button class="button button-primary flow-next" type="submit">Verify payment as paid</button>
         </form>
         <form class="form-stack verification-reject" method="post" action="{{ url_for('payment_verification.reject', payment_id=payment.id) }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <div class="field"><label for="reason">Rejection reason</label><textarea id="reason" name="reason" maxlength="500" required aria-describedby="reason-hint">{{ request.form.get('reason', '') if error else '' }}</textarea><small id="reason-hint">Explain the issue to the student (up to 500 characters).</small></div>
-          <button class="button button-danger" type="submit">Reject payment</button>
+          <button class="button button-danger flow-next" type="submit">Reject payment</button>
         </form>
       {% else %}
         <p class="notice notice-info">This payment is not eligible for another review action.</p>

@@ -19,7 +19,7 @@
   {% if staff_view %}
     <section class="staff-queue" aria-labelledby="staff-queue-heading">
       <div class="section-heading"><div><p class="page-eyebrow">Live shop queue</p><h2 id="staff-queue-heading">What needs attention</h2><p class="hint">Counts reflect orders assigned to your shop.</p></div><a class="button button-secondary" href="{{ url_for('staff_orders.index') }}">View all orders</a></div>
-      <div class="staff-metrics" aria-label="Order status overview">
+      <div class="staff-metrics" data-staggered-cards aria-label="Order status overview">
         <a class="staff-metric staff-metric--attention" href="{{ url_for('payment_verification.index') }}"><strong>{{ queue.payment_review }}</strong><span>Payment actions</span><small>Online review or onsite cash</small></a>
         <a class="staff-metric staff-metric--attention" href="{{ url_for('staff_orders.index') }}"><strong>{{ queue.ready_to_print }}</strong><span>Ready to print</span><small>Paid orders awaiting processing</small></a>
         <a class="staff-metric" href="{{ url_for('staff_orders.index') }}"><strong>{{ queue.printing }}</strong><span>Printing</span><small>In progress</small></a>
@@ -35,7 +35,7 @@
     </section>
     <section class="staff-workspace" aria-labelledby="staff-workspace-heading">
       <div class="section-heading"><div><p class="page-eyebrow">Your operations</p><h2 id="staff-workspace-heading">Run this shop</h2></div></div>
-      <div class="card-grid">
+      <div class="card-grid" data-staggered-cards>
         <a class="action-card" href="{{ url_for('staff_orders.index') }}"><span class="eyebrow">01 / Production</span><h3>Shop orders</h3><p>Review incoming jobs and record printing progress.</p><span class="card-action">Open orders →</span></a>
         <a class="action-card" href="{{ url_for('payment_verification.index') }}"><span class="eyebrow">02 / Payments</span><h3>Payment verification</h3><p>Review online references and confirm onsite cash once collected.</p><span class="card-action">Review payments →</span></a>
         <a class="action-card" href="{{ url_for('shop_staff.index') }}"><span class="eyebrow">03 / Shop profile</span><h3>Edit shop details</h3><p>Update your services, prices, photo, fees, and payment settings.</p><span class="card-action">Manage shop →</span></a>
