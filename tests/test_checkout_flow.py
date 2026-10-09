@@ -553,10 +553,12 @@ def test_professor_self_delivery_allows_cash_at_faculty(client, test_app, confir
     offer_professor_service(test_app, shop_id)
     assert start(client, shop_id, file_id, destination={"destination": "PROFESSOR"}).status_code == 302
     assert post(client, "/checkout/payment", {"payment_method": "ONSITE"}).status_code == 302
+    assert b"Einstein Building 1st Floor" in client.get("/checkout/review").data
     assert post(client, "/checkout/place").status_code == 302
     with test_app.app_context():
         order = db.session.scalar(select(Order))
         assert order.professor_recipient_type == "SELF"
+        assert order.professor_office == "Einstein Building 1st Floor"
         assert order.payment.payment_method == PaymentMethod.ONSITE
         assert order.payment.payment_status == PaymentStatus.PENDING
         reference = order.order_reference
@@ -612,11 +614,13 @@ def test_student_professor_delivery_and_professor_normal_order(client, test_app)
     assert post(client, "/checkout/payment", {"payment_method": "ONSITE"}).status_code == 400
     assert post(client, "/checkout/payment", {"payment_method": "ONLINE"}).status_code == 400
     assert post(client, "/checkout/payment", {"payment_method": "ONLINE", "payment_reference": "STUDENT-1234"}).status_code == 302
+    assert b"Einstein Building 1st Floor" in client.get("/checkout/review").data
     assert post(client, "/checkout/place").status_code == 302
     with test_app.app_context():
         order = db.session.scalar(select(Order))
         assert order.professor_id == professor_id
         assert order.professor_name == "Maria Santos"
+        assert order.professor_office == "Einstein Building 1st Floor"
         assert order.payment.payment_method == PaymentMethod.ONLINE
 
     professor_user = student(test_app, "unverified@example.edu", UserRole.PROFESSOR)

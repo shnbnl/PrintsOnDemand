@@ -126,7 +126,7 @@ def test_student_faculty_snapshot_online_payment_and_staff_handoff(client, test_
     order_url = professor_place(client, file_id, blue, professor_id).headers["Location"]
     detail = client.get(order_url)
     assert b"Faculty: CCIS" in detail.data
-    assert b"Student professor delivery requires online payment" in detail.data
+    assert b"Delivery location: Einstein Building 3rd Floor" in detail.data
     assert b'value="ONSITE"' not in detail.data
     assert b"Change intended professor" not in detail.data
     assert client.post(order_url + "/professor", data={

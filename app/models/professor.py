@@ -10,7 +10,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
 from app.extensions import db
 from app.models.user import utc_now
-from app.professor_faculties import ALL_FACULTIES
+from app.professor_faculties import ALL_FACULTIES, DELIVERY_LOCATIONS_BY_DEPARTMENT
 
 
 class Faculty(StrEnum):
@@ -51,6 +51,13 @@ class Professor(db.Model):
     )
     orders: Mapped[list[Order]] = relationship(back_populates="professor")
     account: Mapped[User | None] = relationship(back_populates="professor", uselist=False)
+
+    @property
+    def delivery_location(self) -> str | None:
+        """Use the registered department for future handoffs; preserve legacy offices."""
+        department = (self.account.professor_department if self.account and self.account.professor_department
+                      else self.department)
+        return DELIVERY_LOCATIONS_BY_DEPARTMENT.get(department) or self.office
 
     @validates("name")
     def validate_name(self, key: str, value: str) -> str:

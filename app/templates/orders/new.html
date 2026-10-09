@@ -89,7 +89,7 @@
                <p>Your printed papers will be physically delivered to your Faculty. You can pay online or in cash to the delivery staff at handoff.</p>
               {% if own_professor %}<dl class="detail-list"><div class="detail-row"><dt>Name</dt><dd>{{ own_professor.name }}</dd></div>
                 <div class="detail-row"><dt>Department</dt><dd>{{ own_professor.department or 'Not listed' }}</dd></div>
-                <div class="detail-row"><dt>Office</dt><dd>{{ own_professor.office or 'Not listed' }}</dd></div>
+                <div class="detail-row"><dt>Delivery location</dt><dd>{{ own_professor.delivery_location or 'Not listed' }}</dd></div>
                 <div class="detail-row"><dt>Email</dt><dd>{{ own_professor.email }}</dd></div></dl>{% endif %}
                {% if own_professor %}<div class="managed-faculty"><span class="page-eyebrow">Destination · Faculty / Department</span><strong>{{ own_professor.faculty }}</strong>{% if own_professor.department %}<span>{{ own_professor.department }}</span>{% endif %}</div>{% endif %}
             {% else %}
@@ -97,7 +97,7 @@
             <select id="professor_id" name="professor_id" aria-describedby="professor-hint">
               <option value="">Select a professor</option>
               {% for professor in professors %}
-                <option value="{{ professor.id }}" data-name="{{ professor.name }}" data-department="{{ professor.department or 'Not listed' }}" data-faculty="{{ professor.faculty }}" data-office="{{ professor.office or 'Not listed' }}" data-email="{{ professor.email }}" {% if selected_professor_id == professor.id|string %}selected{% endif %}>{{ professor.name }} — {{ professor.faculty }}{% if professor.office %} · {{ professor.office }}{% endif %}</option>
+                <option value="{{ professor.id }}" data-name="{{ professor.name }}" data-department="{{ professor.account.professor_department or professor.department or 'Not listed' }}" data-faculty="{{ professor.faculty }}" data-office="{{ professor.delivery_location or 'Not listed' }}" data-email="{{ professor.email }}" {% if selected_professor_id == professor.id|string %}selected{% endif %}>{{ professor.name }} — {{ professor.faculty }}{% if professor.delivery_location %} · {{ professor.delivery_location }}{% endif %}</option>
               {% endfor %}
             </select>
             <p class="hint" id="professor-hint">The selected professor determines the Faculty. Blue and Silver staff will physically deliver the printed papers there. Online payment is required; no file is sent electronically.</p>
@@ -105,7 +105,7 @@
               <div class="summary-row"><dt>Name</dt><dd data-professor-name></dd></div>
               <div class="summary-row"><dt>Department</dt><dd data-professor-department></dd></div>
               <div class="summary-row"><dt>Faculty</dt><dd data-professor-faculty></dd></div>
-              <div class="summary-row"><dt>Office</dt><dd data-professor-office></dd></div>
+              <div class="summary-row"><dt>Delivery location</dt><dd data-professor-office></dd></div>
               <div class="summary-row"><dt>Email</dt><dd data-professor-email></dd></div>
             </dl>
             {% endif %}

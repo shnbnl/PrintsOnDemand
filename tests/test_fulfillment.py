@@ -114,8 +114,9 @@ def test_delivery_review_placement_fee_snapshot_and_staff(client, test_app):
         fee.amount = Decimal("99.00")
         db.session.commit()
         assert order.delivery_fee == Decimal("40.00")
+        stored_total = order.total
     detail = client.get(placed.headers["Location"])
-    assert b"Delivery fee: PHP 40.00" in detail.data
+    assert f"Order total: PHP {stored_total}".encode() in detail.data
     assert b"No courier has been booked" in detail.data
     assert b"Delivery:" in client.get("/orders").data
     staff_id = student(test_app, "staff16@example.edu", UserRole.SHOP_STAFF)

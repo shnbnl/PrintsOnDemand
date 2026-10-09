@@ -103,7 +103,7 @@
         <div class="summary-row"><dt>Professor</dt><dd>{{ order.professor_name }}</dd></div>
         <div class="summary-row"><dt>Faculty</dt><dd>{{ order.professor_faculty or 'Not recorded for this older order' }}</dd></div>
         <div class="summary-row"><dt>Department</dt><dd>{{ order.professor_department or 'Not listed' }}</dd></div>
-        <div class="summary-row"><dt>Office</dt><dd>{{ order.professor_office or 'Not listed' }}</dd></div>
+        <div class="summary-row"><dt>Delivery location</dt><dd>{{ order.professor_office or 'Not listed' }}</dd></div>
         <div class="summary-row"><dt>Email</dt><dd>{{ order.professor_email }}</dd></div>
       {% endif %}
       {% if order.destination and order.destination.value == 'PICKUP' %}

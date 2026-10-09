@@ -16,6 +16,7 @@
       <strong>{{ professor.account.name }}</strong><span>{{ professor.account.email }}</span>
       <span>Department: {{ professor.account.professor_department or 'Not supplied' }}</span>
       <span>Faculty: {{ professor.account.professor_faculty or ('Not applicable' if professor.account.professor_department in ('GE', 'SHS') else 'Not supplied') }}</span>
+      <span>Delivery location: {{ professor.delivery_location or 'Not listed' }}</span>
     </div>
     <div class="professor-toggle-list field-wide">
       {% for field in [form.is_active, form.direct_send_approved, form.accepts_student_deliveries] %}

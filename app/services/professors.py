@@ -107,21 +107,24 @@ def validate_professor_selection(
 def professor_snapshot(professor: Professor | None, *, faculty: str | None = None) -> dict | None:
     if professor is None:
         return None
+    department = (professor.account.professor_department if professor.account and professor.account.professor_department
+                  else professor.department)
     return {
         "id": professor.id,
         "name": professor.name,
         "email": professor.email,
-        "department": professor.department,
+        "department": department,
         "faculty": faculty or professor.faculty,
-        "office": professor.office,
+        "office": professor.delivery_location,
     }
 
 
 def assign_professor(order, professor: Professor, *, faculty: str | None = None) -> None:
+    details = professor_snapshot(professor, faculty=faculty)
     order.destination = OrderDestination.PROFESSOR
     order.professor = professor
-    order.professor_name = professor.name
-    order.professor_email = professor.email
-    order.professor_department = professor.department
-    order.professor_faculty = faculty or professor.faculty
-    order.professor_office = professor.office
+    order.professor_name = details["name"]
+    order.professor_email = details["email"]
+    order.professor_department = details["department"]
+    order.professor_faculty = details["faculty"]
+    order.professor_office = details["office"]

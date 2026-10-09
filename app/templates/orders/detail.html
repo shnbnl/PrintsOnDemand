@@ -43,7 +43,7 @@
         <p>Intended recipient: <strong>{{ order.professor_name }}</strong></p>
         <p>Department: {{ order.professor_department or 'Not listed' }}</p>
         <p>Faculty: {{ order.professor_faculty or 'Not recorded for this older order' }}</p>
-        <p>Office: {{ order.professor_office or 'Not listed' }}</p>
+        <p>Delivery location: {{ order.professor_office or 'Not listed' }}</p>
         <p>Email: {{ order.professor_email }}</p>
         <p>Blue and Silver staff physically deliver the printed papers to this Faculty. {% if order.delivered_at %}Staff recorded the handoff at {{ order.delivered_at.strftime('%Y-%m-%d %H:%M UTC') }}.{% else %}No physical handoff has been confirmed yet.{% endif %} No file is sent electronically.</p>
       </div>

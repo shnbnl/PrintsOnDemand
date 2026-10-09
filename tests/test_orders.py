@@ -206,8 +206,8 @@ def test_professor_checkout_review_confirmation_and_snapshot(client, test_app):
     assert b"Liza Navarro" not in selection.data
     reviewed = professor_review(client, file_id, shop_id, professor_id)
     assert reviewed.status_code == 200
-    assert b"Computer Engineering" in reviewed.data
-    assert b"Engineering Building 204" in reviewed.data
+    assert b"MITL" in reviewed.data
+    assert b"Einstein Building 1st Floor" in reviewed.data
     assert b"maria.santos@example.edu" in reviewed.data
     response = professor_place(
         client, file_id, shop_id, professor_id,
@@ -228,8 +228,8 @@ def test_professor_checkout_review_confirmation_and_snapshot(client, test_app):
         assert order.professor_id == professor_id
         assert order.professor_name == "Maria Santos"
         assert order.professor_email == "maria.santos@example.edu"
-        assert order.professor_department == "Computer Engineering"
-        assert order.professor_office == "Engineering Building 204"
+        assert order.professor_department == "MITL"
+        assert order.professor_office == "Einstein Building 1st Floor"
         assert order.status == OrderStatus.PENDING_PAYMENT
         assert order.total == Decimal("6.75")
         assert order.items[0].unit_price == Decimal("2.25")
@@ -283,11 +283,11 @@ def test_professor_rechecked_after_review_and_in_order_service(client, test_app)
         db.session.commit()
     assert professor_review(client, file_id, shop_id, professor_id).status_code == 200
     with test_app.app_context():
-        db.session.get(Professor, professor_id).office = "New Room"
+        db.session.get(Professor, professor_id).account.professor_department = "CCIS"
         db.session.commit()
     changed = professor_place(client, file_id, shop_id, professor_id)
     assert changed.status_code == 409
-    assert b"New Room" in changed.data
+    assert b"Einstein Building 3rd Floor" in changed.data
     assert professor_place(client, file_id, shop_id, professor_id).status_code == 302
 
 

@@ -96,12 +96,13 @@ def test_professor_pickup_and_faculty_destination_use_managed_profile(client, te
         account = db.session.get(User, owner)
         account.professor_id = managed
         account.professor_verification_status = ProfessorVerificationStatus.VERIFIED
-        account.professor_department = "MITL"  # Registration data is not authoritative.
+        account.professor_department = "MITL"
         db.session.commit()
     page = select_shop(client, file_id, blue)
     assert b'Scheduled Pickup' in page.data and b'Deliver to Faculty' in page.data
     assert b'Deliver to Professor' not in page.data and b'id="professor_id"' not in page.data
-    assert b'<strong>CCIS</strong>' in page.data and b'name="professor_faculty"' not in page.data
+    assert b'<strong>Einstein Building 1st Floor</strong>' in page.data
+    assert b'name="professor_faculty"' not in page.data
     assert post(client, "/checkout/fulfillment", configure(
         file_id, destination="PROFESSOR", professor_faculty="MITL",
     )).status_code == 400

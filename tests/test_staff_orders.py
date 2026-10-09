@@ -76,7 +76,7 @@ def test_staff_list_detail_and_shop_isolation(client, test_app):
     assert b"SUBMITTED" in listing.data and b"PENDING_PAYMENT" in listing.data
     detail = client.get(a)
     assert detail.status_code == 200
-    for expected in (b"lecture.pdf", b"A4", b"Grayscale", b"PHP 6.75", b"DEMO-REF-1234", b"Maria Santos", b"Computer Engineering", b"Engineering Building 204"):
+    for expected in (b"lecture.pdf", b"A4", b"Grayscale", b"PHP 6.75", b"DEMO-REF-1234", b"Maria Santos", b"MITL", b"Einstein Building 1st Floor"):
         assert expected in detail.data
     assert key.encode() not in detail.data
     assert b"instance/uploads" not in detail.data

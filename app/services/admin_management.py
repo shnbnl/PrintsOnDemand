@@ -6,7 +6,7 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from app.extensions import db
 from app.models import Order, PrintingShop, Professor, ProfessorVerificationStatus, User, UserRole
 from app.services.professors import PROFESSOR_DELIVERY_SHOP
-from app.professor_faculties import faculty_for_account
+from app.professor_faculties import DELIVERY_LOCATIONS_BY_DEPARTMENT, faculty_for_account
 
 
 class ManagementError(ValueError):
@@ -28,6 +28,7 @@ def verify_professor_with_profile(account: User) -> Professor:
     profile.department = account.professor_department or profile.department
     profile.faculty = (faculty_for_account(account.professor_department, account.professor_faculty)
                        if account.professor_department else profile.faculty)
+    profile.office = DELIVERY_LOCATIONS_BY_DEPARTMENT.get(account.professor_department) or profile.office
     account.professor = profile
     account.professor_verification_status = ProfessorVerificationStatus.VERIFIED
     db.session.add(profile)
@@ -50,6 +51,7 @@ def save_professor_approvals(record: Professor, *, is_active: bool,
     record.department = account.professor_department or record.department
     record.faculty = (faculty_for_account(account.professor_department, account.professor_faculty)
                       if account.professor_department else record.faculty)
+    record.office = DELIVERY_LOCATIONS_BY_DEPARTMENT.get(account.professor_department) or record.office
     record.is_active = is_active
     record.direct_send_approved = direct_send_approved
     record.accepts_student_deliveries = accepts_student_deliveries

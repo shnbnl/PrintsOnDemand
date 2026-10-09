@@ -136,8 +136,8 @@ def test_professor_snapshot_and_print_details_remain_visible(client, test_app):
     response = client.get(url)
     assert response.status_code == 200
     assert b"Intended recipient: <strong>Maria Santos</strong>" in response.data
-    assert b"Computer Engineering" in response.data
-    assert b"Engineering Building 204" in response.data
+    assert b"MITL" in response.data
+    assert b"Einstein Building 1st Floor" in response.data
     assert b"maria.santos@example.edu" in response.data
     assert b"private-lecture.pdf" in response.data
     assert b"Grayscale" in response.data

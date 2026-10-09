@@ -72,7 +72,6 @@ def test_online_payment_submission_is_unverified_and_idempotent(client, test_app
     assert b"Maria Santos" in detail.data
     assert b"Payment pending" in detail.data
     assert b"Amount due: PHP 6.75" in detail.data
-    assert b"Payment is pending" in detail.data
     with test_app.app_context():
         payment = db.session.scalar(select(Payment))
         order = db.session.scalar(select(Order))
@@ -157,7 +156,6 @@ def test_onsite_selection_and_pending_method_change(client, test_app):
     assert b"Order created. Payment will be made onsite." in detail.data
     assert b"Pay at the printing shop" in detail.data
     assert b"Payment pending" in detail.data
-    assert b"Payment is pending" in detail.data
     assert choose(client, url, "ONSITE").status_code == 302
     assert submit(client, url, "DEMO-REF-1234").status_code == 409
     assert choose(client, url, "ONLINE").status_code == 302

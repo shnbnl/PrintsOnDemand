@@ -7,7 +7,7 @@ from sqlalchemy import select
 
 from app.extensions import db
 from app.models import Professor, ProfessorVerificationStatus, User, UserRole
-from app.professor_faculties import FACULTIES_BY_DEPARTMENT
+from app.professor_faculties import DELIVERY_LOCATIONS_BY_DEPARTMENT, FACULTIES_BY_DEPARTMENT
 from app.services.admin_management import verify_professor_with_profile
 from app.services.professors import selectable_professors
 from test_auth import csrf_token, login, register
@@ -24,7 +24,7 @@ def test_registration_uses_exact_department_choices_and_rejects_arbitrary_values
     page = client.get("/auth/register?account_type=PROFESSOR")
     assert department_options(page) == [b""] + [name.encode() for name in FACULTIES_BY_DEPARTMENT]
     assert b'"CMET"' in page.data and b'"Marine Engineering"' in page.data
-    assert b'"IECELL"' not in page.data
+    assert b'"IECELL"' not in page.data and b'value="GE"' not in page.data
     missing = register(client, account_type="PROFESSOR", name="Maria Santos",
                        email="maria.santos@example.edu")
     assert missing.status_code == 200 and b"Select your department" in missing.data
@@ -76,6 +76,28 @@ def test_mitl_professor_can_select_civil_engineering(client, test_app):
         account = db.session.scalar(select(User))
         assert account.professor_department == "MITL"
         assert account.professor_faculty == "Civil Engineering"
+
+
+def test_ge_is_not_a_registration_department(client, test_app):
+    response = register(client, account_type="PROFESSOR", name="GE Professor",
+                        email="ge@example.edu", professor_department="GE")
+    assert response.status_code == 200
+    with test_app.app_context():
+        assert db.session.scalar(select(User)) is None
+
+
+@pytest.mark.parametrize("department,location", DELIVERY_LOCATIONS_BY_DEPARTMENT.items())
+def test_verification_sets_department_delivery_location(client, test_app, department, location):
+    choices = FACULTIES_BY_DEPARTMENT[department]
+    response = register(client, account_type="PROFESSOR", name="Department Professor",
+                        email=f"{department.lower()}@example.edu", professor_department=department,
+                        professor_faculty=choices[0] if choices else "")
+    assert response.status_code == 302
+    with test_app.app_context():
+        account = db.session.scalar(select(User))
+        profile = verify_professor_with_profile(account)
+        assert profile.office == location
+        assert profile.delivery_location == location
 
 
 def test_professor_settings_show_information_without_delivery_control(client, test_app):
