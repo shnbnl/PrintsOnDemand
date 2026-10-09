@@ -234,6 +234,7 @@ h3 { font-weight: 710; letter-spacing: -.015em; }
 .price-cell { border-color: #d3dfeb; }
 .price-cell:has(input:checked) { border-color: var(--cobalt); background: #eaf2ff; }
 .checkout-fulfillment-form .destination-card { border-top: 3px solid var(--cobalt); }
+.fulfillment-fields:not([hidden]) { display: grid; gap: .8rem; margin-top: .85rem; }
 .checkout-payment-grid .form-stack { width: 100%; gap: .85rem; }
 .checkout-payment-method legend { margin-bottom: .55rem; font-size: 1.1rem; }
 .checkout-payment-options { margin: 0; padding: 1rem; gap: .75rem; }
