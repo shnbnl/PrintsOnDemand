@@ -8,11 +8,11 @@
   <header class="page-intro">
     <p class="page-eyebrow">Manual review</p>
     <h1>Payment verification</h1>
-    <p class="page-lead">Review online references and record onsite cash only after the shop receives the full amount.</p>
+    <p class="page-lead">Review online references and record cash only after the full amount is collected.</p>
   </header>
   <div class="operations-overview operations-overview--compact" aria-label="Payments awaiting review">
     <div><strong>{{ payments|length }}</strong><span>Payments awaiting staff action</span></div>
-    <p>Check online transfers independently. For onsite orders, confirm the cash received at the counter.</p>
+    <p>Check online transfers independently. Confirm shop or Faculty cash only after collection.</p>
   </div>
   {% if payments %}
     <ul class="order-list staff-operation-list" data-staggered-cards>
@@ -30,7 +30,7 @@
             {% if payment.payment_method.value == 'ONLINE' %}<div class="summary-row"><dt>Payment reference</dt><dd>{{ payment.payment_reference }}</dd></div>{% endif %}
             <div class="summary-row"><dt>{{ 'Submitted' if payment.payment_method.value == 'ONLINE' else 'Order placed' }}</dt><dd>{% set action_time = payment.submitted_at if payment.payment_method.value == 'ONLINE' else payment.order.created_at %}{% if action_time %}<time datetime="{{ action_time.isoformat() }}">{{ action_time.strftime('%Y-%m-%d %H:%M UTC') }}</time>{% else %}Unknown{% endif %}</dd></div>
           </dl>
-          <a class="card-action" href="{{ url_for('payment_verification.detail', payment_id=payment.id) }}">{{ 'Review online payment' if payment.payment_method.value == 'ONLINE' else 'Confirm onsite cash' }}</a>
+          <a class="card-action" href="{{ url_for('payment_verification.detail', payment_id=payment.id) }}">{{ 'Review online payment' if payment.payment_method.value == 'ONLINE' else 'Confirm Faculty cash' if payment.order.destination and payment.order.destination.value == 'PROFESSOR' else 'Confirm onsite cash' }}</a>
         </li>
       {% endfor %}
     </ul>

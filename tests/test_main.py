@@ -1,5 +1,6 @@
 """Foundation behavior and configuration checks."""
 
+import re
 import pytest
 from sqlalchemy import text
 
@@ -26,10 +27,12 @@ def test_index(client):
     assert b"Prints On Demand" in response.data
     assert b"Your campus printing desk" in response.data
     assert b"Find a printing shop, prepare your file" in response.data
-    assert b"Create student account" in response.data
-    assert b"Create professor account" in response.data
-    assert b'href="/auth/register?account_type=STUDENT"' in response.data
-    assert b'href="/auth/register?account_type=PROFESSOR"' in response.data
+    assert b">Log in</a>" in response.data
+    assert b">Sign up</a>" in response.data
+    assert response.data.count(b'href="/auth/register"') == 1
+    registration = client.get("/auth/register")
+    choices = re.findall(rb'<input[^>]*name="account_type"[^>]*>', registration.data)
+    assert len(choices) == 2 and all(b"checked" not in choice for choice in choices)
     assert b'<nav class="desktop-nav"' not in response.data
     assert b'<details class="mobile-nav"' not in response.data
     assert response.data.count(b"prints-on-demand-logo.png") >= 3

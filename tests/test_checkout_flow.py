@@ -535,7 +535,8 @@ def test_page_based_price_and_snapshots_are_server_authoritative_for_multiple_fi
     assert b"Total Printed Pages" in detail.data
 
 
-def test_professor_self_delivery_allows_cash_at_faculty(client, test_app):
+@pytest.mark.parametrize("confirmation_stage", ("before_processing", "after_delivery"))
+def test_professor_self_delivery_allows_cash_at_faculty(client, test_app, confirmation_stage):
     owner_id, shop_id, file_id = setup(client, test_app, professor=True, online=True)
     professor_id = approved_professor(test_app, name="Verified Teacher")
     with test_app.app_context():
@@ -568,15 +569,28 @@ def test_professor_self_delivery_allows_cash_at_faculty(client, test_app):
     sign_in(client, staff_id)
     staff_url = f"/staff/orders/{reference}"
     from test_staff_orders import action_post
-    assert action_post(client, staff_url, "start_processing").status_code == 302
+    dashboard = client.get("/shop")
+    assert b"<strong>1</strong><span>Payment actions</span>" in dashboard.data
+    assert reference.encode() in client.get("/payments/verification").data
+    review = client.get(f"/payments/verification/{payment_id}")
+    assert b"Confirm Faculty cash received" in review.data
+    if confirmation_stage == "before_processing":
+        assert client.post(f"/payments/verification/{payment_id}/confirm-onsite", data={
+            "csrf_token": token(review), "cash_received": "yes",
+        }).status_code == 302
+        with test_app.app_context():
+            order = db.session.scalar(select(Order))
+            assert order.status.value == "PROCESSING" and order.payment.payment_status == PaymentStatus.PAID
+    else:
+        assert action_post(client, staff_url, "start_processing").status_code == 302
     assert action_post(client, staff_url, "mark_ready").status_code == 302
     assert action_post(client, staff_url, "mark_delivered").status_code == 302
     assert action_post(client, staff_url, "complete_professor").status_code == 409
-    review = client.get(f"/payments/verification/{payment_id}")
-    assert b"Confirm cash received" in review.data
-    assert client.post(f"/payments/verification/{payment_id}/confirm-onsite", data={
-        "csrf_token": token(review), "cash_received": "yes",
-    }).status_code == 302
+    if confirmation_stage == "after_delivery":
+        review = client.get(f"/payments/verification/{payment_id}")
+        assert client.post(f"/payments/verification/{payment_id}/confirm-onsite", data={
+            "csrf_token": token(review), "cash_received": "yes",
+        }).status_code == 302
     with test_app.app_context():
         order = db.session.scalar(select(Order))
         assert order.status.value == "DELIVERED" and order.payment.payment_status == PaymentStatus.PAID

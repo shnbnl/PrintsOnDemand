@@ -66,6 +66,18 @@ def test_registration_saves_faculty_from_its_selected_department(client, test_ap
                         professor_faculty="Computer Science").status_code == 200
 
 
+def test_mitl_professor_can_select_civil_engineering(client, test_app):
+    assert "Civil Engineering" in FACULTIES_BY_DEPARTMENT["MITL"]
+    response = register(client, account_type="PROFESSOR", name="Civil Professor",
+                        email="civil@example.edu", professor_department="MITL",
+                        professor_faculty="Civil Engineering")
+    assert response.status_code == 302
+    with test_app.app_context():
+        account = db.session.scalar(select(User))
+        assert account.professor_department == "MITL"
+        assert account.professor_faculty == "Civil Engineering"
+
+
 def test_professor_settings_show_information_without_delivery_control(client, test_app):
     profile_id = approved_professor(test_app, accepts=False, linked=False)
     assert register(client, account_type="PROFESSOR", name="Maria Santos",

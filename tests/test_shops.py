@@ -189,6 +189,23 @@ def test_student_list_search_and_detail_only_show_active_shops(client, test_app)
     assert client.get(f"/shops/{inactive_id}").status_code == 404
 
 
+def test_shop_detail_places_fees_beside_services_above_prices(client, test_app):
+    shop_id = add_shop(test_app)
+    with test_app.app_context():
+        db.session.add(ShopService(shop_id=shop_id, service_type=ServiceType.RUSH_PRINTING))
+        db.session.add(ShopFee(shop_id=shop_id, fee_type=FeeType.RUSH_PRINTING,
+                               amount=Decimal("20.00")))
+        db.session.commit()
+    add_user(test_app, UserRole.STUDENT, "student@example.com")
+    login(client, "student@example.com")
+
+    detail = client.get(f"/shops/{shop_id}")
+    assert detail.status_code == 200
+    html = detail.get_data(as_text=True)
+    assert html.index("Services offered") < html.index("Additional fees") < html.index("Pricelist")
+    assert 'class="shop-detail-grid"' in html
+
+
 def test_student_cannot_modify_shops_or_prices(client, test_app):
     shop_id = add_shop(test_app)
     add_user(test_app, UserRole.STUDENT, "student@example.com")

@@ -56,7 +56,8 @@ def faculty_cash_handoff_query():
     return and_(
         Order.destination == OrderDestination.PROFESSOR,
         Order.professor_recipient_type == "SELF",
-        Order.status == OrderStatus.DELIVERED,
+        Order.status.in_((OrderStatus.PENDING_PAYMENT, OrderStatus.PROCESSING,
+                          OrderStatus.READY, OrderStatus.DELIVERED)),
         Order.shop_id.in_(select(PrintingShop.id).where(PrintingShop.name == PROFESSOR_DELIVERY_SHOP)),
         Order.user_id.in_(select(User.id).where(User.role == UserRole.PROFESSOR)),
     )
@@ -132,17 +133,18 @@ def decide_payment(actor, payment_id: int, *, reject: bool, reason: str = "") ->
 
 
 def confirm_onsite_cash(actor, payment_id: int) -> Payment:
-    """Record collected cash; start printing unless Faculty delivery is already done."""
+    """Record collected cash; start printing if the order has not begun yet."""
     payment = review_payment(actor, payment_id)
     order = payment.order
     if payment.payment_method != PaymentMethod.ONSITE or payment.payment_status != PaymentStatus.PENDING:
         raise VerificationError("This onsite payment is no longer awaiting cash. Reload the page.", 409)
-    faculty_handoff = (order.destination == OrderDestination.PROFESSOR
-                       and order.professor_recipient_type == "SELF"
-                       and order.status == OrderStatus.DELIVERED
-                       and order.shop.name == PROFESSOR_DELIVERY_SHOP
-                       and order.user.role == UserRole.PROFESSOR)
-    if (not (faculty_handoff or (order.status == OrderStatus.PENDING_PAYMENT
+    faculty_cash = (order.destination == OrderDestination.PROFESSOR
+                    and order.professor_recipient_type == "SELF"
+                    and order.status in (OrderStatus.PENDING_PAYMENT, OrderStatus.PROCESSING,
+                                         OrderStatus.READY, OrderStatus.DELIVERED)
+                    and order.shop.name == PROFESSOR_DELIVERY_SHOP
+                    and order.user.role == UserRole.PROFESSOR)
+    if (not (faculty_cash or (order.status == OrderStatus.PENDING_PAYMENT
                                 and order.destination != OrderDestination.PROFESSOR))
             or payment.payment_reference is not None
             or payment.amount != order.total or payment.currency != order.currency):
@@ -169,7 +171,7 @@ def confirm_onsite_cash(actor, payment_id: int) -> Payment:
     if recorded.rowcount != 1:
         db.session.rollback()
         raise VerificationError("This payment changed during review. Reload the page.", 409)
-    if not faculty_handoff:
+    if order.status == OrderStatus.PENDING_PAYMENT:
         started = db.session.execute(update(Order).where(
             Order.id == order.id, Order.status == OrderStatus.PENDING_PAYMENT,
             Order.total == payment.amount, Order.currency == payment.currency,

@@ -4,9 +4,10 @@ from flask import Blueprint, render_template, url_for
 from flask_login import current_user
 
 from app.authorization import roles_required
-from app.models import OrderDestination, OrderStatus, PaymentMethod, PaymentStatus, UserRole
+from app.models import OrderStatus, UserRole
 from app.routes.shops import detail_context
 from app.services.order_processing import available_action, list_staff_orders
+from app.services.payment_verification import review_queue
 
 
 access_bp = Blueprint("access", __name__)
@@ -38,17 +39,10 @@ def professor():
 def shop():
     if current_user.shop is not None:
         orders = list_staff_orders(current_user)
+        payment_ids = {payment.id for payment in review_queue(current_user)}
+
         def needs_payment_action(order):
-            payment = order.payment
-            return bool(payment and order.status == OrderStatus.PENDING_PAYMENT
-                        and payment.amount == order.total and payment.currency == order.currency
-                        and ((payment.payment_method == PaymentMethod.ONLINE
-                              and payment.payment_status == PaymentStatus.SUBMITTED
-                             and payment.payment_reference)
-                             or (payment.payment_method == PaymentMethod.ONSITE
-                                 and payment.payment_status == PaymentStatus.PENDING
-                                 and payment.payment_reference is None
-                                 and order.destination != OrderDestination.PROFESSOR)))
+            return bool(order.payment and order.payment.id in payment_ids)
 
         queue = {
             "payment_review": sum(needs_payment_action(order) for order in orders),
@@ -61,7 +55,8 @@ def shop():
         attention_orders = [order for order in orders if needs_payment_action(order)
                             or available_action(order) == "start_processing"][:5]
         return render_template("shops/detail.html", staff_view=True, queue=queue,
-                               attention_orders=attention_orders, recent_orders=orders[:5],
+                               attention_orders=attention_orders, payment_action_ids=payment_ids,
+                               recent_orders=orders[:5],
                                **detail_context(current_user.shop))
     return render_template("main/protected.html", title="Shop Staff access")
 

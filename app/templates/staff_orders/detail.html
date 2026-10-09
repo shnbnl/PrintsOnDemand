@@ -89,7 +89,7 @@
         {% if order.payment.payment_reference %}<div class="summary-row"><dt>Payment reference</dt><dd>{{ order.payment.payment_reference }}</dd></div>{% endif %}
       </dl>
       {% if order.payment.payment_method.value == 'ONLINE' and order.payment.payment_status.value == 'SUBMITTED' %}<p><a class="button button-secondary" href="{{ url_for('payment_verification.detail', payment_id=order.payment.id) }}">Review online payment</a></p>{% endif %}
-      {% if order.payment.payment_method.value == 'ONSITE' and order.payment.payment_status.value == 'PENDING' and (not order.destination or order.destination.value != 'PROFESSOR' or order.status.value == 'DELIVERED') %}<p><a class="button button-secondary" href="{{ url_for('payment_verification.detail', payment_id=order.payment.id) }}">{{ 'Confirm cash collected at Faculty' if order.destination and order.destination.value == 'PROFESSOR' else 'Confirm onsite cash after collection' }}</a></p>{% endif %}
+      {% if order.payment.payment_method.value == 'ONSITE' and order.payment.payment_status.value == 'PENDING' %}<p><a class="button button-secondary" href="{{ url_for('payment_verification.detail', payment_id=order.payment.id) }}">{{ 'Confirm cash collected at Faculty' if order.destination and order.destination.value == 'PROFESSOR' else 'Confirm onsite cash after collection' }}</a></p>{% endif %}
     {% else %}<p class="hint">No payment method selected. Payment has not been recorded as paid.</p>{% endif %}
   </section>
 

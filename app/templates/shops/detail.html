@@ -29,7 +29,7 @@
       </div>
       {% if attention_orders %}
         <div class="staff-attention"><h3>Next actions</h3><ul class="staff-attention-list">
-          {% for order in attention_orders %}{% set payment_action = order.payment and order.payment.payment_status.value in ('SUBMITTED', 'PENDING') %}<li><div><strong>{{ order.order_reference }}</strong><span>{{ order.user.name }} · {{ order.destination.label if order.destination else 'Fulfillment not selected' }}</span></div><a class="button button-secondary" href="{{ url_for('payment_verification.detail', payment_id=order.payment.id) if payment_action else url_for('staff_orders.detail', order_reference=order.order_reference) }}">{{ 'Confirm onsite cash' if payment_action and order.payment.payment_method.value == 'ONSITE' else ('Review online payment' if payment_action else 'Start printing') }}</a></li>{% endfor %}
+          {% for order in attention_orders %}{% set payment_action = order.payment and order.payment.id in payment_action_ids %}<li><div><strong>{{ order.order_reference }}</strong><span>{{ order.user.name }} · {{ order.destination.label if order.destination else 'Fulfillment not selected' }}</span></div><a class="button button-secondary" href="{{ url_for('payment_verification.detail', payment_id=order.payment.id) if payment_action else url_for('staff_orders.detail', order_reference=order.order_reference) }}">{{ 'Confirm Faculty cash' if payment_action and order.payment.payment_method.value == 'ONSITE' and order.destination and order.destination.value == 'PROFESSOR' else 'Confirm onsite cash' if payment_action and order.payment.payment_method.value == 'ONSITE' else 'Review online payment' if payment_action else 'Start printing' }}</a></li>{% endfor %}
         </ul></div>
       {% else %}<div class="staff-queue-empty"><strong>Queue is clear</strong><p>New online reviews, onsite cash orders, and paid jobs will appear here.</p></div>{% endif %}
     </section>
@@ -49,7 +49,7 @@
     </section>
   {% endif %}
 
-  <div class="shop-detail-grid">
+  <div class="shop-detail-grid{{ ' shop-detail-grid--no-fees' if not fees else '' }}">
     <section class="content-card">
       <p class="page-eyebrow">What this shop offers</p>
       <h2>Services offered</h2>
@@ -57,6 +57,12 @@
         <ul class="chip-list">{% for service in services %}<li>{{ service.service_type.label }}</li>{% endfor %}</ul>
       {% else %}<p>No services are currently listed.</p>{% endif %}
     </section>
+    {% if fees %}
+      <section class="content-card shop-fees-card">
+        <h2>Additional fees</h2><p class="hint">Rush printing adds ₱20 once per order when enabled and selected.</p>
+        <ul class="summary-list">{% for fee in fees %}<li class="summary-row"><span>{{ fee.fee_type.label }}{% if fee.is_demo %} (sample){% endif %}</span><strong>{% if fee.fee_type.value == 'RUSH_PRINTING' %}₱20.00 per order{% else %}₱{{ '%.2f'|format(fee.amount) }}{% endif %}</strong></li>{% endfor %}</ul>
+      </section>
+    {% endif %}
     <section class="content-card pricelist-card">
       <p class="page-eyebrow">Current rates</p>
       <h2>Pricelist</h2>
@@ -76,12 +82,6 @@
         </table>
       </div>
     </section>
-    {% if fees %}
-      <section class="content-card">
-        <h2>Additional fees</h2><p class="hint">Rush printing adds ₱20 once per order when enabled and selected.</p>
-        <ul class="summary-list">{% for fee in fees %}<li class="summary-row"><span>{{ fee.fee_type.label }}{% if fee.is_demo %} (sample){% endif %}</span><strong>{% if fee.fee_type.value == 'RUSH_PRINTING' %}₱20.00 per order{% else %}₱{{ '%.2f'|format(fee.amount) }}{% endif %}</strong></li>{% endfor %}</ul>
-      </section>
-    {% endif %}
   </div>
 
 {% endblock %}

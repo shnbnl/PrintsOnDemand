@@ -178,6 +178,7 @@ section section { margin-bottom: 0; background: var(--surface-muted); box-shadow
 .shop-detail-grid > *, .detail-grid > * { min-width: 0; margin: 0; }
 .pricing-table { min-width: 29rem; }
 .pricelist-card { grid-column: 1 / -1; }
+.shop-detail-grid--no-fees > :first-child { grid-column: 1 / -1; }
 .action-panel { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; border-color: #b9c8d7; background: #eaf0f6; }
 .action-panel > div:first-child { max-width: 36rem; }
 .shop-card p { margin-bottom: 0.45rem; }

@@ -2,7 +2,7 @@
 
 FACULTIES_BY_DEPARTMENT = {
     "MITL": (
-        "Chemical Engineering", "Industrial Engineering", "Architecture",
+        "Chemical Engineering", "Civil Engineering", "Industrial Engineering", "Architecture",
         "Computer Engineering", "Electronics Engineering", "Mechanical Engineering",
         "Electrical Engineering",
     ),

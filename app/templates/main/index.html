@@ -32,9 +32,8 @@
             <a class="button button-primary" href="{{ url_for('access.admin') }}">Go to admin management</a>
           {% endif %}
         {% else %}
-          <a class="button button-primary" href="{{ url_for('auth.login') }}" data-landing-login>Log-in</a>
-          <a class="button button-secondary" href="{{ url_for('auth.register', account_type='STUDENT') }}" data-landing-entry>Create student account</a>
-          <a class="button button-secondary" href="{{ url_for('auth.register', account_type='PROFESSOR') }}" data-landing-entry>Create professor account</a>
+          <a class="button button-primary" href="{{ url_for('auth.login') }}" data-landing-login>Log in</a>
+          <a class="button button-secondary" href="{{ url_for('auth.register') }}" data-landing-entry>Sign up</a>
         {% endif %}
         </div>
       </div>
