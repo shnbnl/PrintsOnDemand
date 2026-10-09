@@ -1,6 +1,6 @@
 """Owner-only order selection, quote review, creation, and detail."""
 
-from flask import Blueprint, abort, current_app, redirect, render_template, request, send_file, session, url_for
+from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, send_file, session, url_for
 from io import BytesIO
 from flask_login import current_user
 from datetime import timedelta
@@ -17,6 +17,7 @@ from app.models import (
 from app.order_forms import PlaceOrderForm, SelectProfessorForm
 from app.payment_forms import PaymentMethodForm, PaymentReferenceForm
 from app.services.orders import create_order
+from app.services.order_processing import ProcessingError, complete_customer_order, customer_can_complete
 from app.services.fulfillment import (
     FIELDS, FulfillmentError, availability, slot_options, today, validate_fulfillment,
 )
@@ -66,12 +67,13 @@ def index():
         statement = statement.join(Order.payment).where(
             Payment.payment_status == PaymentStatus[payment_status]
         )
-    statement = statement.options(selectinload(Order.payment)).order_by(
+    statement = statement.options(selectinload(Order.payment), selectinload(Order.shop)).order_by(
         Order.created_at.desc(), Order.id.desc()
     )
     orders = db.paginate(statement, page=page, per_page=HISTORY_PAGE_SIZE, error_out=False)
     return render_template(
         "orders/index.html", orders=orders, status=status, payment_status=payment_status,
+        completable_ids={order.id for order in orders.items if customer_can_complete(order)},
         order_statuses=OrderStatus, payment_statuses=PaymentStatus,
     )
 
@@ -179,7 +181,7 @@ def render_selection(*, file_ids=None, shop_id=None, destination=None, professor
         shop_availability=shop_availability,
         pickup_slots=slot_options(OrderDestination.PICKUP),
         delivery_slots=slot_options(OrderDestination.DELIVERY),
-        pickup_min=(today() + timedelta(days=max(1, current_app.config["PICKUP_LEAD_DAYS"]))).isoformat(),
+        pickup_min=(today() + timedelta(days=max(0, current_app.config["PICKUP_LEAD_DAYS"]))).isoformat(),
         pickup_max=(today() + timedelta(days=current_app.config["PICKUP_MAX_DAYS"])).isoformat(),
         delivery_min=(today() + timedelta(days=max(1, current_app.config["DELIVERY_LEAD_DAYS"]))).isoformat(),
         delivery_max=(today() + timedelta(days=current_app.config["DELIVERY_MAX_DAYS"])).isoformat(),
@@ -363,6 +365,17 @@ def detail(order_reference: str):
     return render_order_detail(order)
 
 
+@orders_bp.post("/<order_reference>/complete")
+@roles_required(*ORDERING_ROLES)
+def complete(order_reference: str):
+    try:
+        complete_customer_order(current_user, order_reference)
+    except ProcessingError as error:
+        abort(error.status_code, description=error.message)
+    flash("Order completed. Thank you for confirming receipt.", "success")
+    return redirect(url_for("orders.detail", order_reference=order_reference))
+
+
 @orders_bp.get("/<order_reference>/files/<int:item_id>/download")
 @roles_required(*ORDERING_ROLES)
 def download_file(order_reference: str, item_id: int):
@@ -401,6 +414,7 @@ def render_order_detail(order, *, payment_error=None, professor_error=None, stat
         reference_form = PaymentReferenceForm()
     return render_template(
         "orders/detail.html", order=order, professor_form=professor_form(order),
+        can_complete=customer_can_complete(order),
         method_form=method_form, reference_form=reference_form,
         online_details=online_details,
         payment_qr_image_url=url_for("orders.payment_qr", order_reference=order.order_reference) if online_details else None,

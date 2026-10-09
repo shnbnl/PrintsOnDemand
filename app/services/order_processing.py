@@ -70,6 +70,38 @@ def available_action(order: Order) -> str | None:
     return NEXT_ACTION.get(order.status) if order.status != OrderStatus.DELIVERED else None
 
 
+def customer_can_complete(order: Order) -> bool:
+    """Only a paid order ready for handoff can be confirmed by its customer."""
+    return available_action(order) in {"complete", "complete_professor"}
+
+
+def complete_customer_order(actor, order_reference: str) -> Order:
+    if not getattr(actor, "is_authenticated", False) or actor.role not in {UserRole.STUDENT, UserRole.PROFESSOR}:
+        raise ProcessingError("Customer access required.", 403)
+    order = db.session.scalar(select(Order).where(
+        Order.order_reference == order_reference, Order.user_id == actor.id,
+    ))
+    if order is None:
+        raise ProcessingError("Order not found.", 404)
+    if not customer_can_complete(order):
+        raise ProcessingError("This order is not ready to be completed.", 409)
+
+    now = utc_now()
+    paid_payment = exists(select(Payment.id).where(
+        Payment.order_id == Order.id, Payment.payment_status == PaymentStatus.PAID,
+        Payment.amount == Order.total, Payment.currency == Order.currency,
+    ))
+    result = db.session.execute(update(Order).where(
+        Order.id == order.id, Order.user_id == actor.id,
+        Order.status == order.status, paid_payment,
+    ).values(status=OrderStatus.COMPLETED, updated_at=now, completed_at=now))
+    if result.rowcount != 1:
+        db.session.rollback()
+        raise ProcessingError("The order changed. Reload it before trying again.", 409)
+    db.session.commit()
+    return order
+
+
 def advance_order(actor, order_reference: str, action: str) -> Order:
     order = get_staff_order(actor, order_reference)
     transition = TRANSITIONS.get(action)

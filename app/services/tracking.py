@@ -42,9 +42,10 @@ def build_tracking(order: Order) -> OrderTracking:
             OrderStatus.PENDING_PAYMENT: "Wait for the printing shop to start processing.",
             OrderStatus.PROCESSING: "The printing shop is processing your order.",
             OrderStatus.READY: ("The printed papers are ready for physical delivery to the professor's Faculty."
-                                if order.destination == OrderDestination.PROFESSOR else "The print job is ready for the applicable next step."),
-            OrderStatus.DELIVERED: "Blue and Silver staff recorded delivery to the professor's Faculty.",
-            OrderStatus.COMPLETED: "The shop processing workflow is complete.",
+                                if order.destination == OrderDestination.PROFESSOR else
+                                "Your printed papers are ready. Confirm completion after receiving them."),
+            OrderStatus.DELIVERED: "Blue and Silver staff recorded delivery to the professor's Faculty. Confirm completion after the handoff.",
+            OrderStatus.COMPLETED: "This order is complete.",
         }[order.status]
     elif payment.payment_status == PaymentStatus.REJECTED:
         method = payment.payment_method.value.title()
@@ -107,7 +108,7 @@ def build_tracking(order: Order) -> OrderTracking:
     if order.delivered_at:
         steps.append(TrackingStep("Delivered to Faculty", "Blue and Silver staff confirmed physical handoff of the printed papers.", order.delivered_at))
     if order.completed_at:
-        steps.append(TrackingStep("Order completed", "The shop completed its processing workflow.", order.completed_at))
+        steps.append(TrackingStep("Order completed", "This order was marked complete.", order.completed_at))
     steps.append(TrackingStep("Current order status", order_detail))
 
     return OrderTracking(

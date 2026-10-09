@@ -5,7 +5,7 @@ from sqlalchemy import select
 from app.extensions import db
 from app.models import Order, Professor, ProfessorVerificationStatus, User
 from test_checkout_flow import print_fields, post, setup
-from test_fulfillment import delivery_fields, offer_delivery
+from test_fulfillment import date_after, delivery_fields, offer_delivery
 from test_orders import approved_professor, offer_professor_service, pickup_fields, shop
 
 
@@ -17,6 +17,16 @@ def select_shop(client, file_id, shop_id):
     assert post(client, "/checkout/upload", {"file_id": str(file_id)}).status_code == 302
     assert post(client, "/checkout/shop", {"shop_id": str(shop_id), **print_fields(file_id)}).status_code == 302
     return client.get("/checkout/fulfillment")
+
+
+def test_guided_checkout_accepts_same_day_pickup(client, test_app):
+    _, shop_id, file_id = setup(client, test_app)
+    page = select_shop(client, file_id, shop_id)
+    pickup_today = date_after(0)
+    assert f'id="pickup_date" name="pickup_date" type="date" min="{pickup_today}"'.encode() in page.data
+    assert post(client, "/checkout/fulfillment", {
+        "destination": "PICKUP", "pickup_date": pickup_today, "pickup_slot": "14:00-15:00",
+    }).status_code == 302
 
 
 def test_student_professor_option_only_at_blue_and_managed_faculty_is_immutable(client, test_app):

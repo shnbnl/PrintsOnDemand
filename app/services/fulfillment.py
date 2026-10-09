@@ -153,7 +153,8 @@ def _scheduled(values: dict[str, str], prefix: str, shop: PrintingShop) -> tuple
     start = today()
     lead = current_app.config[f"{prefix.upper()}_LEAD_DAYS"]
     window = current_app.config[f"{prefix.upper()}_MAX_DAYS"]
-    if requested < start + timedelta(days=max(1, lead)) or requested > start + timedelta(days=window):
+    minimum_lead = max(0 if prefix == "pickup" else 1, lead)
+    if requested < start + timedelta(days=minimum_lead) or requested > start + timedelta(days=window):
         raise FulfillmentError(f"Select a {prefix} date within the available scheduling window.")
     try:
         valid_slots = dict(slot_options(OrderDestination.PICKUP if prefix == "pickup" else OrderDestination.DELIVERY))

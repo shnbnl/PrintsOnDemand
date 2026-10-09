@@ -80,6 +80,20 @@ def test_pickup_review_placement_history_and_tracking(client, test_app):
     assert b"Scheduled Pickup" in client.get("/orders").data
 
 
+def test_same_day_pickup_is_selectable_and_accepted(client, test_app):
+    _, shop_id, file_id = setup(client, test_app)
+    pickup_today = date_after(0)
+    # The date picker and server validation must agree on the Philippine date.
+    selection = client.get("/orders/new", query_string={"shop_id": shop_id, "file_id": file_id})
+    assert f'min="{pickup_today}"'.encode() in selection.data
+    fields = {**pickup_fields(), "pickup_date": pickup_today}
+    assert review(client, shop_id, file_id, fields).status_code == 200
+    placed = place(client, shop_id, file_id, fields)
+    assert placed.status_code == 302
+    with test_app.app_context():
+        assert db.session.scalar(select(Order)).pickup_date.isoformat() == pickup_today
+
+
 def test_delivery_review_placement_fee_snapshot_and_staff(client, test_app):
     _, shop_id, file_id = setup(client, test_app, delivery=True)
     fields = delivery_fields()

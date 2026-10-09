@@ -34,7 +34,7 @@
       <p class="detail-label">Payment</p><p>{{ payment_badge(order.payment) }}</p>
       <p class="detail-label">Order status</p><p>{{ order_badge(order) }}</p>
     </div>
-    <div class="order-next-step"><p><strong>Next step:</strong> {{ tracking.next_step }}</p><a class="order-tracking-link" href="#tracking">View order tracking</a></div>
+    <div class="order-next-step"><p><strong>Next step:</strong> {{ tracking.next_step }}</p><a class="order-tracking-link" href="#tracking">View order tracking</a>{% if can_complete %}<form method="post" action="{{ url_for('orders.complete', order_reference=order.order_reference) }}" class="order-complete-form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><p class="hint">Received your printed order? Confirm it here.</p><button class="button button-primary flow-next" type="submit">Complete order</button></form>{% endif %}</div>
   </section>
   <div class="order-detail-grid">
     <div class="order-detail-column">

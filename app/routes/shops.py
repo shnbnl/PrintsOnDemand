@@ -17,6 +17,12 @@ from app.models import ServiceType, FeeType
 
 shops_bp = Blueprint("shops", __name__, url_prefix="/shops")
 SCHOOL_AREA_CENTER = {"lat": 14.243375, "lng": 121.112716}
+SHOP_DISPLAY_RATINGS = {
+    "Blue and Silver Bookstore": 4.0,
+    "Iced Design and Prints": 4.5,
+    "CHALECOSPOT": 4.0,
+    "Pixels Print and Press": 5.0,
+}
 
 
 def detail_context(shop: PrintingShop) -> dict:
@@ -80,6 +86,7 @@ def map_markers(query: str = "") -> list[dict]:
         markers.append({
             "id": shop.id,
             "name": shop.name,
+            "rating": SHOP_DISPLAY_RATINGS.get(shop.name),
             "description": shop.description,
             "address": shop.address,
             "hours": f"{shop.opening_time:%I:%M %p} - {shop.closing_time:%I:%M %p}",

@@ -87,10 +87,11 @@ def test_student_map_search_and_existing_shop_flow(client, test_app):
     assert shops[0]["services"] == ["Rush Printing"]
     assert shops[0]["prices"][2]["color"] == "₱8.75"
     assert set(shops[0]) == {
-        "id", "name", "description", "address", "hours", "services",
+        "id", "name", "rating", "description", "address", "hours", "services",
         "fulfillment", "fees", "prices", "is_sample", "position", "detail_url", "photo_url",
     }
     assert shops[0]["fulfillment"] == []
+    assert shops[0]["rating"] is None
     assert shops[0]["fees"] == [{
         "label": "Rush printing", "amount": "₱20.00 per order", "is_sample": False,
     }]
@@ -310,6 +311,16 @@ def test_exact_demo_coordinates_are_persisted_and_sent_to_map(client, test_app):
     add_user(test_app, UserRole.STUDENT, "exact-map@example.com")
     login(client, "exact-map@example.com")
     markers = map_data(client.get("/shops/map"))
+    expected_ratings = {
+        "Blue and Silver Bookstore": 4.0,
+        "Iced Design and Prints": 4.5,
+        "CHALECOSPOT": 4.0,
+        "Pixels Print and Press": 5.0,
+    }
+    assert {marker["name"]: marker["rating"] for marker in markers} == expected_ratings
+    panel = client.get("/shops/map").get_data(as_text=True)
+    for rating in expected_ratings.values():
+        assert f"Rated {rating:.1f} out of 5 stars" in panel
     assert len(markers) == len(FINAL_DEMO_COORDINATES) == 4
     assert {marker["name"] for marker in markers} == set(FINAL_DEMO_COORDINATES)
     for marker in markers:

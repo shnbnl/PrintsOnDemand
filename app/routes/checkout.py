@@ -389,7 +389,7 @@ def render_fulfillment(shop, *, fields=None, error=None, status=200):
         professors=professors, own_professor=own_professor,
         pickup_slots=slot_options(OrderDestination.PICKUP),
         delivery_slots=slot_options(OrderDestination.DELIVERY),
-        pickup_min=(today() + timedelta(days=max(1, current_app.config["PICKUP_LEAD_DAYS"]))).isoformat(),
+        pickup_min=(today() + timedelta(days=max(0, current_app.config["PICKUP_LEAD_DAYS"]))).isoformat(),
         pickup_max=(today() + timedelta(days=current_app.config["PICKUP_MAX_DAYS"])).isoformat(),
         delivery_min=(today() + timedelta(days=max(1, current_app.config["DELIVERY_LEAD_DAYS"]))).isoformat(),
         delivery_max=(today() + timedelta(days=current_app.config["DELIVERY_MAX_DAYS"])).isoformat(),
