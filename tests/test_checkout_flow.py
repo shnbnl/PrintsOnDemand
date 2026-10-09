@@ -561,6 +561,8 @@ def test_professor_self_delivery_allows_cash_at_faculty(client, test_app, confir
         assert order.payment.payment_status == PaymentStatus.PENDING
         reference = order.order_reference
         payment_id = order.payment.id
+    customer_detail = client.get(f"/orders/{reference}")
+    assert b"You can pay online or give cash to the Blue and Silver delivery staff" not in customer_detail.data
     staff_id = student(test_app, "faculty-cash-staff@example.edu", role=UserRole.SHOP_STAFF)
     with test_app.app_context():
         from app.models import User

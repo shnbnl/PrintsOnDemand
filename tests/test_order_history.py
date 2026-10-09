@@ -197,4 +197,4 @@ def test_recorded_completed_and_paid_state_appears_without_new_events(client, te
     assert b"Processing started" in detail.data
     assert b"Order ready" in detail.data
     assert b"Order completed" in detail.data
-    assert b"Shop processing is reflected" in detail.data
+    assert b"Shop processing is reflected" not in detail.data
