@@ -77,22 +77,22 @@ def today() -> date:
     return datetime.now(ZoneInfo(current_app.config["FULFILLMENT_TIMEZONE"])).date()
 
 
-def slot_options(method: OrderDestination) -> tuple[tuple[str, str], ...]:
-    key = "PICKUP_TIME_SLOTS" if method == OrderDestination.PICKUP else "DELIVERY_TIME_SLOTS"
+def slot_options(shop: PrintingShop) -> tuple[tuple[str, str], ...]:
+    """Offer hourly windows within this shop's actual operating hours."""
+    opening = shop.opening_time.hour * 60 + shop.opening_time.minute
+    closing = shop.closing_time.hour * 60 + shop.closing_time.minute
     options = []
-    for value in current_app.config[key]:
-        match = re.fullmatch(r"(\d{2}):(\d{2})-(\d{2}):(\d{2})", value)
-        if not match:
-            raise RuntimeError(f"Invalid configured {key} slot: {value!r}")
-        start_hour, start_minute, end_hour, end_minute = map(int, match.groups())
-        try:
-            start = time(start_hour, start_minute)
-            end = time(end_hour, end_minute)
-        except ValueError as error:
-            raise RuntimeError(f"Invalid configured {key} slot: {value!r}") from error
-        if start >= end:
-            raise RuntimeError(f"Invalid configured {key} slot: {value!r}")
-        options.append((value, f"{start.strftime('%I:%M %p').lstrip('0')}–{end.strftime('%I:%M %p').lstrip('0')}"))
+    start = opening
+    while start < closing:
+        # Align to the next clock hour so 10:00–11:00 means the same at every shop.
+        next_hour = (start // 60 + 1) * 60
+        end = min(next_hour, closing)
+        if end - start >= 30:
+            begin_time, end_time = time(start // 60, start % 60), time(end // 60, end % 60)
+            value = f"{begin_time:%H:%M}-{end_time:%H:%M}"
+            label = f"{begin_time.strftime('%I:%M %p').lstrip('0')}–{end_time.strftime('%I:%M %p').lstrip('0')}"
+            options.append((value, label))
+        start = end
     return tuple(options)
 
 
@@ -122,12 +122,9 @@ def slot_fits_shop(shop: PrintingShop, value: str) -> bool:
 
 
 def availability(shop: PrintingShop) -> dict[str, bool]:
-    pickup = service_available(shop.id, ServiceType.PICKUP) and any(
-        slot_fits_shop(shop, value) for value, _ in slot_options(OrderDestination.PICKUP)
-    )
-    delivery = service_available(shop.id, ServiceType.DELIVERY) and any(
-        slot_fits_shop(shop, value) for value, _ in slot_options(OrderDestination.DELIVERY)
-    )
+    has_slots = bool(slot_options(shop))
+    pickup = service_available(shop.id, ServiceType.PICKUP) and has_slots
+    delivery = service_available(shop.id, ServiceType.DELIVERY) and has_slots
     if delivery:
         try:
             delivery_fee_for(shop.id)
@@ -154,13 +151,10 @@ def _scheduled(values: dict[str, str], prefix: str, shop: PrintingShop) -> tuple
     start = today()
     lead = current_app.config[f"{prefix.upper()}_LEAD_DAYS"]
     window = current_app.config[f"{prefix.upper()}_MAX_DAYS"]
-    minimum_lead = max(0 if prefix == "pickup" else 1, lead)
+    minimum_lead = max(0, lead)
     if requested < start + timedelta(days=minimum_lead) or requested > start + timedelta(days=window):
         raise FulfillmentError(f"Select a {prefix} date within the available scheduling window.")
-    try:
-        valid_slots = dict(slot_options(OrderDestination.PICKUP if prefix == "pickup" else OrderDestination.DELIVERY))
-    except RuntimeError:
-        raise
+    valid_slots = dict(slot_options(shop))
     if raw_slot not in valid_slots:
         raise FulfillmentError(f"Select a valid {prefix} time slot.")
     if not slot_fits_shop(shop, raw_slot):

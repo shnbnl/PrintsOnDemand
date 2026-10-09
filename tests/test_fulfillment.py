@@ -179,19 +179,17 @@ def test_delivery_requires_enabled_service_and_configured_fee(client, test_app):
         assert db.session.scalar(select(Order)) is None
 
 
-def test_shop_hours_and_configured_windows_are_authoritative(client, test_app):
+def test_shop_hours_and_date_windows_are_authoritative(client, test_app):
     _, shop_id, file_id = setup(client, test_app, delivery=True)
     with test_app.app_context():
         db.session.get(PrintingShop, shop_id).closing_time = time(14)
         db.session.commit()
     assert review(client, shop_id, file_id, pickup_fields()).status_code == 400
     assert review(client, shop_id, file_id, delivery_fields()).status_code == 400
-    test_app.config["PICKUP_TIME_SLOTS"] = ("10:00-11:00",)
     test_app.config["PICKUP_MAX_DAYS"] = 4
     good = {**pickup_fields(), "pickup_slot": "10:00-11:00"}
     assert review(client, shop_id, file_id, good).status_code == 200
     assert review(client, shop_id, file_id, {**good, "pickup_date": date_after(5)}).status_code == 400
-    test_app.config["DELIVERY_TIME_SLOTS"] = ("10:00-11:00",)
     test_app.config["DELIVERY_LEAD_DAYS"] = 4
     assert review(client, shop_id, file_id, {
         **delivery_fields(), "delivery_slot": "10:00-11:00",

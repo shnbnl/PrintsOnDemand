@@ -1,16 +1,18 @@
 """Guided checkout: order, payment, file ownership, and fulfillment boundaries."""
 
 from decimal import Decimal
+from datetime import datetime, time
 import hashlib
 from io import BytesIO
 import zipfile
+from zoneinfo import ZoneInfo
 
 import pytest
 
 from sqlalchemy import select
 
 from app.extensions import db
-from app.models import ColorMode, Order, PaperSize, PaymentMethod, PaymentStatus, PrintConfiguration, PrintPrice, PrintingShop, UploadedFile, UserRole
+from app.models import ColorMode, FeeType, Order, PaperSize, PaymentMethod, PaymentStatus, PrintConfiguration, PrintPrice, PrintingShop, ServiceType, ShopFee, ShopService, UploadedFile, UserRole
 from app.services.fulfillment import FulfillmentError
 from app.services.pricing import PricingError, quote_cart
 from app.storage import LocalStorage
@@ -156,6 +158,34 @@ def start(client, shop_id, file_id, *, quantity="2", destination=None):
     selected = post(client, "/checkout/shop", {"shop_id": str(shop_id), **print_fields(file_id, quantity=quantity)})
     assert selected.status_code == 302, selected.get_data(as_text=True)[:500]
     return post(client, "/checkout/fulfillment", destination or pickup_fields())
+
+
+@pytest.mark.parametrize("professor", [False, True])
+def test_fulfillment_dates_and_slots_follow_shop_hours_for_both_customer_roles(client, test_app, professor):
+    _, shop_id, file_id = setup(client, test_app, professor=professor)
+    with test_app.app_context():
+        store = db.session.get(PrintingShop, shop_id)
+        store.opening_time, store.closing_time = time(6, 30), time(17)
+        db.session.add(ShopService(shop_id=shop_id, service_type=ServiceType.DELIVERY, enabled=True))
+        db.session.add(ShopFee(shop_id=shop_id, fee_type=FeeType.DELIVERY, amount=Decimal("40.00")))
+        db.session.commit()
+    post(client, "/checkout/upload", {"file_id": str(file_id)})
+    post(client, "/checkout/shop", {"shop_id": str(shop_id), **print_fields(file_id)})
+    page = client.get("/checkout/fulfillment")
+    today = datetime.now(ZoneInfo("Asia/Manila")).date().isoformat()
+    assert page.status_code == 200
+    assert f'id="pickup_date" name="pickup_date" type="date" min="{today}"'.encode() in page.data
+    assert f'id="delivery_date" name="delivery_date" type="date" min="{today}"'.encode() in page.data
+    assert b'value="06:30-07:00"' in page.data
+    assert b'value="10:00-11:00"' in page.data
+    assert b'value="16:00-17:00"' in page.data
+    assert b'value="17:00-18:00"' not in page.data
+    fields = {"destination": "DELIVERY", "delivery_recipient_name": "Rafael Cruz",
+              "delivery_recipient_phone": "+639171234567",
+              "delivery_address": "123 Campus Road, Laguna, Philippines",
+              "delivery_date": today, "delivery_slot": "16:00-17:00"}
+    assert post(client, "/checkout/fulfillment", fields).status_code == 302
+    assert post(client, "/checkout/fulfillment", {**fields, "delivery_slot": "17:00-18:00"}).status_code == 400
 
 
 def test_student_cash_checkout_creates_order_payment_and_success(client, test_app):

@@ -48,11 +48,10 @@
   function updateFulfillment() {
     if (!shop && !fixedShop) return;
     const selectedShop = shop ? shop.selectedOptions[0] : fixedShop;
+    const availableSlots = new Set((selectedShop?.dataset.slots || "").split(","));
     document.querySelectorAll('#pickup_slot, #delivery_slot').forEach((slotSelect) => {
       slotSelect.querySelectorAll('option[value]:not([value=""])').forEach((option) => {
-        const [start, end] = option.value.split("-");
-        option.disabled = !selectedShop?.dataset.opening ||
-          start < selectedShop.dataset.opening || end > selectedShop.dataset.closing;
+        option.disabled = !availableSlots.has(option.value);
       });
       if (slotSelect.selectedOptions[0]?.disabled) slotSelect.value = "";
     });

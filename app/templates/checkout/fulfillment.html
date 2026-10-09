@@ -6,7 +6,7 @@
   {% if error %}<p class="notice notice-error" role="alert">{{ error }}</p>{% endif %}
   <form class="form-stack checkout-fulfillment-form" method="post" action="{{ url_for('checkout.fulfillment') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <div data-fixed-shop data-professor="{{ '1' if offered.PROFESSOR else '0' }}" data-pickup="{{ '1' if offered.PICKUP else '0' }}" data-delivery="{{ '1' if offered.DELIVERY else '0' }}" data-opening="{{ shop.opening_time.strftime('%H:%M') }}" data-closing="{{ shop.closing_time.strftime('%H:%M') }}"></div>
+    <div data-fixed-shop data-professor="{{ '1' if offered.PROFESSOR else '0' }}" data-pickup="{{ '1' if offered.PICKUP else '0' }}" data-delivery="{{ '1' if offered.DELIVERY else '0' }}" data-slots="{{ pickup_slots|map(attribute=0)|join(',') }}"></div>
     <section class="content-card destination-card"><p class="page-eyebrow">Fulfillment</p><h2>How would you like to receive your order?</h2>
       <fieldset class="choice-fieldset"><legend>Fulfillment method</legend><div class="choice-grid fulfillment-choices">
         {% set methods = [('PICKUP', 'Scheduled Pickup', 'Request a date and time at the shop.'), ('DELIVERY', 'Delivery', 'Have your printed papers delivered to you.')] %}
