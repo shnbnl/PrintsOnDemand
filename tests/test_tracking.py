@@ -29,7 +29,7 @@ def test_new_order_confirmation_and_timeline_without_payment(client, test_app):
         assert tracking.steps[2].timestamp is None
     assert response.status_code == 200
     assert b"Your order was created successfully." in response.data
-    assert f"Order reference: {reference}".encode() in response.data
+    assert f"<h2>{reference}</h2>".encode() in response.data
     assert f"Order total: PHP {total}".encode() in response.data
     assert b"Payment not selected" in response.data
     assert b"Payment not selected" in response.data
@@ -55,7 +55,7 @@ def test_online_tracking_changes_only_with_recorded_payment(client, test_app):
         payment = db.session.scalar(select(Payment))
         selected_at = payment.updated_at.isoformat()
         assert build_tracking(payment.order).steps[1].timestamp == payment.updated_at
-    assert b"Payment method: <strong>Online</strong>" in pending.data
+    assert b"Payment method</p><p>Online</p>" in pending.data
     assert b"Payment pending" in pending.data
     assert b"no reference submitted" in pending.data
     assert b"submit your payment reference" in pending.data
@@ -69,7 +69,7 @@ def test_online_tracking_changes_only_with_recorded_payment(client, test_app):
         submitted_at = payment.updated_at.isoformat()
         assert build_tracking(payment.order).steps[1].timestamp == payment.updated_at
         assert payment.order.status.value == "PENDING_PAYMENT"
-    assert b"Payment method: <strong>Online</strong>" in submitted.data
+    assert b"Payment method</p><p>Online</p>" in submitted.data
     assert b"Payment submitted" in submitted.data
     assert b"Payment submitted for verification" in submitted.data
     assert b"awaiting manual verification" in submitted.data
@@ -94,7 +94,7 @@ def test_onsite_confirmation_and_tracking_remain_pending(client, test_app):
         payment = db.session.scalar(select(Payment))
         selected_at = payment.updated_at.isoformat()
         assert build_tracking(payment.order).steps[1].timestamp == payment.updated_at
-    assert b"Payment method: <strong>Onsite</strong>" in response.data
+    assert b"Payment method</p><p>Onsite</p>" in response.data
     assert b"Payment pending" in response.data
     assert b"Payment will be made onsite" in response.data
     assert b"Pay at the printing shop" in response.data
@@ -118,7 +118,7 @@ def test_pending_method_change_tracks_current_recorded_method(client, test_app):
         assert payment.updated_at >= first_updated_at
         assert "Online payment method selected" in tracking.steps[1].detail
     response = client.get(url)
-    assert b"Payment method: <strong>Online</strong>" in response.data
+    assert b"Payment method</p><p>Online</p>" in response.data
     assert b"Onsite payment selected" not in response.data
 
 
@@ -143,8 +143,8 @@ def test_professor_snapshot_and_print_details_remain_visible(client, test_app):
     assert b"private-lecture.pdf" in response.data
     assert b"Grayscale" in response.data
     assert b"A4" in response.data
-    assert b"Subtotal: PHP 6.75" in response.data
-    assert b"Fees total: PHP 0.00" in response.data
+    assert b"Order total: PHP 6.75" in response.data
+    assert b"Payment summary" not in response.data
     assert b"No file is sent electronically" in response.data
 
 

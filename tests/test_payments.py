@@ -216,14 +216,15 @@ def test_online_qr_comes_from_owned_shop_not_global_url(client, test_app):
     assert b"Use the example transfer destination below" in response.data
 
 
-def test_payment_summary_and_normalized_reference_keep_stored_amount(client, test_app):
+def test_payment_detail_and_normalized_reference_keep_stored_amount(client, test_app):
     configured_online(test_app)
     _, url = created_order(client, test_app)
     assert choose(client, url, "ONLINE").status_code == 302
     pending = client.get(url)
-    for expected in (b"Payment summary", b"Order items", b"Campus Prints",
-                     b"Fulfillment:", b"Subtotal: PHP 6.75", b"Total: PHP 6.75"):
+    for expected in (b"Order total: PHP 6.75", b"Campus Prints",
+                     b"Print details (1 file)", b"Order tracking", b"Payment"):
         assert expected in pending.data
+    assert b"Payment summary" not in pending.data
     assert submit(client, url, "  DEMO   REF-123  ", amount="0.01", payment_status="PAID").status_code == 302
     submitted = client.get(url)
     assert b"Payment reference submitted" in submitted.data

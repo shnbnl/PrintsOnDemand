@@ -65,63 +65,6 @@
       <p>Destination: No destination selected.</p>
     {% endif %}
   </section>
-  <section class="content-card price-summary order-total">
-    <p class="page-eyebrow">Price summary</p>
-    <h2>Payment summary</h2>
-    <p class="payment-summary-context"><strong>{{ order.shop_name }}</strong><br>Order reference: {{ order.order_reference }}<br>Fulfillment: {{ order.destination.label if order.destination else 'Not selected' }}</p>
-    <h3>Order items</h3>
-    <ul class="payment-summary-items">
-      {% for item in order.items %}<li><span>{{ item.original_filename }} ({{ item.quantity }} {{ 'print' if item.quantity == 1 else 'prints' }})</span><strong>{{ order.currency }} {{ item.line_total }}</strong></li>{% endfor %}
-    </ul>
-    <div class="summary-list">
-      <p class="summary-row">Subtotal: {{ order.currency }} {{ order.subtotal }}</p>
-      {% if order.items | selectattr('is_rush') | list %}<p class="summary-row">Rush printing fee: {{ order.currency }} {{ order.rush_fee }}</p>{% endif %}
-      {% if order.destination and order.destination.value == 'DELIVERY' %}<p class="summary-row">Delivery fee: {{ order.currency }} {{ order.delivery_fee }}</p>{% endif %}
-      {% if order.fees_total > order.rush_fee + order.delivery_fee %}<p class="summary-row">Other fees: {{ order.currency }} {{ order.fees_total - order.rush_fee - order.delivery_fee }}</p>{% endif %}
-      <p class="summary-row">Fees total: {{ order.currency }} {{ order.fees_total }}</p>
-      <p class="summary-row summary-total"><strong>Total: {{ order.currency }} {{ order.total }}</strong></p>
-    </div>
-    <div class="payment-summary-state"><p>Payment method: <strong>{{ tracking.payment_method }}</strong></p><p>Payment status: {{ payment_badge(order.payment) }}</p></div>
-  </section>
-  <section class="content-card timeline-card" id="tracking" aria-labelledby="tracking-heading">
-    <p class="page-eyebrow">What has happened</p>
-    <h2 id="tracking-heading">Order tracking</h2>
-    <ol class="tracking-list">
-      {% for step in tracking.steps %}
-        <li class="tracking-step {{ 'tracking-step-done' if step.timestamp else 'tracking-step-pending' }}{% if step.timestamp and (loop.last or not loop.nextitem.timestamp) %} tracking-step-current{% endif %}"{% if step.timestamp and (loop.last or not loop.nextitem.timestamp) %} aria-current="step"{% endif %}>
-          <span class="tracking-marker" aria-hidden="true"></span>
-          <div><strong>{{ step.title }}</strong>: {{ step.detail }}
-          {% if step.timestamp %}
-            <time datetime="{{ step.timestamp.isoformat() }}">{{ step.timestamp.strftime('%Y-%m-%d %H:%M UTC') }}</time>
-          {% endif %}
-          </div>
-        </li>
-      {% endfor %}
-    </ol>
-    <p class="order-next-step"><strong>Next step:</strong> {{ tracking.next_step }}</p>
-  </section>
-    </div>
-    <div class="order-detail-column">
-  <section class="content-card print-details">
-    <p class="page-eyebrow">Your documents</p>
-    <h2>Print details ({{ order.items|length }} {{ 'file' if order.items|length == 1 else 'files' }})</h2>
-    <div class="order-item-list">
-      {% for item in order.items %}
-        <article class="order-item-card">
-          <h3>{{ loop.index }}. {{ item.original_filename }}</h3>
-          <dl class="detail-list">
-            <div class="detail-row"><dt>Paper</dt><dd>{{ item.paper_size.label }}</dd></div>
-            <div class="detail-row"><dt>Output</dt><dd>{{ item.color_mode.label }}</dd></div>
-            {% if item.pdf_page_count is not none %}<div class="detail-row"><dt>Document pages</dt><dd>{{ item.pdf_page_count }}</dd></div><div class="detail-row"><dt>Total Printed Pages</dt><dd>{{ item.total_printed_pages }}</dd></div>{% endif %}
-            <div class="detail-row"><dt>Print count</dt><dd>{{ item.quantity }} {{ 'copy' if item.quantity == 1 else 'copies' }}</dd></div>
-            <div class="detail-row"><dt>Price per page</dt><dd>{{ order.currency }} {{ item.unit_price }}</dd></div>
-            <div class="detail-row"><dt>Line total</dt><dd>{{ order.currency }} {{ item.line_total }}</dd></div>
-          </dl>
-          <a class="button button-secondary" href="{{ url_for('orders.download_file', order_reference=order.order_reference, item_id=item.id) }}">Download order file</a>
-        </article>
-      {% endfor %}
-    </div>
-  </section>
   <section class="content-card payment-panel">
     <h2>Payment</h2>
     {% if order.destination and order.destination.value == 'PROFESSOR' %}<p class="notice notice-warning">{% if current_user.role.value == 'PROFESSOR' %}You can pay online or give cash to the Blue and Silver delivery staff at your Faculty.{% else %}Student professor delivery requires online payment.{% if not online_details and not order.payment %} Online payment is currently unavailable; contact the shop before placing another order.{% endif %}{% endif %}</p>{% endif %}
@@ -184,6 +127,45 @@
         {{ reference_form.submit(class_="button button-primary") }}
       </form>
     {% endif %}
+  </section>
+    </div>
+    <div class="order-detail-column">
+  <section class="content-card print-details">
+    <p class="page-eyebrow">Your documents</p>
+    <h2>Print details ({{ order.items|length }} {{ 'file' if order.items|length == 1 else 'files' }})</h2>
+    <div class="order-item-list">
+      {% for item in order.items %}
+        <article class="order-item-card">
+          <h3>{{ loop.index }}. {{ item.original_filename }}</h3>
+          <dl class="detail-list">
+            <div class="detail-row"><dt>Paper</dt><dd>{{ item.paper_size.label }}</dd></div>
+            <div class="detail-row"><dt>Output</dt><dd>{{ item.color_mode.label }}</dd></div>
+            {% if item.pdf_page_count is not none %}<div class="detail-row"><dt>Document pages</dt><dd>{{ item.pdf_page_count }}</dd></div><div class="detail-row"><dt>Total Printed Pages</dt><dd>{{ item.total_printed_pages }}</dd></div>{% endif %}
+            <div class="detail-row"><dt>Print count</dt><dd>{{ item.quantity }} {{ 'copy' if item.quantity == 1 else 'copies' }}</dd></div>
+            <div class="detail-row"><dt>Price per page</dt><dd>{{ order.currency }} {{ item.unit_price }}</dd></div>
+            <div class="detail-row"><dt>Line total</dt><dd>{{ order.currency }} {{ item.line_total }}</dd></div>
+          </dl>
+          <a class="button button-secondary" href="{{ url_for('orders.download_file', order_reference=order.order_reference, item_id=item.id) }}">Download order file</a>
+        </article>
+      {% endfor %}
+    </div>
+  </section>
+  <section class="content-card timeline-card" id="tracking" aria-labelledby="tracking-heading">
+    <p class="page-eyebrow">What has happened</p>
+    <h2 id="tracking-heading">Order tracking</h2>
+    <ol class="tracking-list">
+      {% for step in tracking.steps %}
+        <li class="tracking-step {{ 'tracking-step-done' if step.timestamp else 'tracking-step-pending' }}{% if step.timestamp and (loop.last or not loop.nextitem.timestamp) %} tracking-step-current{% endif %}"{% if step.timestamp and (loop.last or not loop.nextitem.timestamp) %} aria-current="step"{% endif %}>
+          <span class="tracking-marker" aria-hidden="true"></span>
+          <div><strong>{{ step.title }}</strong>: {{ step.detail }}
+          {% if step.timestamp %}
+            <time datetime="{{ step.timestamp.isoformat() }}">{{ step.timestamp.strftime('%Y-%m-%d %H:%M UTC') }}</time>
+          {% endif %}
+          </div>
+        </li>
+      {% endfor %}
+    </ol>
+    <p class="order-next-step"><strong>Next step:</strong> {{ tracking.next_step }}</p>
   </section>
     </div>
   {% if professor_form %}
