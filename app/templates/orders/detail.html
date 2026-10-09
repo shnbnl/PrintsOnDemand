@@ -10,16 +10,6 @@
     <div>
       <p class="page-eyebrow">Your print order</p>
       <h1>Order {{ order.order_reference }}</h1>
-      <p>Your order was created successfully. Keep this reference to follow its progress.</p>
-  {% if order.payment and order.payment.payment_status.value == 'PAID' %}
-      <p>Payment verified. Check tracking for the shop's progress.</p>
-  {% elif order.payment and order.payment.payment_status.value == 'REJECTED' %}
-      <p>Payment rejected. Review the reason below and contact the printing shop about this order.</p>
-  {% elif order.payment and order.payment.payment_status.value == 'SUBMITTED' %}
-      <p>Payment submitted for verification. The shop has not confirmed receipt yet.</p>
-  {% else %}
-      <p>Payment is pending. Choose a method below or follow the selected method's instructions.</p>
-  {% endif %}
     </div>
   </header>
   <section class="content-card order-confirmation" aria-label="Order confirmation">

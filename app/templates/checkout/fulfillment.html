@@ -7,7 +7,7 @@
   <form class="form-stack checkout-fulfillment-form" method="post" action="{{ url_for('checkout.fulfillment') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div data-fixed-shop data-professor="{{ '1' if offered.PROFESSOR else '0' }}" data-pickup="{{ '1' if offered.PICKUP else '0' }}" data-delivery="{{ '1' if offered.DELIVERY else '0' }}" data-opening="{{ shop.opening_time.strftime('%H:%M') }}" data-closing="{{ shop.closing_time.strftime('%H:%M') }}"></div>
-    <section class="content-card destination-card"><p class="page-eyebrow">Fulfillment</p><h2>How would you like to receive your order?</h2><p class="hint">Dates and time slots are requests in Philippine time.</p>
+    <section class="content-card destination-card"><p class="page-eyebrow">Fulfillment</p><h2>How would you like to receive your order?</h2>
       <fieldset class="choice-fieldset"><legend>Fulfillment method</legend><div class="choice-grid fulfillment-choices">
         {% set methods = [('PICKUP', 'Scheduled Pickup', 'Request a date and time at the shop.'), ('DELIVERY', 'Delivery', 'Have your printed papers delivered to you.')] %}
         {% if current_user.role.value == 'STUDENT' %}{% set methods = methods + [('PROFESSOR', 'Deliver to Professor', 'Blue and Silver physically delivers the printed papers.')] %}
@@ -17,7 +17,6 @@
         {% endfor %}
       </div></fieldset>
       {% if offered.PROFESSOR %}<div class="fulfillment-fields" data-method-fields="PROFESSOR" {% if fields.get('destination') != 'PROFESSOR' %}hidden{% endif %}>
-        <p class="hint">{{ 'Pay online or give cash to the Blue and Silver delivery staff at your Faculty.' if current_user.role.value == 'PROFESSOR' else 'Student professor delivery requires online payment.' }} Staff will physically deliver the printed papers; no file is emailed.</p>
         {% if current_user.role.value == 'PROFESSOR' %}
           <div class="managed-faculty"><span class="page-eyebrow">Destination · Faculty / Department</span><strong>{{ own_professor.faculty }}</strong>{% if own_professor.department %}<span>{{ own_professor.department }}</span>{% endif %}<p class="hint">The physical printed copies will be delivered to the {{ own_professor.faculty }} faculty. This destination is assigned by Blue and Silver.</p></div>
         {% else %}

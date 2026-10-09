@@ -221,7 +221,7 @@ def test_professor_checkout_review_confirmation_and_snapshot(client, test_app):
     assert b"maria.santos@example.edu" in confirmation.data
     assert b"PENDING_PAYMENT" in confirmation.data
     assert b"No file is sent electronically" in confirmation.data
-    assert b"Payment is pending" in confirmation.data
+    assert b"Awaiting payment" in confirmation.data
     with test_app.app_context():
         order = db.session.scalar(select(Order))
         assert order.destination == OrderDestination.PROFESSOR
@@ -406,8 +406,8 @@ def test_order_quote_creation_and_model_snapshots(client, test_app):
     assert re.search(r"/orders/POD-\d{4}-[0-9A-F]{12}$", response.headers["Location"])
     detail = client.get(response.headers["Location"])
     assert detail.status_code == 200
-    assert b"Your order was created successfully." in detail.data
-    assert b"Payment is pending" in detail.data
+    assert b"Your print order" in detail.data
+    assert b"Awaiting payment" in detail.data
     assert b"PENDING_PAYMENT" in detail.data
     assert b"PHP 6.75" in detail.data
     assert b"Paid" not in detail.data

@@ -28,7 +28,7 @@ def test_new_order_confirmation_and_timeline_without_payment(client, test_app):
         assert tracking.steps[1].timestamp is None
         assert tracking.steps[2].timestamp is None
     assert response.status_code == 200
-    assert b"Your order was created successfully." in response.data
+    assert b"Your print order" in response.data
     assert f"<h2>{reference}</h2>".encode() in response.data
     assert f"Order total: PHP {total}".encode() in response.data
     assert b"Payment not selected" in response.data
@@ -99,7 +99,6 @@ def test_onsite_confirmation_and_tracking_remain_pending(client, test_app):
     assert b"Payment will be made onsite" in response.data
     assert b"Pay at the printing shop" in response.data
     assert b"Onsite payment selected; payment is pending" in response.data
-    assert b"Payment is pending" in response.data
     assert f'datetime="{selected_at}"'.encode() in response.data
     assert b"Payment successful" not in response.data
 
