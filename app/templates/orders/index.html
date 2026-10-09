@@ -33,25 +33,28 @@
   </form>
 
   {% if orders.items %}
-    <div class="order-history-wrap">
-      <table class="order-history-table">
-        <caption class="sr-only">Your orders, newest first</caption>
-        <thead><tr><th scope="col">Order reference</th><th scope="col">Placed</th><th scope="col">Printing shop</th><th scope="col">Total</th><th scope="col">Order status</th><th scope="col">Payment status</th><th scope="col">Destination</th></tr></thead>
-        <tbody>
-          {% for order in orders.items %}
-            <tr class="order-card">
-              <th scope="row"><a href="{{ url_for('orders.detail', order_reference=order.order_reference) }}">{{ order.order_reference }}</a></th>
-              <td data-label="Placed"><time datetime="{{ order.created_at.isoformat() }}">{{ order.created_at.strftime('%Y-%m-%d %H:%M UTC') }}</time></td>
-              <td data-label="Printing shop">{{ order.shop_name }}</td>
-              <td data-label="Total" class="order-card-total">{{ order.currency }} {{ order.total }}</td>
-              <td data-label="Order status">{{ order_badge(order) }}</td>
-              <td data-label="Payment status">{{ payment_badge(order.payment) }}</td>
-              <td data-label="Fulfillment"><span class="order-destination">{% if order.destination and order.destination.value == 'PROFESSOR' %}Professor Delivery: {{ order.professor_name }} · Faculty {{ order.professor_faculty or 'not recorded' }}{% elif order.destination and order.destination.value == 'PICKUP' %}Scheduled Pickup: {{ order.pickup_date }} {{ order.pickup_slot }}{% elif order.destination and order.destination.value == 'DELIVERY' %}Delivery: {{ order.delivery_date }} {{ order.delivery_slot }}{% else %}Not selected{% endif %}</span><a class="order-card-link" href="{{ url_for('orders.detail', order_reference=order.order_reference) }}">View order</a>{% if order.id in completable_ids %}<form method="post" action="{{ url_for('orders.complete', order_reference=order.order_reference) }}" class="order-complete-form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="button button-primary flow-next" type="submit">Complete order</button></form>{% endif %}</td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
+    <ol class="history-order-list" aria-label="Your orders, newest first">
+      {% for order in orders.items %}
+        <li class="history-order-card">
+          <div class="history-order-heading">
+            <div>
+              <span class="history-order-label">Order reference</span>
+              <h2><a href="{{ url_for('orders.detail', order_reference=order.order_reference) }}">{{ order.order_reference }}</a></h2>
+              <time datetime="{{ order.created_at.isoformat() }}">Placed {{ order.created_at.strftime('%Y-%m-%d %H:%M UTC') }}</time>
+            </div>
+            <div class="history-order-amount"><span class="history-order-label">Total</span><strong>{{ order.currency }} {{ order.total }}</strong></div>
+          </div>
+          <div class="history-order-details">
+            <div><span class="history-order-label">Printing shop</span><strong>{{ order.shop_name }}</strong></div>
+            <div><span class="history-order-label">Destination</span><span>{% if order.destination and order.destination.value == 'PROFESSOR' %}Professor Delivery: {{ order.professor_name }} &middot; Faculty {{ order.professor_faculty or 'not recorded' }}{% elif order.destination and order.destination.value == 'PICKUP' %}Scheduled Pickup: {{ order.pickup_date }} {{ order.pickup_slot }}{% elif order.destination and order.destination.value == 'DELIVERY' %}Delivery: {{ order.delivery_date }} {{ order.delivery_slot }}{% else %}Not selected{% endif %}</span></div>
+          </div>
+          <div class="history-order-footer">
+            <div class="history-order-statuses"><span class="history-order-status"><span class="history-order-label">Order</span>{{ order_badge(order) }}</span><span class="history-order-status"><span class="history-order-label">Payment</span>{{ payment_badge(order.payment) }}</span></div>
+            <div class="history-order-actions"><a class="button button-secondary" href="{{ url_for('orders.detail', order_reference=order.order_reference) }}">View order</a>{% if order.id in completable_ids %}<form method="post" action="{{ url_for('orders.complete', order_reference=order.order_reference) }}" class="order-complete-form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="button button-primary flow-next" type="submit">Complete order</button></form>{% endif %}</div>
+          </div>
+        </li>
+      {% endfor %}
+    </ol>
   {% elif orders.total == 0 and not status and not payment_status %}
     <section class="content-card empty-state"><h2>No orders yet.</h2><p>When you place an order, its progress will appear here.</p><a class="button button-primary flow-next" href="{{ url_for('shops.index') }}">Browse printing shops</a></section>
   {% elif orders.total == 0 %}

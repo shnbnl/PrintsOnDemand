@@ -159,8 +159,8 @@ def test_history_paginates_only_the_owner_orders(client, test_app):
     first = client.get("/orders")
     second = client.get("/orders?page=2")
     assert first.status_code == second.status_code == 200
-    assert first.data.count(b'<th scope="row">') == 20
-    assert second.data.count(b'<th scope="row">') == 3
+    assert first.data.count(b'<li class="history-order-card">') == 20
+    assert second.data.count(b'<li class="history-order-card">') == 3
     assert b"POD-2026-HISTORY0022" in first.data
     assert b"POD-2026-HISTORY0000" in second.data
     assert b"POD-2026-STRANGER" not in first.data + second.data
