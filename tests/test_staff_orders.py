@@ -206,8 +206,12 @@ def test_paid_record_allows_only_sequential_processing_and_tracking(client, test
     assert action_post(client, a, "mark_ready").status_code == 302
     assert action_post(client, a, "complete").status_code == 409
     assert action_post(client, a, "mark_delivered").status_code == 302
-    assert action_post(client, a, "complete_professor").status_code == 302
+    assert action_post(client, a, "complete_professor").status_code == 409
     assert action_post(client, a, "complete").status_code == 409
+    sign_in(client, owner)
+    tracking = client.get(url_a)
+    assert b"Complete order" in tracking.data
+    assert client.post(url_a + "/complete", data={"csrf_token": token(tracking)}).status_code == 302
     with test_app.app_context():
         order = db.session.scalar(select(Order).where(Order.order_reference == url_a.rsplit("/", 1)[1]))
         assert order.status == OrderStatus.COMPLETED
@@ -217,7 +221,6 @@ def test_paid_record_allows_only_sequential_processing_and_tracking(client, test
         steps = build_tracking(order).steps
         assert [step.title for step in steps] == ["Order created", "Payment", "Processing started", "Order ready", "Delivered to Faculty", "Order completed", "Current order status"]
         assert [step.timestamp.hour for step in steps[2:6]] == [1, 2, 3, 4]
-    sign_in(client, owner)
     tracking = client.get(url_a)
     assert tracking.status_code == 200
     assert b"Processing started" in tracking.data and b"Order ready" in tracking.data and b"Order completed" in tracking.data

@@ -9,9 +9,8 @@
     <div>
       <p class="eyebrow">Administration / Recipients</p>
       <h1>Professor Management</h1>
-      <p class="page-lead">Verify Professor accounts, then link them to managed profiles for deliveries.</p>
+      <p class="page-lead">Verify Professor accounts, then manage their delivery approval settings.</p>
     </div>
-    <a class="button button-primary flow-next" href="{{ url_for('admin_management.new_professor') }}">Add professor</a>
   </header>
 
   <div class="operations-overview" aria-label="Professor management overview">
@@ -45,13 +44,14 @@
     {% if verified %}
       <div class="table-scroll" role="region" aria-label="Verified professors" tabindex="0">
         <table class="data-table responsive-table">
-          <thead><tr><th>Name</th><th>Department</th><th>Email</th><th>Student deliveries</th><th>Account link</th><th>Action</th></tr></thead>
+          <thead><tr><th>Name</th><th>Department</th><th>Faculty</th><th>Email</th><th>Student deliveries</th><th>Manage</th><th>Action</th></tr></thead>
           <tbody>{% for account in verified %}<tr>
             <th scope="row">{{ account.name }}</th>
             <td data-label="Department">{{ account.professor_department or 'Not supplied' }}</td>
+            <td data-label="Faculty">{{ account.professor_faculty or ('Not applicable' if account.professor_department in ('GE', 'SHS') else 'Not supplied') }}</td>
             <td data-label="Email">{{ account.email }}</td>
             <td data-label="Student deliveries">{{ 'Accepted' if account.professor and account.professor.accepts_student_deliveries else 'Off' }}</td>
-            <td data-label="Account link">{% if account.professor %}<a class="button button-primary flow-next" href="{{ url_for('admin_management.edit_professor', professor_id=account.professor_id) }}">Manage profile</a>{% else %}<a class="button button-primary flow-next" href="{{ url_for('admin_management.new_professor', account_id=account.id) }}">Create and link profile</a>{% endif %}</td>
+            <td data-label="Manage">{% if account.professor %}<a class="button button-primary flow-next" href="{{ url_for('admin_management.edit_professor', professor_id=account.professor_id) }}">Manage profile</a>{% else %}<span class="hint">Profile unavailable</span>{% endif %}</td>
             <td data-label="Action"><a class="professor-action professor-action--danger" href="{{ url_for('admin_management.delete_professor_account', account_id=account.id) }}">Delete account</a></td>
           </tr>{% endfor %}</tbody>
         </table>
@@ -69,20 +69,19 @@
     <div class="section-card">
       <div class="table-scroll" role="region" aria-label="Professors" tabindex="0">
         <table class="data-table responsive-table">
-          <thead><tr><th scope="col">Name</th><th scope="col">Email</th><th scope="col">Department</th><th scope="col">Faculty</th><th scope="col">Office</th><th scope="col">Linked account</th><th scope="col">Active</th><th scope="col">Direct-to-Professor approval</th><th scope="col">Accept student deliveries</th><th scope="col">Action</th></tr></thead>
+          <thead><tr><th scope="col">Name</th><th scope="col">Email</th><th scope="col">Department</th><th scope="col">Faculty</th><th scope="col">Office</th><th scope="col">Active</th><th scope="col">Direct-to-Professor approval</th><th scope="col">Accept student deliveries</th><th scope="col">Action</th></tr></thead>
           <tbody>
             {% for professor in professors %}
               <tr>
                 <th scope="row">{{ professor.name }}</th>
                 <td data-label="Email">{{ professor.email }}</td>
-                <td data-label="Department">{{ professor.department or '—' }}</td>
-                <td data-label="Faculty">{{ professor.faculty or 'Not assigned' }}</td>
+                <td data-label="Department">{{ professor.account.professor_department if professor.account else professor.department or '—' }}</td>
+                <td data-label="Faculty">{{ professor.account.professor_faculty or ('Not applicable' if professor.account.professor_department in ('GE', 'SHS') else 'Not supplied') if professor.account else professor.faculty or 'Not assigned' }}</td>
                 <td data-label="Office">{{ professor.office or '—' }}</td>
-                <td data-label="Linked account">{{ professor.account.email if professor.account else 'Unlinked' }}</td>
                 <td data-label="Active"><span class="status-badge status-badge--{{ 'success' if professor.is_active else 'muted' }}">{{ 'Yes' if professor.is_active else 'No' }}</span></td>
                 <td data-label="Direct-to-Professor approval"><span class="status-badge status-badge--{{ 'success' if professor.direct_send_approved else 'muted' }}">{{ 'Approved' if professor.direct_send_approved else 'Not approved' }}</span></td>
                 <td data-label="Accept student deliveries"><span class="status-badge status-badge--{{ 'success' if professor.accepts_student_deliveries else 'muted' }}">{{ 'On' if professor.accepts_student_deliveries else 'Off' }}</span></td>
-                <td data-label="Action"><div class="form-actions"><a class="professor-action" href="{{ url_for('admin_management.edit_professor', professor_id=professor.id) }}">Edit</a><a class="professor-action professor-action--danger" href="{{ url_for('admin_management.delete_professor', professor_id=professor.id) }}">Delete profile</a></div></td>
+                <td data-label="Action">{% if professor.account %}<a class="button button-primary flow-next" href="{{ url_for('admin_management.edit_professor', professor_id=professor.id) }}">Manage</a>{% else %}<a class="button button-danger" href="{{ url_for('admin_management.delete_professor', professor_id=professor.id) }}">Remove legacy profile</a>{% endif %}</td>
               </tr>
             {% endfor %}
           </tbody>
@@ -92,8 +91,7 @@
   {% else %}
     <div class="empty-state">
       <h2>No professors yet</h2>
-      <p>Add a professor to manage future Direct-to-Professor selections.</p>
-      <a class="button button-primary flow-next" href="{{ url_for('admin_management.new_professor') }}">Add professor</a>
+      <p>Verify a Professor account to create its managed profile automatically.</p>
     </div>
   {% endif %}
   </div>

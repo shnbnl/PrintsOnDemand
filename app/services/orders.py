@@ -48,6 +48,7 @@ def create_order(
                 raise FulfillmentError("Choose fulfillment before payment.")
             payment_choice = validate_checkout_payment(
                 shop=quote.shop, destination=fulfillment.destination, method=payment_method,
+                actor_role=actor.role,
                 reference=payment_reference,
             )
         reference = f"POD-{utc_now().year}-{secrets.token_hex(6).upper()}"

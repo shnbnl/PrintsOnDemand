@@ -472,7 +472,9 @@ def fulfillment():
 
 def render_payment(quote, fulfillment, *, error=None, status=200):
     online_details = online_payment_details(quote.shop)
-    cash_available = quote.shop.cash_enabled and fulfillment.destination != OrderDestination.PROFESSOR
+    cash_available = quote.shop.cash_enabled and (
+        fulfillment.destination != OrderDestination.PROFESSOR or current_user.role == UserRole.PROFESSOR
+    )
     chosen = request.form.get("payment_method") if request.method == "POST" else draft().get("payment_method")
     reference = request.form.get("payment_reference", "") if request.method == "POST" else draft().get("payment_reference", "")
     return render_template(
@@ -518,6 +520,7 @@ def payment():
         method, reference = validate_checkout_payment(
             shop=quote.shop,
             destination=fulfillment.destination,
+            actor_role=current_user.role,
             method=request.form.get("payment_method", ""),
             reference=request.form.get("payment_reference", ""),
         )
@@ -546,6 +549,7 @@ def review():
     try:
         quote, fulfillment = current_quote(saved)
         validate_checkout_payment(shop=quote.shop, destination=fulfillment.destination,
+                                  actor_role=current_user.role,
                                   method=saved["payment_method"],
                                   reference=saved.get("payment_reference", ""))
     except (PricingError, FulfillmentError, PaymentError):
@@ -577,6 +581,7 @@ def place():
     try:
         quote, fulfillment = current_quote(saved)
         validate_checkout_payment(shop=quote.shop, destination=fulfillment.destination,
+                                  actor_role=current_user.role,
                                   method=saved["payment_method"],
                                   reference=saved.get("payment_reference", ""))
     except (PricingError, FulfillmentError, PaymentError):

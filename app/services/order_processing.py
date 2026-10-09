@@ -2,10 +2,10 @@
 
 from dataclasses import dataclass
 
-from sqlalchemy import exists, select, update
+from sqlalchemy import exists, or_, select, update
 
 from app.extensions import db
-from app.models import Order, OrderDestination, OrderStatus, Payment, PaymentStatus, UserRole
+from app.models import Order, OrderDestination, OrderStatus, Payment, PaymentMethod, PaymentStatus, User, UserRole
 from app.models.user import utc_now
 from app.services.professors import PROFESSOR_DELIVERY_SHOP
 
@@ -22,8 +22,6 @@ TRANSITIONS = {
     "start_processing": (OrderStatus.PENDING_PAYMENT, OrderStatus.PROCESSING, "processing_started_at"),
     "mark_ready": (OrderStatus.PROCESSING, OrderStatus.READY, "ready_at"),
     "mark_delivered": (OrderStatus.READY, OrderStatus.DELIVERED, "delivered_at"),
-    "complete_professor": (OrderStatus.DELIVERED, OrderStatus.COMPLETED, "completed_at"),
-    "complete": (OrderStatus.READY, OrderStatus.COMPLETED, "completed_at"),
 }
 NEXT_ACTION = {current: action for action, (current, _, _) in TRANSITIONS.items()}
 
@@ -55,9 +53,20 @@ def get_staff_order(actor, order_reference: str) -> Order:
 
 
 def available_action(order: Order) -> str | None:
+    faculty_cash_pending = (
+        order.destination == OrderDestination.PROFESSOR
+        and order.professor_recipient_type == "SELF"
+        and order.shop.name == PROFESSOR_DELIVERY_SHOP
+        and order.user.role == UserRole.PROFESSOR
+        and order.payment is not None
+        and order.payment.payment_method == PaymentMethod.ONSITE
+        and order.payment.payment_status == PaymentStatus.PENDING
+        and order.payment.amount == order.total
+        and order.payment.currency == order.currency
+    )
     if (
         order.payment is None
-        or order.payment.payment_status != PaymentStatus.PAID
+        or (order.payment.payment_status != PaymentStatus.PAID and not faculty_cash_pending)
         or order.payment.amount != order.total
         or order.payment.currency != order.currency
     ):
@@ -65,14 +74,19 @@ def available_action(order: Order) -> str | None:
     if order.destination == OrderDestination.PROFESSOR and order.shop.name == PROFESSOR_DELIVERY_SHOP:
         return {
             OrderStatus.READY: "mark_delivered",
-            OrderStatus.DELIVERED: "complete_professor",
         }.get(order.status, NEXT_ACTION.get(order.status))
     return NEXT_ACTION.get(order.status) if order.status != OrderStatus.DELIVERED else None
 
 
 def customer_can_complete(order: Order) -> bool:
     """Only a paid order ready for handoff can be confirmed by its customer."""
-    return available_action(order) in {"complete", "complete_professor"}
+    payment = order.payment
+    if (payment is None or payment.payment_status != PaymentStatus.PAID
+            or payment.amount != order.total or payment.currency != order.currency):
+        return False
+    if order.destination == OrderDestination.PROFESSOR and order.shop.name == PROFESSOR_DELIVERY_SHOP:
+        return order.status == OrderStatus.DELIVERED
+    return order.status == OrderStatus.READY
 
 
 def complete_customer_order(actor, order_reference: str) -> Order:
@@ -108,7 +122,7 @@ def advance_order(actor, order_reference: str, action: str) -> Order:
     if transition is None or order.status != transition[0]:
         raise ProcessingError("This processing action is not available for the order's current state.", 409)
     if available_action(order) != action:
-        raise ProcessingError("Payment must be recorded as paid for this order's total before processing.", 409)
+        raise ProcessingError("Payment or an eligible cash-at-Faculty handoff is required before processing.", 409)
     if action == "mark_delivered" and (
         order.destination != OrderDestination.PROFESSOR or actor.shop.name != PROFESSOR_DELIVERY_SHOP
     ):
@@ -119,10 +133,20 @@ def advance_order(actor, order_reference: str, action: str) -> Order:
         Payment.order_id == Order.id, Payment.payment_status == PaymentStatus.PAID,
         Payment.amount == Order.total, Payment.currency == Order.currency,
     ))
+    faculty_cash_pending = exists(select(Payment.id).where(
+        Payment.order_id == Order.id,
+        Payment.payment_method == PaymentMethod.ONSITE,
+        Payment.payment_status == PaymentStatus.PENDING,
+        Payment.amount == Order.total, Payment.currency == Order.currency,
+        Order.destination == OrderDestination.PROFESSOR,
+        Order.professor_recipient_type == "SELF",
+        Order.user_id.in_(select(User.id).where(User.role == UserRole.PROFESSOR)),
+        Order.shop_id == actor.shop_id,
+    )) if actor.shop.name == PROFESSOR_DELIVERY_SHOP else None
     result = db.session.execute(
         update(Order).where(
             Order.id == order.id, Order.shop_id == actor.shop_id,
-            Order.status == transition[0], paid_payment,
+            Order.status == transition[0], or_(paid_payment, faculty_cash_pending) if faculty_cash_pending is not None else paid_payment,
         ).values(status=transition[1], updated_at=now, **{transition[2]: now})
     )
     if result.rowcount != 1:

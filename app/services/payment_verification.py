@@ -6,8 +6,9 @@ from sqlalchemy import and_, exists, or_, select, update
 from sqlalchemy.orm import selectinload
 
 from app.extensions import db
-from app.models import Order, OrderDestination, OrderStatus, Payment, PaymentMethod, PaymentStatus, UserRole
+from app.models import Order, OrderDestination, OrderStatus, Payment, PaymentMethod, PaymentStatus, PrintingShop, User, UserRole
 from app.models.user import utc_now
+from app.services.professors import PROFESSOR_DELIVERY_SHOP
 
 
 class VerificationError(ValueError):
@@ -34,19 +35,31 @@ def review_queue(actor) -> list[Payment]:
         or_(
             and_(Payment.payment_method == PaymentMethod.ONLINE,
                  Payment.payment_status == PaymentStatus.SUBMITTED,
-                 Payment.payment_reference.is_not(None)),
+                 Payment.payment_reference.is_not(None),
+                 Order.status == OrderStatus.PENDING_PAYMENT),
             and_(Payment.payment_method == PaymentMethod.ONSITE,
                  Payment.payment_status == PaymentStatus.PENDING,
                  Payment.payment_reference.is_(None),
-                 Order.destination != OrderDestination.PROFESSOR),
+                 or_(and_(Order.destination != OrderDestination.PROFESSOR,
+                          Order.status == OrderStatus.PENDING_PAYMENT),
+                     faculty_cash_handoff_query())),
         ),
         Payment.amount == Order.total, Payment.currency == Order.currency,
-        Order.status == OrderStatus.PENDING_PAYMENT,
     ).options(selectinload(Payment.order).selectinload(Order.user))
         .order_by(Payment.created_at.asc(), Payment.id.asc()))
     if shop_id is not None:
         statement = statement.where(Order.shop_id == shop_id)
     return db.session.scalars(statement).all()
+
+
+def faculty_cash_handoff_query():
+    return and_(
+        Order.destination == OrderDestination.PROFESSOR,
+        Order.professor_recipient_type == "SELF",
+        Order.status == OrderStatus.DELIVERED,
+        Order.shop_id.in_(select(PrintingShop.id).where(PrintingShop.name == PROFESSOR_DELIVERY_SHOP)),
+        Order.user_id.in_(select(User.id).where(User.role == UserRole.PROFESSOR)),
+    )
 
 
 def review_payment(actor, payment_id: int) -> Payment:
@@ -119,12 +132,18 @@ def decide_payment(actor, payment_id: int, *, reject: bool, reason: str = "") ->
 
 
 def confirm_onsite_cash(actor, payment_id: int) -> Payment:
-    """Record cash actually received, then start the paid order atomically."""
+    """Record collected cash; start printing unless Faculty delivery is already done."""
     payment = review_payment(actor, payment_id)
     order = payment.order
     if payment.payment_method != PaymentMethod.ONSITE or payment.payment_status != PaymentStatus.PENDING:
         raise VerificationError("This onsite payment is no longer awaiting cash. Reload the page.", 409)
-    if (order.status != OrderStatus.PENDING_PAYMENT or order.destination == OrderDestination.PROFESSOR
+    faculty_handoff = (order.destination == OrderDestination.PROFESSOR
+                       and order.professor_recipient_type == "SELF"
+                       and order.status == OrderStatus.DELIVERED
+                       and order.shop.name == PROFESSOR_DELIVERY_SHOP
+                       and order.user.role == UserRole.PROFESSOR)
+    if (not (faculty_handoff or (order.status == OrderStatus.PENDING_PAYMENT
+                                and order.destination != OrderDestination.PROFESSOR))
             or payment.payment_reference is not None
             or payment.amount != order.total or payment.currency != order.currency):
         raise VerificationError("Payment details do not match a pending order.", 409)
@@ -132,8 +151,9 @@ def confirm_onsite_cash(actor, payment_id: int) -> Payment:
     now = utc_now()
     eligible_order = exists(select(Order.id).where(
         Order.id == Payment.order_id,
-        Order.status == OrderStatus.PENDING_PAYMENT,
-        Order.destination != OrderDestination.PROFESSOR,
+        or_(and_(Order.status == OrderStatus.PENDING_PAYMENT,
+                 Order.destination != OrderDestination.PROFESSOR),
+            faculty_cash_handoff_query()),
         Order.total == Payment.amount, Order.currency == Payment.currency,
         *((Order.shop_id == actor.shop_id,) if actor.role == UserRole.SHOP_STAFF else ()),
     ))
@@ -149,14 +169,15 @@ def confirm_onsite_cash(actor, payment_id: int) -> Payment:
     if recorded.rowcount != 1:
         db.session.rollback()
         raise VerificationError("This payment changed during review. Reload the page.", 409)
-    started = db.session.execute(update(Order).where(
-        Order.id == order.id, Order.status == OrderStatus.PENDING_PAYMENT,
-        Order.total == payment.amount, Order.currency == payment.currency,
-        *((Order.shop_id == actor.shop_id,) if actor.role == UserRole.SHOP_STAFF else ()),
-    ).values(status=OrderStatus.PROCESSING, processing_started_at=now, updated_at=now)
-        .execution_options(synchronize_session=False))
-    if started.rowcount != 1:
-        db.session.rollback()
-        raise VerificationError("The order changed during review. Reload the page.", 409)
+    if not faculty_handoff:
+        started = db.session.execute(update(Order).where(
+            Order.id == order.id, Order.status == OrderStatus.PENDING_PAYMENT,
+            Order.total == payment.amount, Order.currency == payment.currency,
+            *((Order.shop_id == actor.shop_id,) if actor.role == UserRole.SHOP_STAFF else ()),
+        ).values(status=OrderStatus.PROCESSING, processing_started_at=now, updated_at=now)
+            .execution_options(synchronize_session=False))
+        if started.rowcount != 1:
+            db.session.rollback()
+            raise VerificationError("The order changed during review. Reload the page.", 409)
     db.session.commit()
     return db.session.get(Payment, payment_id, populate_existing=True)

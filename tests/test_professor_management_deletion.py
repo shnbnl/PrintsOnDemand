@@ -28,31 +28,41 @@ def confirm_delete(client, path):
     return client.post(path, data={"csrf_token": token(page), "confirm_delete": "yes"})
 
 
-def test_save_professor_returns_to_management_page(client, test_app):
+def test_manage_verified_professor_returns_to_management_page(client, test_app):
     _, staff = blue_staff(test_app)
+    account_id = student(test_app, "one@example.edu", UserRole.PROFESSOR)
+    with test_app.app_context():
+        account = db.session.get(User, account_id)
+        account.name = "Professor One"
+        account.professor_department = "CCIS"
+        account.professor_faculty = "Computer Science"
+        db.session.commit()
     sign_in(client, staff)
-    path = "/admin/professors/new"
-    page = client.get(path)
-    created = client.post(path, data={
-        "csrf_token": token(page), "name": "Professor One", "email": "one@example.edu",
-        "department": "Computer Science", "faculty": "CCIS", "is_active": "y", "account_id": "0",
+    page = client.get("/admin/professors")
+    created = client.post(f"/admin/professors/accounts/{account_id}/verify", data={
+        "csrf_token": token(page),
     })
     assert created.status_code == 302
     assert created.headers["Location"].endswith("/admin/professors")
     with test_app.app_context():
-        profile_id = db.session.scalar(select(Professor.id))
+        profile_id = db.session.get(User, account_id).professor_id
     edit = f"/admin/professors/{profile_id}/edit"
     page = client.get(edit)
     saved = client.post(edit, data={
-        "csrf_token": token(page), "name": "Professor Updated", "email": "one@example.edu",
-        "department": "Computer Science", "faculty": "CCIS", "is_active": "y", "account_id": "0",
+        "csrf_token": token(page), "name": "Professor Updated", "email": "forged@example.edu",
+        "department": "MITL", "faculty": "Psychology", "is_active": "y",
+        "direct_send_approved": "y", "accepts_student_deliveries": "y",
     })
     assert saved.status_code == 302
     assert saved.headers["Location"].endswith("/admin/professors")
-    assert b"Professor Updated" in client.get(saved.headers["Location"]).data
+    assert b"Professor One" in client.get(saved.headers["Location"]).data
+    with test_app.app_context():
+        profile = db.session.get(Professor, profile_id)
+        assert (profile.department, profile.faculty, profile.email) == ("CCIS", "Computer Science", "one@example.edu")
+        assert profile.is_active and profile.direct_send_approved and profile.accepts_student_deliveries
 
 
-def test_delete_managed_profile_unlinks_account_and_keeps_order_snapshot(client, test_app):
+def test_linked_managed_profile_cannot_be_deleted_separately(client, test_app):
     blue, staff = blue_staff(test_app)
     profile_id = approved_professor(test_app, faculty="CCIS")
     with test_app.app_context():
@@ -68,27 +78,24 @@ def test_delete_managed_profile_unlinks_account_and_keeps_order_snapshot(client,
     sign_in(client, staff)
     path = f"/admin/professors/{profile_id}/delete"
     management = client.get("/admin/professors")
-    assert path.encode() in management.data
-    page = client.get(path)
-    assert b"Existing orders keep" in page.data
-    assert client.post(path, data={"csrf_token": token(page)}).status_code == 400
+    assert path.encode() not in management.data
+    assert client.get(path).status_code == 404
+    assert client.post(path, data={"csrf_token": token(management), "confirm_delete": "yes"}).status_code == 404
     with test_app.app_context():
         assert db.session.get(Professor, profile_id) is not None
-    deleted = confirm_delete(client, path)
-    assert deleted.status_code == 302 and deleted.headers["Location"].endswith("/admin/professors")
     with test_app.app_context():
-        assert db.session.get(Professor, profile_id) is None
+        assert db.session.get(Professor, profile_id) is not None
         account = db.session.get(User, account_id)
-        assert account is not None and account.professor_id is None
+        assert account is not None and account.professor_id == profile_id
         assert account.professor_verification_status == ProfessorVerificationStatus.VERIFIED
         order = db.session.get(Order, order_id)
-        assert order.professor_id is None
+        assert order.professor_id == profile_id
         assert (order.professor_name, order.professor_faculty) == ("Maria Santos", "CCIS")
     sign_in(client, owner)
     assert b"Maria Santos" in client.get(placed.headers["Location"]).data
 
 
-def test_delete_verified_account_removes_owned_data_but_keeps_managed_profile_and_other_order(client, test_app):
+def test_delete_verified_account_removes_managed_profile_but_keeps_other_order_snapshot(client, test_app):
     blue, staff = blue_staff(test_app)
     profile_id = approved_professor(test_app, faculty="CCIS")
     with test_app.app_context():
@@ -114,10 +121,9 @@ def test_delete_verified_account_removes_owned_data_but_keeps_managed_profile_an
         assert db.session.get(User, account_id) is None
         assert db.session.get(UploadedFile, own_file) is None
         assert db.session.scalar(select(Order.id).where(Order.user_id == account_id)) is None
-        profile = db.session.get(Professor, profile_id)
-        assert profile is not None and profile.account is None
-        assert profile.accepts_student_deliveries is False
+        assert db.session.get(Professor, profile_id) is None
         remaining = db.session.scalar(select(Order).where(Order.user_id == owner))
+        assert remaining.professor_id is None
         assert (remaining.professor_name, remaining.professor_faculty) == ("Maria Santos", "CCIS")
     sign_in(client, owner)
     assert b"Maria Santos" in client.get(student_order.headers["Location"]).data

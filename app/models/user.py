@@ -70,6 +70,7 @@ class User(UserMixin, db.Model):
         server_default=ProfessorVerificationStatus.PENDING.value,
     )
     professor_department: Mapped[str | None] = mapped_column(db.String(120), nullable=True)
+    professor_faculty: Mapped[str | None] = mapped_column(db.String(120), nullable=True)
     student_delivery_preference: Mapped[bool] = mapped_column(
         db.Boolean, nullable=False, default=False, server_default=db.false()
     )

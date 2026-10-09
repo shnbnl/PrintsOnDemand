@@ -112,10 +112,14 @@ def test_confirmed_deletion_removes_exact_owned_graph_and_bytes(client, test_app
         assert db.session.get(User, graph["staff"]) is not None
         assert db.session.get(User, graph["admin"]) is not None
         profile = db.session.get(Professor, graph["professor"])
-        assert profile is not None
-        assert profile.account is None
-        assert profile.accepts_student_deliveries is (role != UserRole.PROFESSOR)
-        assert db.session.get(Order, 2).professor_id == profile.id
+        if role == UserRole.PROFESSOR:
+            assert profile is None
+            assert db.session.get(Order, 2).professor_id is None
+        else:
+            assert profile is not None
+            assert profile.account is None
+            assert profile.accepts_student_deliveries is True
+            assert db.session.get(Order, 2).professor_id == profile.id
     assert all(not (storage / graph["keys"][file_id]).exists() for file_id in graph["owner_files"])
     assert (storage / graph["keys"][graph["survivor_file"]]).exists()
     assert not list(storage.glob(".account-deletion-*"))

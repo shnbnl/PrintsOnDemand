@@ -48,7 +48,7 @@ def test_four_staff_accounts_are_provisioned_outside_public_registration(test_ap
         assert [user.shop_id for user in users] == ids
 
 
-def test_blue_staff_manage_faculty_and_link_professor_account(client, test_app):
+def test_blue_staff_verifies_and_manages_professor_approvals(client, test_app):
     blue = shop(test_app, name="Blue and Silver Bookstore")
     others = [shop(test_app, name=name) for name in (
         "CHALECOSPOT", "Iced Design and Prints", "Pixels Print and Press"
@@ -77,26 +77,21 @@ def test_blue_staff_manage_faculty_and_link_professor_account(client, test_app):
     assert client.post(f"/admin/professors/accounts/{account_id}/verify", data={
         "csrf_token": token(pending),
     }).status_code == 302
-    page = client.get("/admin/professors/new")
-    assert page.status_code == 200 and b"Professor Management" in page.data
-    posted = client.post("/admin/professors/new", data={
-        "csrf_token": token(page), "name": "Juan Dela Cruz", "email": "juan@example.edu",
-        "faculty": "CCIS", "account_id": str(account_id), "department": "Information Technology",
-        "office": "ICT Building 301", "is_active": "y", "direct_send_approved": "y",
-        "accepts_student_deliveries": "y",
-    })
-    assert posted.status_code == 302
+    assert client.get("/admin/professors/new").status_code == 404
     with test_app.app_context():
-        profile = db.session.scalar(select(Professor))
-        assert (profile.faculty, profile.account.id, profile.accepts_student_deliveries) == ("CCIS", account_id, True)
+        profile = db.session.get(User, account_id).professor
+        assert (profile.department, profile.faculty, profile.account.id, profile.accepts_student_deliveries) == (
+            "CCIS", "Information Technology", account_id, False,
+        )
         profile_id = profile.id
     edit = f"/admin/professors/{profile_id}/edit"
     assert client.post(edit, data={
         "csrf_token": token(client.get(edit)), "name": "Juan Dela Cruz", "email": "juan@example.edu",
         "faculty": "NOT_A_FACULTY", "account_id": str(account_id), "is_active": "y",
-    }).status_code == 200
+        "direct_send_approved": "y", "accepts_student_deliveries": "y",
+    }).status_code == 302
     with test_app.app_context():
-        assert db.session.get(Professor, profile_id).faculty == "CCIS"
+        assert db.session.get(Professor, profile_id).faculty == "Information Technology"
     assert client.post(edit, data={
         "csrf_token": token(client.get(edit)), "name": "Juan Dela Cruz", "email": "juan@example.edu",
         "faculty": "MITL", "account_id": str(account_id), "is_active": "y",
@@ -104,7 +99,7 @@ def test_blue_staff_manage_faculty_and_link_professor_account(client, test_app):
     }).status_code == 302
     with test_app.app_context():
         profile = db.session.get(Professor, profile_id)
-        assert profile.faculty == "MITL" and not profile.accepts_student_deliveries
+        assert profile.faculty == "Information Technology" and not profile.accepts_student_deliveries
 
 
 def test_student_faculty_snapshot_online_payment_and_staff_handoff(client, test_app):
@@ -131,7 +126,7 @@ def test_student_faculty_snapshot_online_payment_and_staff_handoff(client, test_
     order_url = professor_place(client, file_id, blue, professor_id).headers["Location"]
     detail = client.get(order_url)
     assert b"Faculty: CCIS" in detail.data
-    assert b"Professor delivery requires online payment" in detail.data
+    assert b"Student professor delivery requires online payment" in detail.data
     assert b'value="ONSITE"' not in detail.data
     assert b"Change intended professor" not in detail.data
     assert client.post(order_url + "/professor", data={

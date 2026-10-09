@@ -30,24 +30,31 @@
         <div class="field professor-department-field" data-professor-department>
           {{ form.professor_department.label }}
           {{ form.professor_department() }}
-          <p class="hint">Required for Professor accounts.</p>
           {% for error in form.professor_department.errors %}<p class="field-error" role="alert">{{ error }}</p>{% endfor %}
         </div>
-        <div class="field">
-          {{ form.password.label }}
-          <div class="password-input">{{ form.password(autocomplete="new-password", placeholder="Create a password") }}<button type="button" class="password-toggle" data-password-toggle aria-label="Show password" aria-pressed="false">Show</button></div>
-          <p class="hint">Use at least 10 characters.</p>
-          {% for error in form.password.errors %}<p class="field-error" role="alert">{{ error }}</p>{% endfor %}
+        <div class="field professor-faculty-field" data-professor-faculty hidden>
+          {{ form.professor_faculty.label }}
+          {{ form.professor_faculty() }}
+          {% for error in form.professor_faculty.errors %}<p class="field-error" role="alert">{{ error }}</p>{% endfor %}
         </div>
-        <div class="field">
-          {{ form.confirm_password.label }}
-          <div class="password-input">{{ form.confirm_password(autocomplete="new-password", placeholder="Confirm your password") }}<button type="button" class="password-toggle" data-password-toggle aria-label="Show password confirmation" aria-pressed="false">Show</button></div>
-          {% for error in form.confirm_password.errors %}<p class="field-error" role="alert">{{ error }}</p>{% endfor %}
+        <div class="auth-password-fields">
+          <div class="field">
+            {{ form.password.label }}
+            <div class="password-input">{{ form.password(autocomplete="new-password", placeholder="Create a password") }}<button type="button" class="password-toggle" data-password-toggle aria-label="Show password" aria-pressed="false">Show</button></div>
+            <p class="hint">Use at least 10 characters.</p>
+            {% for error in form.password.errors %}<p class="field-error" role="alert">{{ error }}</p>{% endfor %}
+          </div>
+          <div class="field">
+            {{ form.confirm_password.label }}
+            <div class="password-input">{{ form.confirm_password(autocomplete="new-password", placeholder="Confirm your password") }}<button type="button" class="password-toggle" data-password-toggle aria-label="Show password confirmation" aria-pressed="false">Show</button></div>
+            {% for error in form.confirm_password.errors %}<p class="field-error" role="alert">{{ error }}</p>{% endfor %}
+          </div>
         </div>
         <button class="button button-primary button-block flow-next" id="{{ form.submit.id }}" name="{{ form.submit.name }}" type="submit">{{ form.submit.label.text }}</button>
       </form>
     </section>
     <p class="auth-switch">Already registered? <a href="{{ url_for('auth.login') }}">Log-in</a></p>
   </div>
+  <script id="professor-faculty-options" type="application/json">{{ faculties_by_department|tojson }}</script>
   <script src="{{ url_for('static', filename='js/auth-login-transition.js') }}" defer></script>
 {% endblock %}

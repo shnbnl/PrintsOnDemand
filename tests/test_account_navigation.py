@@ -30,7 +30,7 @@ def test_account_action_is_grouped_with_identity(client, test_app, role):
     assert b'/professor/settings' not in page.data
 
 
-def test_retired_professor_page_redirects_and_preference_is_csrf_protected(client, test_app):
+def test_retired_professor_page_redirects_and_preference_is_closed(client, test_app):
     user_id = student(test_app, "professor@example.edu", UserRole.PROFESSOR)
     sign_in(client, user_id)
     legacy = client.get("/professor/settings")
@@ -45,7 +45,7 @@ def test_retired_professor_page_redirects_and_preference_is_csrf_protected(clien
     assert client.post("/account/professor-preference", data={
         "csrf_token": token(account), "department": "CCIS",
         "accepts_student_deliveries": "y",
-    }).status_code == 302
+    }).status_code == 404
 
 
 @pytest.mark.parametrize(("role", "path"), [

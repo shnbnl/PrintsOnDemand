@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 
-from app.models import Order, OrderDestination, OrderStatus, PaymentMethod, PaymentStatus
+from app.models import Order, OrderDestination, OrderStatus, PaymentMethod, PaymentStatus, UserRole
 
 
 @dataclass(frozen=True)
@@ -28,7 +28,7 @@ def build_tracking(order: Order) -> OrderTracking:
         method = "Not selected"
         status = "Not started"
         payment_step = TrackingStep("Payment", "No payment method has been selected.")
-        next_step = ("Choose online payment for professor delivery." if order.destination == OrderDestination.PROFESSOR
+        next_step = ("Choose online payment for professor delivery." if order.destination == OrderDestination.PROFESSOR and order.user.role != UserRole.PROFESSOR
                      else "Choose online or onsite payment for this order.")
     elif payment.payment_status == PaymentStatus.PAID:
         method = payment.payment_method.value.title()
@@ -58,7 +58,9 @@ def build_tracking(order: Order) -> OrderTracking:
         payment_step = TrackingStep(
             "Payment", "Onsite payment selected; payment is pending.", payment.updated_at
         )
-        next_step = "Pay at the printing shop. Payment has not been recorded yet."
+        next_step = ("Pay the delivery staff at your Faculty when your printed papers arrive. Payment has not been recorded yet."
+                     if order.destination == OrderDestination.PROFESSOR else
+                     "Pay at the printing shop. Payment has not been recorded yet.")
     else:
         method = "Online"
         status = payment.payment_status.value

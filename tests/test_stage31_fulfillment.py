@@ -109,15 +109,14 @@ def test_professor_pickup_and_faculty_destination_use_managed_profile(client, te
         file_id, destination="PROFESSOR", professor_id=str(managed),
     )).status_code == 400
     assert post(client, "/checkout/fulfillment", configure(file_id, destination="PROFESSOR")).status_code == 302
-    assert post(client, "/checkout/payment", {"payment_method": "ONSITE"}).status_code == 400
-    assert post(client, "/checkout/payment", {"payment_method": "ONLINE"}).status_code == 400
-    assert post(client, "/checkout/payment", {"payment_method": "ONLINE", "payment_reference": "FACULTY-1234"}).status_code == 302
+    assert post(client, "/checkout/payment", {"payment_method": "ONSITE"}).status_code == 302
     assert post(client, "/checkout/place").status_code == 302
     with test_app.app_context():
         order = db.session.scalar(select(Order))
         assert (order.professor_id, order.professor_faculty, order.professor_recipient_type) == (
             managed, "CCIS", "SELF",
         )
+        assert order.payment.payment_method.value == "ONSITE"
         db.session.get(Professor, managed).faculty = "GE"
         db.session.commit()
         assert db.session.get(Order, order.id).professor_faculty == "CCIS"

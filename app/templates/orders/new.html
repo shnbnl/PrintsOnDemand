@@ -86,7 +86,7 @@
           </fieldset>
           <div class="field fulfillment-fields" data-method-fields="PROFESSOR" {% if selected_destination != 'PROFESSOR' %}hidden{% endif %}>
             {% if current_user.role.value == 'PROFESSOR' %}
-               <p>Your printed papers will be physically delivered to the Faculty assigned by Blue and Silver. Professor delivery requires online payment.</p>
+               <p>Your printed papers will be physically delivered to your Faculty. You can pay online or in cash to the delivery staff at handoff.</p>
               {% if own_professor %}<dl class="detail-list"><div class="detail-row"><dt>Name</dt><dd>{{ own_professor.name }}</dd></div>
                 <div class="detail-row"><dt>Department</dt><dd>{{ own_professor.department or 'Not listed' }}</dd></div>
                 <div class="detail-row"><dt>Office</dt><dd>{{ own_professor.office or 'Not listed' }}</dd></div>
@@ -129,5 +129,5 @@
     </form>
     <script src="{{ url_for('static', filename='js/order-selection.js') }}" defer></script>
   {% endif %}
-  <p class="hint">A placed order starts pending payment. Choose an available payment method afterward; Professor Delivery requires online payment.</p>
+  <p class="hint">A placed order starts pending payment. Choose an available payment method afterward. Student orders delivered to a professor require online payment.</p>
 {% endblock %}

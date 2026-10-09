@@ -10,6 +10,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
 from app.extensions import db
 from app.models.user import utc_now
+from app.professor_faculties import ALL_FACULTIES
 
 
 class Faculty(StrEnum):
@@ -21,12 +22,13 @@ class Faculty(StrEnum):
     GE = "GE"
     IECELL = "IECELL"
     SHS = "SHS"
+    CMET = "CMET"
 
 
 class Professor(db.Model):
     __tablename__ = "professors"
     __table_args__ = (db.CheckConstraint(
-        "faculty IS NULL OR faculty IN ('MITL', 'CAS', 'ETYCB', 'CCIS', 'CHS', 'GE', 'IECELL', 'SHS')",
+        "faculty IS NULL OR length(faculty) <= 120",
         name="professor_faculty_valid",
     ),)
 
@@ -34,7 +36,7 @@ class Professor(db.Model):
     name: Mapped[str] = mapped_column(db.String(120), nullable=False)
     email: Mapped[str] = mapped_column(db.String(254), unique=True, nullable=False, index=True)
     department: Mapped[str | None] = mapped_column(db.String(120), nullable=True)
-    faculty: Mapped[str | None] = mapped_column(db.String(16), nullable=True)
+    faculty: Mapped[str | None] = mapped_column(db.String(120), nullable=True)
     office: Mapped[str | None] = mapped_column(db.String(120), nullable=True)
     is_active: Mapped[bool] = mapped_column(db.Boolean, nullable=False, default=True)
     direct_send_approved: Mapped[bool] = mapped_column(db.Boolean, nullable=False, default=False)
@@ -72,7 +74,6 @@ class Professor(db.Model):
     def validate_faculty(self, key: str, value: str | Faculty | None) -> str | None:
         if value in (None, ""):
             return None
-        try:
-            return Faculty(value).value
-        except ValueError as error:
-            raise ValueError("Select a valid Faculty.") from error
+        if value not in ALL_FACULTIES:
+            raise ValueError("Select a valid Faculty.")
+        return value

@@ -3,7 +3,8 @@
 from sqlalchemy import select
 
 from app.extensions import db
-from app.models import Faculty, OrderDestination, PrintingShop, Professor, ProfessorVerificationStatus, ServiceType, ShopService, User, UserRole
+from app.models import OrderDestination, PrintingShop, Professor, ProfessorVerificationStatus, ServiceType, ShopService, User, UserRole
+from app.professor_faculties import ALL_FACULTIES
 
 PROFESSOR_DELIVERY_SHOP = "Blue and Silver Bookstore"
 
@@ -25,7 +26,7 @@ def professor_can_self_deliver(account: User) -> bool:
         account.role == UserRole.PROFESSOR and account.is_active
         and account.professor_verification_status == ProfessorVerificationStatus.VERIFIED
         and profile is not None and profile.is_active and profile.direct_send_approved
-        and profile.faculty in Faculty._value2member_map_
+        and profile.faculty in ALL_FACULTIES
     )
 
 

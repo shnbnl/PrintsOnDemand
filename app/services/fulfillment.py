@@ -12,9 +12,10 @@ from flask import current_app
 from sqlalchemy import select
 
 from app.extensions import db
-from app.models import Faculty, FeeType, OrderDestination, PrintingShop, ServiceType, ShopFee, ShopService, UserRole
+from app.models import FeeType, OrderDestination, PrintingShop, ServiceType, ShopFee, ShopService, UserRole
 from app.services.pricing import PricingError, money
 from app.services.professors import ProfessorSelectionError, professor_snapshot, professor_service_available, validate_professor_selection
+from app.professor_faculties import ALL_FACULTIES
 
 
 class FulfillmentError(ValueError):
@@ -198,7 +199,7 @@ def validate_fulfillment(*, shop: PrintingShop, values, actor=None) -> Fulfillme
         if data["professor_faculty"]:
             raise FulfillmentError("Faculty is assigned by Blue and Silver and cannot be changed here.")
         faculty = professor.faculty
-        if faculty not in Faculty._value2member_map_:
+        if faculty not in ALL_FACULTIES:
             raise FulfillmentError("The managed professor profile needs a valid Faculty.")
         return Fulfillment(destination, professor.id, professor_snapshot(professor, faculty=faculty),
                            "SELF" if self_order else "STUDENT_SELECTED")

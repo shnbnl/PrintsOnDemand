@@ -184,8 +184,8 @@ def test_student_list_search_and_detail_only_show_active_shops(client, test_app)
     assert b"(sample)" in detail.data
     assert "—" in detail.get_data(as_text=True)
     assert b"Delivery" not in detail.data
-    assert b"Start Order" in detail.data
-    assert f"/checkout/upload?shop_id={active_id}".encode() in detail.data
+    assert b"Ready to continue?" not in detail.data
+    assert f"/checkout/upload?shop_id={active_id}".encode() not in detail.data
     assert client.get(f"/shops/{inactive_id}").status_code == 404
 
 

@@ -39,12 +39,13 @@
     </section>
     <section class="content-card review-decision">
       <h2>Review action</h2>
-      {% if payment.payment_method.value == 'ONSITE' and payment.payment_status.value == 'PENDING' and payment.order.destination.value != 'PROFESSOR' and payment.payment_reference is none and payment.amount == payment.order.total and payment.currency == payment.order.currency and payment.order.status.value == 'PENDING_PAYMENT' %}
-        <p>Collect <strong>{{ payment.currency }} {{ payment.amount }}</strong> in cash at {{ payment.order.shop_name }} before confirming. This action records the payment as paid and starts printing.</p>
+      {% set faculty_handoff = payment.order.destination and payment.order.destination.value == 'PROFESSOR' and payment.order.professor_recipient_type == 'SELF' and payment.order.status.value == 'DELIVERED' %}
+      {% if payment.payment_method.value == 'ONSITE' and payment.payment_status.value == 'PENDING' and payment.payment_reference is none and payment.amount == payment.order.total and payment.currency == payment.order.currency and ((payment.order.destination.value != 'PROFESSOR' and payment.order.status.value == 'PENDING_PAYMENT') or faculty_handoff) %}
+        {% if faculty_handoff %}<p>After delivering the printed papers to the professor's Faculty, confirm that you collected the full <strong>{{ payment.currency }} {{ payment.amount }}</strong> in cash. This records the payment; the customer will complete the order.</p>{% else %}<p>Collect <strong>{{ payment.currency }} {{ payment.amount }}</strong> in cash at {{ payment.order.shop_name }} before confirming. This action records the payment as paid and starts printing.</p>{% endif %}
         <form class="form-stack" method="post" action="{{ url_for('payment_verification.confirm_onsite', payment_id=payment.id) }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <label class="cash-confirmation"><input type="checkbox" name="cash_received" value="yes" required> I received the full cash amount from the customer.</label>
-          <button class="button button-primary flow-next" type="submit">Confirm cash received and start printing</button>
+          <button class="button button-primary flow-next" type="submit">{{ 'Confirm cash received' if faculty_handoff else 'Confirm cash received and start printing' }}</button>
         </form>
       {% elif payment.payment_method.value == 'ONLINE' and payment.payment_status.value == 'SUBMITTED' and payment.payment_reference and payment.amount == payment.order.total and payment.currency == payment.order.currency and payment.order.status.value == 'PENDING_PAYMENT' %}
         <p>Check the submitted reference and independently confirm receipt of funds before verifying. The QR display and reference alone do not prove payment.</p>

@@ -21,9 +21,11 @@
       const confirmation = form.querySelector("#confirm_password");
       const accountType = form.querySelector('input[name="account_type"]:checked');
       const department = form.querySelector("#professor_department");
+      const faculty = form.querySelector("#professor_faculty");
       if (!name?.value.trim() || !email?.value.trim() || !password?.value ||
           !confirmation?.value || password.value !== confirmation.value ||
           !accountType || (accountType.value === "PROFESSOR" && !department?.value) ||
+          (faculty?.required && !faculty.value) ||
           !form.checkValidity()) return;
     } else {
       const identity = form.querySelector("#email, #identifier, #name");

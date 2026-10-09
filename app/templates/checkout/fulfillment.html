@@ -17,7 +17,7 @@
         {% endfor %}
       </div></fieldset>
       {% if offered.PROFESSOR %}<div class="fulfillment-fields" data-method-fields="PROFESSOR" {% if fields.get('destination') != 'PROFESSOR' %}hidden{% endif %}>
-        <p class="hint">Professor Delivery requires online payment. Staff will physically deliver the printed papers; no file is emailed.</p>
+        <p class="hint">{{ 'Pay online or give cash to the Blue and Silver delivery staff at your Faculty.' if current_user.role.value == 'PROFESSOR' else 'Student professor delivery requires online payment.' }} Staff will physically deliver the printed papers; no file is emailed.</p>
         {% if current_user.role.value == 'PROFESSOR' %}
           <div class="managed-faculty"><span class="page-eyebrow">Destination · Faculty / Department</span><strong>{{ own_professor.faculty }}</strong>{% if own_professor.department %}<span>{{ own_professor.department }}</span>{% endif %}<p class="hint">The physical printed copies will be delivered to the {{ own_professor.faculty }} faculty. This destination is assigned by Blue and Silver.</p></div>
         {% else %}

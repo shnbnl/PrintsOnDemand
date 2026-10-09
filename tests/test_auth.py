@@ -10,6 +10,7 @@ from app import create_app
 from app.config import TestingConfig
 from app.extensions import db
 from app.models import User, UserRole
+from app.professor_faculties import FACULTIES_BY_DEPARTMENT
 
 
 PASSWORD = "A-strong-password-123"
@@ -30,6 +31,10 @@ def register(client, **changes):
         "confirm_password": PASSWORD,
     }
     data.update(changes)
+    if data["account_type"] == "PROFESSOR" and "professor_faculty" not in changes:
+        choices = FACULTIES_BY_DEPARTMENT.get(data.get("professor_department"), ())
+        if choices:
+            data["professor_faculty"] = choices[0]
     data["csrf_token"] = csrf_token(client.get("/auth/register"))
     return client.post("/auth/register", data=data)
 

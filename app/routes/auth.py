@@ -11,6 +11,7 @@ from app.extensions import db
 from app.forms import BlueStaffLoginForm, LoginForm, RegistrationForm, ShopStaffLoginForm
 from app.models import PrintingShop, User, UserRole
 from app.services.professors import PROFESSOR_DELIVERY_SHOP
+from app.professor_faculties import FACULTIES_BY_DEPARTMENT
 
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
@@ -45,6 +46,9 @@ def register():
         return redirect(role_home(current_user.role))
 
     form = RegistrationForm()
+    form.professor_faculty.choices = [("", "Select faculty")] + [
+        (faculty, faculty) for faculty in FACULTIES_BY_DEPARTMENT.get(form.professor_department.data, ())
+    ]
     if request.method == "GET" and request.args.get("account_type") in {
         UserRole.STUDENT.value, UserRole.PROFESSOR.value,
     }:
@@ -58,6 +62,7 @@ def register():
             user = User(
                 name=form.name.data.strip(), email=email, role=UserRole(form.account_type.data),
                 professor_department=(form.professor_department.data if form.account_type.data == "PROFESSOR" else None),
+                professor_faculty=(form.professor_faculty.data or None) if form.account_type.data == "PROFESSOR" else None,
             )
             user.set_password(form.password.data)
             db.session.add(user)
@@ -68,12 +73,12 @@ def register():
                 form.email.errors.append("Unable to create account with these details.")
             else:
                 if user.role == UserRole.PROFESSOR:
-                    flash("Account created. Please log in. An active linked profile enables Deliver to Me; Blue and Silver approval is also needed before students can select you.", "success")
+                    flash("Account created. Please log in. Blue and Silver will review your account before professor delivery becomes available.", "success")
                 else:
                     flash("Account created. Please log in.", "success")
                 return redirect(url_for("auth.login"))
 
-    return render_template("auth/register.html", form=form)
+    return render_template("auth/register.html", form=form, faculties_by_department=FACULTIES_BY_DEPARTMENT)
 
 
 @auth_bp.route("/login", methods=["GET", "POST"])

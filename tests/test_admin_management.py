@@ -95,31 +95,32 @@ def test_professor_management_eligibility_normalization_and_snapshots(client, te
     with test_app.app_context():
         db.session.get(User, admin).shop_id = shop_id
         db.session.get(User, account_id).name = "Maria Santos"
-        db.session.get(User, account_id).professor_verification_status = ProfessorVerificationStatus.VERIFIED
+        db.session.get(User, account_id).professor_department = "MITL"
+        db.session.get(User, account_id).professor_faculty = "Chemical Engineering"
         db.session.commit()
     sign_in(client, admin)
-    path = "/admin/professors/new"
+    path = f"/admin/professors/accounts/{account_id}/verify"
     assert client.post(path, data={"name": "No CSRF"}).status_code == 400
-    created = post_with_token(client, path, {
-        "name": "Maria Santos", "email": "  MARIA.SANTOS@EXAMPLE.EDU  ",
-        "department": "Engineering", "office": "Room 204",
-        "is_active": "y", "direct_send_approved": "y", "accepts_student_deliveries": "y", "role": "ADMIN",
-        "account_id": str(account_id),
-    })
+    created = post_with_token(client, path, {"role": "ADMIN"}, token_page="/admin/professors")
     assert created.status_code == 302
     with test_app.app_context():
         professor = db.session.scalar(select(Professor))
         professor_id = professor.id
         assert professor.email == "maria.santos@example.edu"
-    assert post_with_token(client, path, {"name": "Duplicate", "email": "MARIA.SANTOS@example.edu"}).status_code == 200
+        assert professor.department == "MITL" and professor.faculty == "Chemical Engineering"
+    assert post_with_token(client, path, {}, token_page="/admin/professors").status_code == 400
     with test_app.app_context():
         assert len(db.session.scalars(select(Professor)).all()) == 1
+    sign_in(client, admin)
+    edit = f"/admin/professors/{professor_id}/edit"
+    assert post_with_token(client, edit, {
+        "is_active": "y", "direct_send_approved": "y", "accepts_student_deliveries": "y",
+    }).status_code == 302
     sign_in(client, owner)
     assert b"Maria Santos" in client.get("/orders/new").data
     assert professor_review(client, file_id, shop_id, professor_id).status_code == 200
     old_url = professor_place(client, file_id, shop_id, professor_id).headers["Location"]
     sign_in(client, admin)
-    edit = f"/admin/professors/{professor_id}/edit"
     assert post_with_token(client, edit, {
         "name": "Maria Updated", "email": "new.maria@example.edu",
         "department": "New Department", "office": "New Office", "account_id": str(account_id),
@@ -129,8 +130,9 @@ def test_professor_management_eligibility_normalization_and_snapshots(client, te
         assert old.professor_name == "Maria Santos"
         assert old.professor_email == "maria.santos@example.edu"
         assert not db.session.get(Professor, professor_id).is_active
+        assert db.session.get(Professor, professor_id).faculty == "Chemical Engineering"
     sign_in(client, owner)
-    assert b"Maria Updated" not in client.get("/orders/new").data
+    assert b"Maria Santos" not in client.get("/orders/new").data
     assert client.get(old_url).status_code == 200
     assert b"maria.santos@example.edu" in client.get(old_url).data
     sign_in(client, admin)
@@ -141,19 +143,19 @@ def test_professor_management_eligibility_normalization_and_snapshots(client, te
     }).status_code == 302
     sign_in(client, owner)
     new_file = file(test_app, owner, name="new.pdf")
-    assert b"Maria Updated" in client.get("/orders/new").data
+    assert b"Maria Santos" in client.get("/orders/new").data
     assert professor_review(client, new_file, shop_id, professor_id).status_code == 200
     new_url = professor_place(client, new_file, shop_id, professor_id).headers["Location"]
     with test_app.app_context():
         orders = db.session.scalars(select(Order).order_by(Order.id)).all()
-        assert [order.professor_email for order in orders] == ["maria.santos@example.edu", "new.maria@example.edu"]
-    assert b"new.maria@example.edu" in client.get(new_url).data
+        assert [order.professor_email for order in orders] == ["maria.santos@example.edu", "maria.santos@example.edu"]
+    assert b"maria.santos@example.edu" in client.get(new_url).data
     sign_in(client, admin)
     assert post_with_token(client, edit, {
         "name": "Maria Updated", "email": "new.maria@example.edu", "is_active": "y", "account_id": str(account_id),
     }).status_code == 302
     sign_in(client, owner)
-    assert b"Maria Updated" not in client.get("/orders/new").data
+    assert b"Maria Santos" not in client.get("/orders/new").data
 
 
 def test_payment_configuration_changes_student_flow_without_changing_records(client, test_app):
@@ -240,16 +242,18 @@ def test_disabling_professor_service_blocks_new_use_but_keeps_old_order(client, 
     with test_app.app_context():
         db.session.get(User, blue_staff).shop_id = shop_id
         db.session.get(User, account_id).name = "Professor One"
-        db.session.get(User, account_id).professor_verification_status = ProfessorVerificationStatus.VERIFIED
+        db.session.get(User, account_id).professor_department = "MITL"
+        db.session.get(User, account_id).professor_faculty = "Industrial Engineering"
         db.session.commit()
     sign_in(client, blue_staff)
-    created = post_with_token(client, "/admin/professors/new", {
-        "name": "Professor One", "email": "professor.one@example.edu",
-        "is_active": "y", "direct_send_approved": "y", "accepts_student_deliveries": "y", "account_id": str(account_id),
-    })
+    created = post_with_token(client, f"/admin/professors/accounts/{account_id}/verify", {},
+                              token_page="/admin/professors")
     assert created.status_code == 302
     with test_app.app_context():
         professor_id = db.session.scalar(select(Professor)).id
+    assert post_with_token(client, f"/admin/professors/{professor_id}/edit", {
+        "is_active": "y", "direct_send_approved": "y", "accepts_student_deliveries": "y",
+    }).status_code == 302
     sign_in(client, owner)
     assert professor_review(client, file_id, shop_id, professor_id).status_code == 200
     old_url = professor_place(client, file_id, shop_id, professor_id).headers["Location"]

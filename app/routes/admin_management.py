@@ -12,7 +12,8 @@ from app.authorization import roles_required
 from app.extensions import db
 from app.models import PaymentSettings, PrintingShop, Professor, ProfessorVerificationStatus, User, UserRole
 from app.services.admin_management import (
-    ManagementError, assign_staff_to_shop, delete_managed_professor, save_professor,
+    ManagementError, assign_staff_to_shop, delete_managed_professor,
+    save_professor_approvals, verify_professor_with_profile,
 )
 from app.services.account_deletion import (
     AccountDeletionCleanupError, AccountDeletionError, delete_customer_account,
@@ -89,9 +90,11 @@ def verify_professor_account(account_id):
     account = db.get_or_404(User, account_id)
     if account.role != UserRole.PROFESSOR or account.professor_verification_status != ProfessorVerificationStatus.PENDING:
         abort(400)
-    account.professor_verification_status = ProfessorVerificationStatus.VERIFIED
-    db.session.commit()
-    flash("Professor account verified. Link it to a managed profile to enable delivery.", "success")
+    try:
+        verify_professor_with_profile(account)
+    except ManagementError as error:
+        abort(409, description=str(error))
+    flash("Professor account verified and its managed profile created.", "success")
     return redirect(url_for("admin_management.professors"))
 
 
@@ -109,57 +112,36 @@ def reject_professor_account(account_id):
     return redirect(url_for("admin_management.professors"))
 
 
-def professor_editor(record=None):
+def professor_editor(record):
     form = ProfessorForm(obj=record)
-    accounts = db.session.scalars(select(User).where(
-        User.role == UserRole.PROFESSOR,
-        User.professor_verification_status == ProfessorVerificationStatus.VERIFIED,
-    ).order_by(User.name, User.id)).all()
-    form.account_id.choices = [(0, "Unlinked")] + [
-        (user.id, f"{user.name} ({user.email}) — {user.professor_department or 'Department not supplied'}")
-        for user in accounts
-        if user.professor_id is None or (record is not None and user.professor_id == record.id)
-    ]
     if form.validate_on_submit():
         try:
-            save_professor(
-                record, name=form.name.data, email=form.email.data,
-                department=form.department.data, office=form.office.data,
-                faculty=form.faculty.data, account_id=form.account_id.data or None,
-                is_active=bool(form.is_active.data),
+            save_professor_approvals(
+                record, is_active=bool(form.is_active.data),
                 direct_send_approved=bool(form.direct_send_approved.data),
                 accepts_student_deliveries=bool(form.accepts_student_deliveries.data),
             )
         except ManagementError as error:
-            form.email.errors.append(str(error))
+            form.is_active.errors.append(str(error))
         else:
-            flash("Professor saved.", "success")
+            flash("Professor approval settings saved.", "success")
             return redirect(url_for("admin_management.professors"))
-    elif request.method == "GET":
-        form.account_id.data = (
-            record.account.id if record is not None and record.account
-            else request.args.get("account_id", default=0, type=int)
-        )
-        if record is None and form.account_id.data:
-            account = next((item for item in accounts if item.id == form.account_id.data), None)
-            if account is not None:
-                form.name.data = account.name
-                form.email.data = account.email
-                form.department.data = account.professor_department
-                form.faculty.data = account.professor_department
     return render_template("admin/professor_form.html", professor=record, form=form)
 
 
 @admin_management_bp.route("/professors/new", methods=["GET", "POST"])
 @professor_management_required
 def new_professor():
-    return professor_editor()
+    abort(404)
 
 
 @admin_management_bp.route("/professors/<int:professor_id>/edit", methods=["GET", "POST"])
 @professor_management_required
 def edit_professor(professor_id):
-    return professor_editor(db.get_or_404(Professor, professor_id))
+    record = db.get_or_404(Professor, professor_id)
+    if record.account is None:
+        abort(404)
+    return professor_editor(record)
 
 
 def confirm_deletion(*, title: str, name: str, impact: str, action: str, error=None, status=200):
@@ -173,8 +155,10 @@ def confirm_deletion(*, title: str, name: str, impact: str, action: str, error=N
 @professor_management_required
 def delete_professor(professor_id):
     profile = db.get_or_404(Professor, professor_id)
-    page = dict(title="Delete managed professor profile", name=profile.name,
-                impact="The linked Professor account will remain verified but become unlinked. Existing orders keep their saved recipient and Faculty details.",
+    if profile.account is not None:
+        abort(404)
+    page = dict(title="Delete legacy professor profile", name=profile.name,
+                impact="Existing orders keep their saved recipient and Faculty details.",
                 action=url_for("admin_management.delete_professor", professor_id=professor_id))
     if request.method == "POST":
         if not FlaskForm().validate_on_submit():
@@ -198,7 +182,7 @@ def delete_professor_account(account_id):
     if account.role != UserRole.PROFESSOR or account.professor_verification_status != ProfessorVerificationStatus.VERIFIED:
         abort(404)
     page = dict(title="Delete verified Professor account", name=account.name,
-                impact="This permanently removes the login and that account's private files, orders, payment details, and history. The separately managed profile and other customers' past orders remain; new student deliveries to this professor stop.",
+                impact="This permanently removes the login, managed profile, private files, orders, payment details, and history. Other customers' past order details remain; new student deliveries to this professor stop.",
                 action=url_for("admin_management.delete_professor_account", account_id=account_id))
     if request.method == "POST":
         if not FlaskForm().validate_on_submit():

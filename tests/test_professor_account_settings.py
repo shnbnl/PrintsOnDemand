@@ -2,11 +2,13 @@
 
 import re
 
+import pytest
 from sqlalchemy import select
 
 from app.extensions import db
-from app.models import Faculty, Professor, ProfessorVerificationStatus, User, UserRole
-from app.services.admin_management import save_professor
+from app.models import Professor, ProfessorVerificationStatus, User, UserRole
+from app.professor_faculties import FACULTIES_BY_DEPARTMENT
+from app.services.admin_management import verify_professor_with_profile
 from app.services.professors import selectable_professors
 from test_auth import csrf_token, login, register
 from test_orders import approved_professor, sign_in, student
@@ -20,7 +22,9 @@ def department_options(response):
 
 def test_registration_uses_exact_department_choices_and_rejects_arbitrary_values(client, test_app):
     page = client.get("/auth/register?account_type=PROFESSOR")
-    assert department_options(page) == [b""] + [faculty.value.encode() for faculty in Faculty]
+    assert department_options(page) == [b""] + [name.encode() for name in FACULTIES_BY_DEPARTMENT]
+    assert b'"CMET"' in page.data and b'"Marine Engineering"' in page.data
+    assert b'"IECELL"' not in page.data
     missing = register(client, account_type="PROFESSOR", name="Maria Santos",
                        email="maria.santos@example.edu")
     assert missing.status_code == 200 and b"Select your department" in missing.data
@@ -36,8 +40,30 @@ def test_registration_uses_exact_department_choices_and_rejects_arbitrary_values
         account = db.session.scalar(select(User))
         assert account.role == UserRole.PROFESSOR
         assert account.professor_department == "CCIS"
+        assert account.professor_faculty == "Information Technology"
         assert account.professor_id is None
         assert db.session.scalar(select(Professor)) is None
+
+
+@pytest.mark.parametrize("department", FACULTIES_BY_DEPARTMENT)
+def test_registration_saves_faculty_from_its_selected_department(client, test_app, department):
+    choices = FACULTIES_BY_DEPARTMENT[department]
+    selected = choices[-1] if choices else ""
+    response = register(client, account_type="PROFESSOR", name="Department Professor",
+                        email=f"{department.lower()}@example.edu", professor_department=department,
+                        professor_faculty=selected)
+    assert response.status_code == 302
+    with test_app.app_context():
+        account = db.session.scalar(select(User))
+        assert (account.professor_department, account.professor_faculty) == (department, selected or None)
+    if choices:
+        assert register(client, account_type="PROFESSOR", name="Wrong Faculty",
+                        email="wrong@example.edu", professor_department=department,
+                        professor_faculty="Unlisted Faculty").status_code == 200
+    else:
+        assert register(client, account_type="PROFESSOR", name="Unexpected Faculty",
+                        email="wrong@example.edu", professor_department=department,
+                        professor_faculty="Computer Science").status_code == 200
 
 
 def test_professor_settings_show_information_without_delivery_control(client, test_app):
@@ -55,35 +81,27 @@ def test_professor_settings_show_information_without_delivery_control(client, te
     assert b'role="switch"' not in page.data
     assert client.post("/account/professor-preference", data={
         "csrf_token": csrf_token(page), "accepts_student_deliveries": "y",
-    }).status_code == 302
+    }).status_code == 404
     with test_app.app_context():
         account = db.session.scalar(select(User))
         assert account.professor_department == "CCIS"
-        assert account.student_delivery_preference is True
+        assert account.student_delivery_preference is False
         assert account.professor_id is None
         assert db.session.get(Professor, profile_id).accepts_student_deliveries is False
         assert selectable_professors() == []
-        profile = db.session.get(Professor, profile_id)
-        account.professor_verification_status = ProfessorVerificationStatus.VERIFIED
-        db.session.commit()
-        save_professor(
-            profile, name=profile.name, email=profile.email,
-            department=profile.department, office=profile.office,
-            faculty=profile.faculty, account_id=account.id,
-            is_active=True, direct_send_approved=True, accepts_student_deliveries=False,
-        )
+        verify_professor_with_profile(account)
     linked = client.get("/account")
     assert linked.status_code == 200 and b"Your profile is linked" not in linked.data
     assert b'id="department"' not in linked.data
     assert client.post("/account/professor-preference", data={
         "csrf_token": csrf_token(linked), "accepts_student_deliveries": "y",
         "department": "GE",  # The account's saved department cannot be changed here.
-    }).status_code == 302
+    }).status_code == 404
     with test_app.app_context():
         account = db.session.scalar(select(User))
         assert account.professor_department == "CCIS"
-        assert db.session.get(Professor, profile_id).accepts_student_deliveries is True
-        assert [record.id for record in selectable_professors()] == [profile_id]
+        assert db.session.get(Professor, profile_id).accepts_student_deliveries is False
+        assert selectable_professors() == []
 
 
 def test_existing_account_without_department_can_select_one_once(client, test_app):
@@ -93,23 +111,23 @@ def test_existing_account_without_department_can_select_one_once(client, test_ap
     assert page.status_code == 200 and b'id="department"' not in page.data
     assert client.post("/account/professor-preference", data={
         "csrf_token": csrf_token(page), "accepts_student_deliveries": "y",
-    }).status_code == 400
+    }).status_code == 404
     invalid = client.post("/account/professor-preference", data={
         "csrf_token": csrf_token(client.get("/account")),
         "department": "Computer Science", "accepts_student_deliveries": "y",
     })
-    assert invalid.status_code == 400
+    assert invalid.status_code == 404
     with test_app.app_context():
         assert db.session.get(User, account_id).professor_department is None
         assert db.session.get(User, account_id).student_delivery_preference is False
     assert client.post("/account/professor-preference", data={
         "csrf_token": csrf_token(client.get("/account")),
         "department": "MITL", "accepts_student_deliveries": "y",
-    }).status_code == 302
+    }).status_code == 404
     saved = client.get("/account")
-    assert b"MITL" in saved.data and b'id="department"' not in saved.data
+    assert b"Not provided" in saved.data and b'id="department"' not in saved.data
     with test_app.app_context():
-        assert db.session.get(User, account_id).student_delivery_preference is True
+        assert db.session.get(User, account_id).student_delivery_preference is False
 
 
 def test_existing_managed_department_is_displayed_when_account_has_none(client, test_app):
@@ -125,9 +143,9 @@ def test_existing_managed_department_is_displayed_when_account_has_none(client, 
     assert b'id="department"' not in page.data
     assert client.post("/account/professor-preference", data={
         "csrf_token": csrf_token(page), "accepts_student_deliveries": "y",
-    }).status_code == 302
+    }).status_code == 404
     with test_app.app_context():
-        assert db.session.get(Professor, profile_id).accepts_student_deliveries is True
+        assert db.session.get(Professor, profile_id).accepts_student_deliveries is False
 
 
 def test_student_cannot_open_professor_setting(client, test_app):

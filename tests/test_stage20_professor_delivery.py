@@ -84,12 +84,12 @@ def test_professor_self_delivery_and_setting_do_not_expose_dropdown(client, test
     paid_later = client.post(placed.headers["Location"] + "/payment", data={
         "csrf_token": token(detail), "payment_method": "ONSITE",
     })
-    assert paid_later.status_code == 400
+    assert paid_later.status_code == 302
     with test_app.app_context():
-        assert db.session.scalar(select(Payment)) is None
+        assert db.session.scalar(select(Payment)).payment_method.value == "ONSITE"
 
 
-def test_professor_can_toggle_student_delivery_consent(client, test_app):
+def test_professor_cannot_toggle_staff_managed_delivery_approval(client, test_app):
     profile_id = approved_professor(test_app, accepts=False, linked=False)
     account_id = student(test_app, "maria.santos@example.edu", role=UserRole.PROFESSOR)
     with test_app.app_context():
@@ -102,12 +102,12 @@ def test_professor_can_toggle_student_delivery_consent(client, test_app):
     assert client.post("/account/professor-preference", data={"accepts_student_deliveries": "y"}).status_code == 400
     assert client.post("/account/professor-preference", data={
         "csrf_token": token(page), "accepts_student_deliveries": "y"
-    }).status_code == 302
+    }).status_code == 404
     with test_app.app_context():
-        assert db.session.get(Professor, profile_id).accepts_student_deliveries is True
+        assert db.session.get(Professor, profile_id).accepts_student_deliveries is False
     assert client.post("/account/professor-preference", data={
         "csrf_token": token(client.get("/account"))
-    }).status_code == 302
+    }).status_code == 404
     with test_app.app_context():
         assert db.session.get(Professor, profile_id).accepts_student_deliveries is False
 
@@ -132,16 +132,11 @@ def test_blue_staff_can_enable_and_disable_student_deliveries(client, test_app):
     with test_app.app_context():
         db.session.get(User, admin_id).shop_id = blue_id
         db.session.commit()
-    profile_id = approved_professor(test_app, accepts=False, linked=False)
+    profile_id = approved_professor(test_app, accepts=False)
     sign_in(client, admin_id)
     path = f"/admin/professors/{profile_id}/edit"
     assert b"Off" in client.get("/admin/professors").data
-    fields = {
-        "name": "Maria Santos", "email": "maria.santos@example.edu",
-        "department": "Computer Engineering", "office": "Engineering Building 204",
-        "faculty": "MITL", "account_id": "0",
-        "is_active": "y", "direct_send_approved": "y",
-    }
+    fields = {"is_active": "y", "direct_send_approved": "y"}
     assert client.post(path, data={
         **fields, "csrf_token": token(client.get(path)),
         "accepts_student_deliveries": "y",

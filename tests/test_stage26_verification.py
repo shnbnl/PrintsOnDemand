@@ -62,12 +62,14 @@ def test_registration_starts_pending_and_only_blue_can_verify_or_reject(client, 
     with test_app.app_context():
         account = db.session.get(User, account_id)
         assert account.professor_verification_status == ProfessorVerificationStatus.VERIFIED
-        assert account.professor_id is None
+        assert account.professor_id is not None
+        assert account.professor.department == "CCIS"
+        assert account.professor.faculty == "Information Technology"
     assert client.post(reject, data={"csrf_token": token(client.get(index))}).status_code == 400
     assert client.post(f"{index}/accounts/999999/verify", data={"csrf_token": token(client.get(index))}).status_code == 404
 
 
-def test_rejection_and_profile_linking_are_separate_trusted_actions(client, test_app):
+def test_rejection_and_automatic_profile_creation_are_trusted_actions(client, test_app):
     blue, staff = blue_team(test_app)
     assert register(client, account_type="PROFESSOR", name="Rejected Professor",
                     email="rejected@example.edu", professor_department="CAS").status_code == 302
@@ -94,34 +96,31 @@ def test_rejection_and_profile_linking_are_separate_trusted_actions(client, test
     assert client.post(f"/admin/professors/accounts/{pending_id}/verify", data={
         "csrf_token": token(page),
     }).status_code == 302
-    link_page = client.get(f"/admin/professors/new?account_id={pending_id}")
-    assert link_page.status_code == 200 and b"Verified Professor" in link_page.data
-    created = client.post("/admin/professors/new", data={
-        "csrf_token": token(link_page), "name": "Verified Professor",
-        "email": "verified@example.edu", "department": "MITL", "faculty": "MITL",
-        "account_id": str(pending_id), "is_active": "y", "direct_send_approved": "y",
-        "accepts_student_deliveries": "y", "shop_id": "999", "verified": "true",
-    })
-    assert created.status_code == 302
+    assert client.get(f"/admin/professors/new?account_id={pending_id}").status_code == 404
     with test_app.app_context():
-        profile = db.session.scalar(select(Professor).where(Professor.email == "verified@example.edu"))
+        account = db.session.get(User, pending_id)
+        profile = account.professor
         assert profile.account.id == pending_id
-        assert profile.is_active and profile.direct_send_approved
+        assert profile.is_active and not profile.direct_send_approved
         assert profile.account.professor_department == "MITL"
-        assert [item.id for item in selectable_professors()] == [profile.id]
+        assert selectable_professors() == []
         profile_id = profile.id
     edit = f"/admin/professors/{profile_id}/edit"
     assert client.post(edit, data={
-        "csrf_token": token(client.get(edit)), "name": "Verified Professor",
-        "email": "verified@example.edu", "department": "CAS", "faculty": "MITL",
-        "account_id": str(pending_id), "is_active": "y", "direct_send_approved": "y",
+        "csrf_token": token(client.get(edit)), "name": "Forged Name",
+        "email": "forged@example.edu", "department": "CAS", "faculty": "Psychology",
+        "account_id": "999", "is_active": "y", "direct_send_approved": "y",
         "accepts_student_deliveries": "y",
     }).status_code == 302
     with test_app.app_context():
-        assert db.session.get(User, pending_id).professor_department == "CAS"
+        account = db.session.get(User, pending_id)
+        assert account.professor_department == "MITL"
+        assert account.professor.name == "Verified Professor"
+        assert account.professor.email == "verified@example.edu"
+        assert account.professor.faculty == "MITL"
+        assert [item.id for item in selectable_professors()] == [profile_id]
     assert client.post(edit, data={
-        "csrf_token": token(client.get(edit)), "name": "Verified Professor",
-        "email": "verified@example.edu", "department": "CAS", "faculty": "MITL", "account_id": str(pending_id),
+        "csrf_token": token(client.get(edit)),
     }).status_code == 302
     with test_app.app_context():
         assert not db.session.get(Professor, profile_id).is_active

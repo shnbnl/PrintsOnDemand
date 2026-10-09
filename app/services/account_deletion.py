@@ -21,8 +21,8 @@ def delete_customer_account(user_id: int) -> None:
     """Remove a customer's complete owned graph, preserving shared shop data.
 
     Order snapshots and payments belong to the order owner and are removed.
-    Managed professor profiles and *other* customers' order snapshots belong to
-    the shop/their respective owners and remain. Private files are staged before
+    Other customers' order snapshots remain even when a professor's managed
+    profile is removed. Private files are staged before
     commit and purged only after commit, so database failure restores the bytes.
     """
     staged = None
@@ -55,16 +55,14 @@ def delete_customer_account(user_id: int) -> None:
         # Normally only staff/admin review payments; this also handles an old
         # reviewer reference without deleting somebody else's payment.
         db.session.execute(update(Payment).where(Payment.reviewed_by_id == user_id).values(reviewed_by_id=None))
-        if user.role == UserRole.PROFESSOR and user.professor_id is not None:
-            # The shop owns this directory entry. Consent set through the login
-            # account ends with that account; staff can manage the entry later.
-            db.session.execute(
-                update(Professor).where(Professor.id == user.professor_id)
-                .values(accepts_student_deliveries=False)
-            )
+        professor_id = user.professor_id if user.role == UserRole.PROFESSOR else None
+        if professor_id is not None:
+            db.session.execute(update(Order).where(Order.professor_id == professor_id).values(professor_id=None))
         deleted = db.session.execute(delete(User).where(User.id == user_id))
         if deleted.rowcount != 1:
             raise AccountDeletionError("Account deletion did not complete.")
+        if professor_id is not None:
+            db.session.execute(delete(Professor).where(Professor.id == professor_id))
         db.session.commit()
     except Exception as error:
         db.session.rollback()

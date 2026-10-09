@@ -1,14 +1,13 @@
 """Self-service settings and confirmed customer account removal."""
 
-from flask import Blueprint, current_app, flash, redirect, render_template, session, url_for
+from flask import Blueprint, abort, current_app, flash, redirect, render_template, session, url_for
 from flask_login import current_user, logout_user
 from flask_wtf import FlaskForm
-from wtforms import BooleanField, PasswordField, SelectField, SubmitField
-from wtforms.validators import DataRequired, ValidationError
+from wtforms import BooleanField, PasswordField, SubmitField
+from wtforms.validators import DataRequired
 
 from app.authorization import roles_required
-from app.extensions import db
-from app.models import Faculty, UserRole
+from app.models import UserRole
 from app.services.account_deletion import (
     AccountDeletionCleanupError, AccountDeletionError, delete_customer_account,
 )
@@ -32,32 +31,12 @@ class DeleteAccountForm(FlaskForm):
     submit = SubmitField("Permanently delete my account")
 
 
-class ProfessorPreferenceForm(FlaskForm):
-    department = SelectField(
-        "Department", choices=[("", "Select department")] + [(item.value, item.value) for item in Faculty],
-        validate_choice=False,
-    )
-    accepts_student_deliveries = BooleanField("Accept student print deliveries")
-    submit = SubmitField("Save preference")
-
-    def validate_department(self, field):
-        if field.data and field.data not in {item.value for item in Faculty}:
-            raise ValidationError("Select a valid department.")
-
-
-def render_settings(*, preference_form=None, status=200):
+def render_settings():
     if current_user.role == UserRole.PROFESSOR:
         profile = current_user.professor
         department = current_user.professor_department or (profile.department if profile else None)
-        form = preference_form or ProfessorPreferenceForm(formdata=None)
-        if preference_form is None:
-            form.accepts_student_deliveries.data = (
-                profile.accepts_student_deliveries if profile is not None
-                else current_user.student_delivery_preference
-            )
-        return render_template("account/settings.html", preference_form=form,
-                               department=department, needs_department=not department), status
-    return render_template("account/settings.html"), status
+        return render_template("account/settings.html", department=department)
+    return render_template("account/settings.html")
 
 
 @account_bp.get("")
@@ -69,22 +48,7 @@ def settings():
 @account_bp.post("/professor-preference")
 @roles_required(UserRole.PROFESSOR)
 def professor_preference():
-    profile = current_user.professor
-    department = current_user.professor_department or (profile.department if profile else None)
-    form = ProfessorPreferenceForm()
-    if form.validate_on_submit():
-        if not department and not form.department.data:
-            form.department.errors.append("Select your department.")
-        else:
-            if not department:
-                current_user.professor_department = form.department.data
-            current_user.student_delivery_preference = bool(form.accepts_student_deliveries.data)
-            if profile is not None:
-                profile.accepts_student_deliveries = current_user.student_delivery_preference
-            db.session.commit()
-            flash("Professor account preference updated.", "success")
-            return redirect(url_for("account.settings"))
-    return render_settings(preference_form=form, status=400)
+    abort(404)
 
 
 @account_bp.route("/delete", methods=["GET", "POST"])

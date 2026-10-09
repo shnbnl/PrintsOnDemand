@@ -8,7 +8,7 @@ from sqlalchemy import exists, select, update
 from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
-from app.models import Order, OrderDestination, OrderStatus, Payment, PaymentMethod, PaymentStatus, PrintingShop
+from app.models import Order, OrderDestination, OrderStatus, Payment, PaymentMethod, PaymentStatus, PrintingShop, UserRole
 from app.models.user import utc_now
 
 
@@ -64,14 +64,15 @@ def normalize_payment_reference(reference: str) -> str:
 
 
 def validate_checkout_payment(*, shop: PrintingShop, destination: OrderDestination, method: str,
+                              actor_role: UserRole | None = None,
                               reference: str = "") -> tuple[PaymentMethod, str | None]:
     """Validate pre-order payment intent without treating it as paid."""
     try:
         selected = PaymentMethod(method)
     except ValueError as error:
         raise PaymentError("Select a valid payment method.") from error
-    if destination == OrderDestination.PROFESSOR and selected != PaymentMethod.ONLINE:
-        raise PaymentError("Professor delivery requires online payment.")
+    if destination == OrderDestination.PROFESSOR and selected != PaymentMethod.ONLINE and actor_role != UserRole.PROFESSOR:
+        raise PaymentError("Student professor delivery requires online payment.")
     if selected == PaymentMethod.ONLINE and online_payment_details(shop) is None:
         raise PaymentError("Online payment is unavailable for this shop.")
     if selected == PaymentMethod.ONSITE and not shop.cash_enabled:
@@ -93,8 +94,8 @@ def select_payment_method(*, order_reference: str, user_id: int, method: str) ->
         selected = PaymentMethod(method)
     except ValueError as error:
         raise PaymentError("Select a valid payment method.") from error
-    if order.destination == OrderDestination.PROFESSOR and selected != PaymentMethod.ONLINE:
-        raise PaymentError("Professor delivery requires online payment.")
+    if order.destination == OrderDestination.PROFESSOR and selected != PaymentMethod.ONLINE and order.user.role != UserRole.PROFESSOR:
+        raise PaymentError("Student professor delivery requires online payment.")
     if selected == PaymentMethod.ONLINE and online_payment_details(order.shop) is None:
         raise PaymentError("Online payment is unavailable for this shop.")
     if selected == PaymentMethod.ONSITE and not order.shop.cash_enabled:

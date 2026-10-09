@@ -101,11 +101,24 @@ const professorDepartment = document.querySelector("[data-professor-department]"
 const departmentInput = professorDepartment?.querySelector("select, input");
 if (professorDepartment && departmentInput) {
   const registrationForm = professorDepartment.closest("form");
+  const facultyField = registrationForm.querySelector("[data-professor-faculty]");
+  const facultyInput = facultyField?.querySelector("select");
+  const facultyOptions = JSON.parse(document.querySelector("#professor-faculty-options")?.textContent || "{}");
   const updateProfessorDepartment = () => {
     const professorSelected = registrationForm.querySelector('input[name="account_type"][value="PROFESSOR"]:checked') !== null;
     professorDepartment.hidden = !professorSelected;
     departmentInput.required = professorSelected;
+    if (facultyField && facultyInput) {
+      const choices = professorSelected ? (facultyOptions[departmentInput.value] || []) : [];
+      const previous = facultyInput.value;
+      facultyInput.replaceChildren(new Option("Select faculty", ""), ...choices.map((name) => new Option(name, name)));
+      if (choices.includes(previous)) facultyInput.value = previous;
+      facultyField.hidden = choices.length === 0;
+      facultyInput.required = choices.length > 0;
+      if (!professorSelected || !choices.length) facultyInput.value = "";
+    }
   };
+  departmentInput.addEventListener("change", updateProfessorDepartment);
   registrationForm.querySelectorAll('input[name="account_type"]').forEach((input) => {
     input.addEventListener("change", updateProfessorDepartment);
   });

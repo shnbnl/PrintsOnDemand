@@ -43,7 +43,7 @@ class Order(db.Model):
         CheckConstraint("fees_total >= 0", name="order_fees_nonnegative"),
         CheckConstraint("total >= 0", name="order_total_nonnegative"),
         CheckConstraint("rush_fee >= 0", name="order_rush_fee_nonnegative"),
-        CheckConstraint("professor_faculty IS NULL OR professor_faculty IN ('MITL', 'CAS', 'ETYCB', 'CCIS', 'CHS', 'GE', 'IECELL', 'SHS')", name="order_professor_faculty_valid"),
+        CheckConstraint("professor_faculty IS NULL OR length(professor_faculty) <= 120", name="order_professor_faculty_valid"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -67,7 +67,7 @@ class Order(db.Model):
     professor_name: Mapped[str | None] = mapped_column(db.String(120), nullable=True)
     professor_email: Mapped[str | None] = mapped_column(db.String(254), nullable=True)
     professor_department: Mapped[str | None] = mapped_column(db.String(120), nullable=True)
-    professor_faculty: Mapped[str | None] = mapped_column(db.String(16), nullable=True)
+    professor_faculty: Mapped[str | None] = mapped_column(db.String(120), nullable=True)
     professor_office: Mapped[str | None] = mapped_column(db.String(120), nullable=True)
     pickup_date: Mapped[date | None] = mapped_column(db.Date, nullable=True)
     pickup_slot: Mapped[str | None] = mapped_column(db.String(32), nullable=True)

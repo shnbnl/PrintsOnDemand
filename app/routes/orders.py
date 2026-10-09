@@ -396,7 +396,7 @@ def render_order_detail(order, *, payment_error=None, professor_error=None, stat
     method_form = None
     if order.status == OrderStatus.PENDING_PAYMENT and order.payment is None:
         method_form = PaymentMethodForm()
-        method_form.payment_method.choices = ([] if order.destination == OrderDestination.PROFESSOR or not order.shop.cash_enabled
+        method_form.payment_method.choices = ([] if (order.destination == OrderDestination.PROFESSOR and current_user.role != UserRole.PROFESSOR) or not order.shop.cash_enabled
                                               else [(PaymentMethod.ONSITE.value, "Onsite payment")])
         if online_details is not None:
             method_form.payment_method.choices.append((PaymentMethod.ONLINE.value, "Online payment"))
@@ -420,7 +420,9 @@ def render_order_detail(order, *, payment_error=None, professor_error=None, stat
         payment_qr_image_url=url_for("orders.payment_qr", order_reference=order.order_reference) if online_details else None,
         payment_error=payment_error,
         professor_error=professor_error,
-        onsite_instructions="Pay at the printing shop with your order reference. Your payment remains pending until staff records it.",
+        onsite_instructions=("Pay the Blue and Silver delivery staff at your Faculty when your printed papers arrive. Your payment remains pending until staff records it."
+                             if order.destination == OrderDestination.PROFESSOR else
+                             "Pay at the printing shop with your order reference. Your payment remains pending until staff records it."),
         tracking=build_tracking(order),
     ), status
 
@@ -433,7 +435,7 @@ def choose_payment(order_reference: str):
     except PaymentError:
         abort(404)
     form = PaymentMethodForm()
-    form.payment_method.choices = ([] if order.destination == OrderDestination.PROFESSOR or not order.shop.cash_enabled
+    form.payment_method.choices = ([] if (order.destination == OrderDestination.PROFESSOR and current_user.role != UserRole.PROFESSOR) or not order.shop.cash_enabled
                                    else [(PaymentMethod.ONSITE.value, "Onsite payment")])
     if online_payment_details(order.shop) is not None:
         form.payment_method.choices.append((PaymentMethod.ONLINE.value, "Online payment"))

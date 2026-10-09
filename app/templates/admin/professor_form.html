@@ -1,22 +1,22 @@
 {% extends "base.html" %}
 
-{% block title %}{{ 'Edit professor' if professor else 'Add professor' }} | Prints On Demand{% endblock %}
+{% block title %}Manage professor | Prints On Demand{% endblock %}
 
 {% block content %}
   {% set back_url = url_for('admin_management.professors') %}{% set back_label = 'Back to professor management' %}{% include '_vector_back.html' %}
   <header class="page-intro">
     <p class="eyebrow">Administration / Professors</p>
-    <h1>{{ 'Edit professor' if professor else 'Add professor' }}</h1>
-    <p class="page-lead">Changes affect future selections. Existing orders keep their stored recipient details.</p>
+    <h1>Manage professor</h1>
+    <p class="page-lead">Approval changes affect future orders. The professor's identity and faculty come from their account.</p>
   </header>
 
   <form class="account-form form-card form-grid" method="post" novalidate>
     {{ form.hidden_tag() }}
-    {% for field in [form.name, form.email, form.department, form.faculty, form.office, form.account_id] %}
-      <div class="field">{{ field.label }} {{ field() }}
-        {% for error in field.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
-      </div>
-    {% endfor %}
+    <div class="professor-profile-identity field-wide">
+      <strong>{{ professor.account.name }}</strong><span>{{ professor.account.email }}</span>
+      <span>Department: {{ professor.account.professor_department or 'Not supplied' }}</span>
+      <span>Faculty: {{ professor.account.professor_faculty or ('Not applicable' if professor.account.professor_department in ('GE', 'SHS') else 'Not supplied') }}</span>
+    </div>
     <div class="professor-toggle-list field-wide">
       {% for field in [form.is_active, form.direct_send_approved, form.accepts_student_deliveries] %}
         <div class="shop-service-row professor-toggle-row">
@@ -30,6 +30,7 @@
         </div>
       {% endfor %}
     </div>
-    <div class="form-actions">{{ form.submit(class_='button') }}</div>
+    {% for error in form.is_active.errors %}<p class="field-error" role="alert">{{ error }}</p>{% endfor %}
+    <div class="form-actions">{{ form.submit(class_='button button-primary flow-next') }}</div>
   </form>
 {% endblock %}
