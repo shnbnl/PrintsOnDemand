@@ -16,7 +16,7 @@ class Config:
     PERMANENT_SESSION_LIFETIME = timedelta(hours=12)
     REMEMBER_COOKIE_DURATION = timedelta(days=14)
     ENV_NAME = "development"
-    UPLOAD_MAX_SIZE = 16 * 1024 * 1024
+    UPLOAD_MAX_SIZE = 25 * 1024 * 1024
     UPLOAD_MAX_QUANTITY = 999
     UPLOAD_STORAGE_ROOT = None
     STORAGE_BACKEND = "local"
@@ -114,6 +114,8 @@ def configure_runtime(app: Flask) -> None:
             if parsed < 1:
                 raise ValueError(f"{name} must be a positive integer.")
             app.config[name] = parsed
+    # Deployment overrides may lower the file limit, but never exceed 25 MiB.
+    app.config["UPLOAD_MAX_SIZE"] = min(app.config["UPLOAD_MAX_SIZE"], 25 * 1024 * 1024)
     app.config["UPLOAD_STORAGE_ROOT"] = (
         os.getenv("UPLOAD_STORAGE_ROOT") or app.config.get("UPLOAD_STORAGE_ROOT")
         or os.path.join(app.instance_path, "uploads")

@@ -18,7 +18,7 @@ def test_app(monkeypatch, tmp_path):
     monkeypatch.delenv("DATABASE_URL", raising=False)
     monkeypatch.delenv("SECRET_KEY", raising=False)
     app = create_app(TestingConfig)
-    app.config["UPLOAD_MAX_SIZE"] = 16 * 1024 * 1024
+    app.config["UPLOAD_MAX_SIZE"] = 25 * 1024 * 1024
     app.config["MAX_CONTENT_LENGTH"] = app.config["UPLOAD_MAX_SIZE"] + 64 * 1024
     app.config["UPLOAD_MAX_QUANTITY"] = 999
     app.config["STORAGE_BACKEND"] = "local"
