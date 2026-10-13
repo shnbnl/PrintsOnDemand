@@ -42,10 +42,9 @@
     const toStart = to === "/checkout/upload";
     const toAccount = to === "/account";
 
-    if (fromCheckout && toHistory) return "tab-to-history";
-    if ((fromCheckout || fromOrders) && toAccount) return "tab-to-account";
-    if (fromAccount && toHistory) return "tab-from-account";
-    if ((fromOrders || fromAccount) && toStart) return "tab-to-start";
+    if ((fromCheckout || fromOrders || fromAccount) && (toStart || toHistory || toAccount)) {
+      return "customer-navigation";
+    }
     if (fromWorkspace && (toStart || toHistory || toAccount)) return "workspace-entry";
     return null;
   };
@@ -53,6 +52,10 @@
   window.addEventListener("pageswap", (event) => {
     if (!event.viewTransition?.types || !event.activation) return;
     const type = transitionType(event.activation.from, event.activation.entry);
+    if (type === "customer-navigation") {
+      event.viewTransition.skipTransition();
+      return;
+    }
     if (type) event.viewTransition.types.add(type);
   });
 
@@ -63,6 +66,10 @@
     const type = activation
       ? transitionType(activation.from, activation.entry)
       : transitionType({ url: document.referrer }, { url: location.href });
+    if (type === "customer-navigation") {
+      event.viewTransition.skipTransition();
+      return;
+    }
     if (type) event.viewTransition.types.add(type);
   });
 })();
