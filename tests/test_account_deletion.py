@@ -90,6 +90,7 @@ def test_confirmed_deletion_removes_exact_owned_graph_and_bytes(client, test_app
     assert client.get("/account").status_code == 200
     response = delete_request(client, user_id=str(graph["staff"]))
     assert response.status_code == 302 and response.headers["Location"].endswith("/")
+    assert response.headers["Clear-Site-Data"] == '"cache", "cookies", "storage"'
     landing = client.get("/")
     assert b"permanently deleted" in landing.data
     assert b'class="account-crumple-transition"' in landing.data

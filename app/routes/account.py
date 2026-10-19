@@ -8,6 +8,7 @@ from wtforms.validators import DataRequired
 
 from app.authorization import roles_required
 from app.models import UserRole
+from app.services.sessions import clear_client_auth
 from app.services.account_deletion import (
     AccountDeletionCleanupError, AccountDeletionError, delete_customer_account,
 )
@@ -62,8 +63,7 @@ def delete_account():
             except AccountDeletionCleanupError:
                 current_app.logger.exception("Account deleted but staged private upload cleanup failed")
                 logout_user()
-                session.clear()
-                session["_remember"] = "clear"
+                clear_client_auth(clear_browser_cookies=True)
                 return render_template(
                     "main/error.html",
                     message="Your account was removed, but private-file cleanup needs support. Contact an administrator.",
@@ -73,8 +73,7 @@ def delete_account():
                 return render_template("account/delete.html", form=form,
                                        error="Account deletion could not be completed. Please try again."), 503
             logout_user()
-            session.clear()
-            session["_remember"] = "clear"  # Also clear Flask-Login's remember cookie.
+            clear_client_auth(clear_browser_cookies=True)
             session["play_account_delete_transition"] = True
             flash("Your account and associated data were permanently deleted.", "success")
             return redirect(url_for("main.index"))

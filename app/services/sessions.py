@@ -44,8 +44,11 @@ def begin_login(user, *, remember=False):
     revoke_session(session.get("_user_id"))
     session.clear()
     g.pop("csrf_token", None)
+    g.clear_site_data = False
+    g.clear_browser_cookies = False
     remember = remember and user.role in (UserRole.STUDENT, UserRole.PROFESSOR)
     token = issue_session(user, remember=remember)
+    g.database_actor_id = user.id
     login_user(user, remember=remember)
     session["_user_id"] = token
     session.permanent = True
@@ -57,10 +60,14 @@ def revoke_session(token):
             connection.execute(delete(AuthSession).where(AuthSession.token_hash == digest(token)))
 
 
-def clear_client_auth():
+def clear_client_auth(*, clear_browser_cookies=False):
     session.clear()
     g.pop("csrf_token", None)
     session["_remember"] = "clear"
+    g.clear_site_data = True
+    g.clear_browser_cookies = clear_browser_cookies
+    g.database_actor_id = None
+    g.database_erasure_id = None
 
 
 def load_session_user(token):
@@ -93,5 +100,6 @@ def load_session_user(token):
     if touched.rowcount != 1:
         clear_client_auth()
         return None
+    g.database_actor_id = record["user_id"]
     user = db.session.get(User, record["user_id"], populate_existing=True)
     return user if user and user.is_active else None

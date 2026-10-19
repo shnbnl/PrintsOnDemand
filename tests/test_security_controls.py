@@ -57,8 +57,13 @@ def test_server_expiry_rejects_even_validly_signed_cookies(client, test_app, exp
     else:
         record.expires_at = now_seconds() - 1
     db.session.commit()
-    assert client.get("/student").status_code == 302
+    response = client.get("/student")
+    assert response.status_code == 302
+    assert response.headers["Clear-Site-Data"] == '"cache", "storage"'
     assert db.session.scalar(select(AuthSession)) is None
+    # Expiry clears stale browser storage without deleting the new login-form
+    # CSRF cookie. A fresh login must remain usable after the redirect.
+    assert login(client).status_code == 302
 
 
 def test_session_rotation_and_password_change_invalidation(client, test_app):

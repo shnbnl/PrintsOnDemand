@@ -14,8 +14,9 @@ git pull --ff-only origin main
 python -m flask --app run.py db upgrade
 ```
 
-The migration adds `auth_sessions` and `rate_limit_buckets`; it does not alter
-customer orders or documents. **Run the migration before reloading the web app.**
+The migrations add `auth_sessions` and `rate_limit_buckets` and, on PostgreSQL,
+enable private-row policies. They do not delete customer orders or documents.
+**Run the migration before reloading the web app.**
 Existing login and remember-me cookies are intentionally rejected after this
 update, so every account must sign in again. Reload the PythonAnywhere web app.
 
@@ -28,6 +29,9 @@ update, so every account must sign in again. Reload the PythonAnywhere web app.
   origin storage. That browser header requires HTTPS and browser support; server
   revocation works independently. No app authentication token is stored in browser
   Local Storage or Session Storage. Other devices stay logged in.
+- Successful account deletion uses the same browser cleanup. Invalid or expired
+  sessions clear cache and origin storage and expire the authentication cookies;
+  they preserve the fresh anonymous session cookie needed for login-form CSRF.
 - Ordinary sessions expire after 30 minutes idle or 12 hours absolute. Customer
   remember-me credentials expire after 7 days idle or 14 days absolute, even if
   used repeatedly. Staff/admin sessions cannot use remember-me. Password changes,
@@ -49,6 +53,56 @@ update, so every account must sign in again. Reload the PythonAnywhere web app.
 - CSP restricts framing, plugins, base URLs and form destinations. It does not
   claim to be a script allowlist; Google Maps and existing inline scripts still
   work. Jinja escaping remains the primary HTML injection protection.
+
+## Database row policies
+
+PostgreSQL migration `d82f1b70a631` enables and forces RLS on `orders`,
+`order_items`, `payments`, `uploaded_files`, and `print_configurations`. SQLite
+does not support RLS; its migration is a no-op and existing route/service
+ownership checks remain essential on both backends.
+
+Each transaction receives the server-validated user ID through a transaction-local
+setting. Missing identity denies private-row access, and pooled connections cannot
+retain the previous transaction's identity. Customers see their own orders/files;
+staff see their assigned active shop's orders and attached files; administrators
+can read private records. Inserts require customer ownership, including ownership
+of an order item's file. Placed item snapshots have no UPDATE policy. Business
+rules for prices, status transitions, and payment review remain in the services;
+RLS enforces row boundaries, not every editable field.
+
+Account deletion explicitly enables a transaction-local erasure scope after
+checking authorization. Self-deletion, administrator deletion, and Blue and Silver
+staff deleting a professor can remove the target's history across shops and clear
+references in surviving orders/payments. That scope permits cross-shop reads
+during deletion; ordinary staff requests do not get it. Shared shop data and other
+customers' orders remain intact.
+
+Use a separate non-owner web DB role with `NOSUPERUSER NOCREATEDB NOCREATEROLE
+NOBYPASSRLS`, ordinary DML/sequence privileges, and no membership in an administrative
+role. Run migrations as the schema owner. Run `security-check` using the **web
+role** after migration; it checks RLS flags, named policies, and bypass privileges.
+Use separate operator credentials with deliberate RLS bypass for complete backups
+and cross-account maintenance. Do not put those credentials in the web process.
+The backup CLI must not run with the restricted web role, which cannot see every
+customer's files. No CLI request identity or implicit RLS bypass is provided.
+
+Authentication tables and public shop/professor directory tables are not covered
+by these policies. The browser never receives database credentials. Because the
+server shares a DB role and sets its own identity, these policies defend against
+missing row filters; they do not contain arbitrary SQL execution with that role.
+Parameterized queries and application authorization remain required.
+
+Optional real PostgreSQL integration tests require an empty, disposable database:
+
+```bash
+POSTGRES_RLS_TEST_URL=postgresql+psycopg://TEST_OWNER@localhost/EMPTY_TEST_DB pytest tests/test_postgres_row_policies.py -q
+```
+
+The test owner needs permission to create test roles and schemas. Never use the
+deployed database: the fixture refuses existing application tables and removes
+the objects it creates. These tests have also run against PostgreSQL 18.6 in
+PGlite; deployment-specific role provisioning and backup operations still need
+verification on the actual host.
 
 ## HTTPS on PythonAnywhere
 

@@ -10,6 +10,7 @@ import click
 from sqlalchemy import select, text
 
 from app.extensions import db
+from app.database_policies import PROTECTED_TABLES
 from app.models import User
 from app.services.backups import BackupError, create_backup, gpg_filename, verify_archive
 
@@ -73,11 +74,36 @@ def register_security_commands(app):
             )).one()
             checks["Database role has no administrative capabilities"] = not any(role)
             owns = db.session.execute(text(
-                "SELECT EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tableowner = current_user)"
+                "SELECT EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' "
+                "AND pg_has_role(current_user, tableowner, 'MEMBER'))"
             )).scalar_one()
             checks["Runtime DB account is separate from schema owner"] = not owns
+            inherited_privilege = db.session.execute(text(
+                "SELECT EXISTS (SELECT 1 FROM pg_roles WHERE "
+                "(rolsuper OR rolcreatedb OR rolcreaterole OR rolbypassrls) "
+                "AND pg_has_role(current_user, oid, 'MEMBER'))"
+            )).scalar_one()
+            checks["Runtime DB account cannot assume an administrative role"] = not inherited_privilege
+            protected = db.session.execute(text(
+                "SELECT c.relname, c.relrowsecurity, c.relforcerowsecurity "
+                "FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace "
+                "WHERE n.nspname = 'public' AND c.relkind = 'r'"
+            )).all()
+            enforced = {name for name, enabled, forced in protected if enabled and forced}
+            checks["Private tables enforce row-level security"] = set(PROTECTED_TABLES) <= enforced
+            policies = set(db.session.execute(text(
+                "SELECT tablename, policyname FROM pg_policies WHERE schemaname = 'public'"
+            )).all())
+            expected = {(table, f"pod_{prefix}_{command}")
+                for table, prefix in (("orders", "orders"), ("order_items", "items"),
+                    ("payments", "payments"), ("uploaded_files", "files"),
+                    ("print_configurations", "config"))
+                for command in ("read", "create", "delete") + (() if table == "order_items" else ("update",))}
+            installed = {(table, name) for table, name in policies if table in PROTECTED_TABLES}
+            checks["Private row policies are installed without unexpected policies"] = expected == installed
         else:
             click.echo("REVIEW SQLite: restrict DB, instance directory, and private upload access to the app OS account.")
+            click.echo("REVIEW SQLite has no database RLS; route and service ownership checks remain required.")
         backup_root = os.getenv("BACKUP_DIRECTORY", "")
         recent = list(Path(backup_root).glob("prints-backup-*.tar.gz.gpg")) if backup_root else []
         from time import time

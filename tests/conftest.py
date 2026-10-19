@@ -24,6 +24,10 @@ def test_app(monkeypatch, tmp_path):
     def reset_request_caches():
         g.pop("_login_user", None)
         g.pop("csrf_token", None)
+        g.pop("clear_site_data", None)
+        g.pop("clear_browser_cookies", None)
+        g.pop("database_actor_id", None)
+        g.pop("database_erasure_id", None)
     app.before_request_funcs.setdefault(None, []).insert(0, reset_request_caches)
     app.config["UPLOAD_MAX_SIZE"] = 25 * 1024 * 1024
     app.config["MAX_CONTENT_LENGTH"] = app.config["UPLOAD_MAX_SIZE"] + 64 * 1024

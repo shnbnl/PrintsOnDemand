@@ -39,6 +39,8 @@ def create_app(config_object: object | None = None) -> Flask:
 
     db.init_app(app)
     from . import models  # Import future model definitions for migration discovery.
+    from app.database_policies import init_database_policies
+    init_database_policies(app)
 
     migrate.init_app(app, db)
     login_manager.init_app(app)

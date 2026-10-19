@@ -4,7 +4,7 @@ import hashlib
 import hmac
 import re
 
-from flask import abort, current_app, redirect, render_template, request, session
+from flask import abort, current_app, g, redirect, render_template, request, session
 from sqlalchemy import case, delete, select
 from werkzeug.middleware.proxy_fix import ProxyFix
 
@@ -82,6 +82,11 @@ def init_security(app):
 
     @app.after_request
     def protect_response(response):
+        if g.get("clear_site_data"):
+            response.headers["Clear-Site-Data"] = (
+                '"cache", "cookies", "storage"' if g.get("clear_browser_cookies")
+                else '"cache", "storage"'
+            )
         response.headers["Content-Security-Policy"] = "object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
         response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(self)"
         if request.is_secure and app.config["FORCE_HTTPS"]:

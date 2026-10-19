@@ -18,6 +18,13 @@ class AccountDeletionCleanupError(Exception):
 
 
 def delete_customer_account(user_id: int) -> None:
+    from app.database_policies import account_erasure_scope
+
+    with account_erasure_scope(user_id):
+        _delete_customer_account(user_id)
+
+
+def _delete_customer_account(user_id: int) -> None:
     """Remove a customer's complete owned graph, preserving shared shop data.
 
     Order snapshots and payments belong to the order owner and are removed.

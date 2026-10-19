@@ -159,8 +159,6 @@ def logout():
     revoke_session(session.get("_user_id"))
     if current_user.is_authenticated:
         logout_user()
-    clear_client_auth()
+    clear_client_auth(clear_browser_cookies=True)
     flash("You have logged out.", "success")
-    response = redirect(url_for("main.index"))
-    response.headers["Clear-Site-Data"] = '"cache", "cookies", "storage"'
-    return response
+    return redirect(url_for("main.index"))
