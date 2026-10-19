@@ -1,4 +1,4 @@
-/* Prints On Demand: PDF-inspired, mobile-first visual foundation. */
+/* Prints On Demand: responsive visual foundation. */
 :root {
   color-scheme: light;
   --navy: #052448;
@@ -261,7 +261,7 @@ button:disabled, input[type="submit"]:disabled { opacity: 0.52; cursor: not-allo
   .account-delete-card .form-actions .button { width: 100%; }
 }
 
-/* PDF-inspired choices, summaries, and status feedback. */
+/* Choices, summaries, and status feedback. */
 .choice-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); gap: 0.75rem; }
 .choice-card { display: flex; align-items: center; gap: 0.65rem; min-height: 3.3rem; padding: 0.7rem 1rem; border: 2px solid var(--border); border-radius: 1.1rem; background: white; cursor: pointer; font-weight: 750; }
 .choice-card:hover, .choice-card:focus-within { border-color: var(--cobalt); }

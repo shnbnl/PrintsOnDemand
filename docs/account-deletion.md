@@ -1,37 +1,34 @@
-# Account deletion policy (Stage 24)
+﻿# Account deletion
 
-Students and professors can open **Account → Delete Account**, review the consequences, cancel, or submit a CSRF-protected form with their current password and an explicit confirmation checkbox. The server derives the account ID from the authenticated session. Staff and admin accounts have no self-service deletion route. A successful deletion logs the customer out, clears the session and remember cookie, and redirects to the public landing page with a confirmation message.
+Students and professors can open **Account → Delete Account**, review the consequences, and submit their current password with explicit confirmation. The POST requires CSRF validation. The account ID comes from the authenticated session; submitted IDs cannot select another customer. Staff and administrators have no self-service account-deletion route.
 
-## Ownership audit
+Blue and Silver staff can separately delete a verified professor account through professor management after confirmation. This removes that professor's login, managed profile, owned orders, payment records, and private files. Ordinary profile approval changes do not delete historical orders.
 
-The database currently has no notification, token, separate profile-settings, or order-event tables. Order progress is stored as status and timestamps on `orders`. User-linked rows are:
+## Data removed and preserved
 
-| Relationship | Deletion policy |
-| --- | --- |
-| `users.id` → `uploaded_files.user_id` | Delete the user's upload metadata and exact private storage keys. |
-| `uploaded_files.id` → `print_configurations.file_id` | Delete each uploaded file's configuration. |
-| `users.id` → `orders.user_id` | Delete every owned order, including pickup/delivery and professor recipient/Faculty snapshots and status timestamps. |
-| `orders.id` → `order_items.order_id` | Delete the order's items before the order. |
-| `uploaded_files.id` → `order_items.uploaded_file_id` | Delete the owner's order items before their file metadata. Other users' files are untouched, even if a malformed cross-owner reference exists. |
-| `orders.id` → `payments.order_id` | Delete associated payment state, submitted reference, rejection reason, and review timestamp before the order. |
-| `users.id` → `payments.reviewed_by_id` | Null a reviewer reference if one exists on somebody else's payment; preserve that payment. Normal customer roles cannot review payments through the app. |
-| `users.professor_id` → `professors.id` | Remove the login account and its link. Preserve the separately managed Blue and Silver directory record; turn off the login-controlled student-delivery acceptance setting. |
-| `orders.professor_id` → `professors.id` | Delete this customer's orders; preserve other customers' orders and their historical recipient snapshots. |
-| `printing_shops.id` → `orders.shop_id`, `users.shop_id` | Preserve shops, staff assignments, services, prices, and fees. |
-| `payment_settings` | Preserve the shared admin-managed payment instructions. |
+| Data | Policy |
+|---|---|
+| Customer login | Delete the user and associated authentication sessions |
+| Owned uploads | Delete metadata, print configurations, and exact private storage keys |
+| Owned orders | Delete order items, fulfillment/recipient snapshots, and payment records |
+| Linked professor profile | Remove the deleted professor account's managed profile |
+| Other customers' orders | Preserve their records and recipient snapshots; clear references to the removed profile |
+| Other customers' payments | Preserve payments; clear any reviewer reference to the deleted account |
+| Shared shops and staff | Preserve shop records, services, rates, fees, assignments, and other accounts |
+| Backups and downloaded copies | Not erased by this operation; follow the separate retention policy |
 
-The retained managed professor record can still contain a name, email, office, department, and Faculty. Other customers' existing orders may contain those professor recipient snapshots and payment records. They belong to the shop's directory or those other customers' orders, not to the deleted login account. The shop must manage separate requests to remove or correct that operational data. This deletion does not remove external backups or copies downloaded outside application-controlled private storage.
+## Database and file sequence
 
-## Database and private-storage sequence
+The service locks the target account where supported, marks it inactive within the transaction, and collects owned order IDs and private file keys. Storage validates the keys and moves files into a private staging directory on the same filesystem. Payment records, order items, orders, configurations, and upload metadata are removed in dependency order. References from surviving records are cleared before deleting the account and applicable professor profile.
 
-The service locks the authenticated user row where the database supports it, marks the account inactive within the transaction, and collects its order IDs and exact upload keys. The local storage backend validates each key and moves its file into a private staging directory on the same filesystem. It then deletes payment records, order items, orders, print configurations, upload metadata, and the user row in dependency order, all in one database transaction. A failed database or staging operation rolls back and moves staged files back to their original keys. Only after a successful commit are the staged files unlinked. No upload directory is deleted wholesale.
+A database/staging failure rolls back and restores staged files where possible. After a successful database commit, staged bytes are purged. A postcommit purge failure is reported for operator attention; the deleted account cannot be restored merely by retrying the HTTP request. Successful self-deletion clears the browser session and remember cookie and requests browser cache/cookie/storage cleanup.
 
-Database and filesystem writes cannot be one atomic transaction. A process crash or storage error immediately after database commit can leave unreferenced bytes in a private `.account-deletion-<random-id>` staging directory. The route reports an error and logs it rather than claiming full cleanup. With the application stopped, an operator runs:
+Database and filesystem changes cannot form a single atomic transaction. A hard interruption can leave files in private `.account-deletion-*` directories. With the app offline, run:
 
-```powershell
-python -m flask --app wsgi:app recover-account-deletions
+```bash
+python -m flask --app run.py recover-account-deletions
 ```
 
-The command checks each staged key against live upload metadata, restores bytes still referenced by a rolled-back transaction, and deletes bytes whose records are gone. Run it only while deletion requests are stopped, so it cannot race with an active transaction. It reports restored and removed counts. The command operates on local private storage in development, testing, and production, including when production uploads are disabled. A different storage backend needs equivalent staging/recovery support before account deletion can remove its files.
+Recovery restores staged files still referenced by database metadata and purges those whose records are gone. It must not race with active deletion requests. This is logical deletion from application-managed storage, not guaranteed forensic erasure from disks or external copies.
 
-No migration is required: existing foreign keys and columns support the explicit deletion order. The application stores sessions and remember credentials in signed browser cookies rather than a token table; removing the user prevents future authentication, while logout clears the current cookies.
+PostgreSQL account erasure uses an explicit authorized RLS scope for target history and surviving references. SQLite uses application ownership checks and explicit deletion order. See [Security operations](security-operations.md) for session revocation, database privileges, backup retention, and recovery requirements.

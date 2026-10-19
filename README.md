@@ -1,235 +1,154 @@
-# Prints On Demand
+﻿# Prints On Demand
 
-Prints On Demand is a printing-service web application for students and professors. They can find a printing shop, submit documents with printing instructions, choose a recipient and fulfillment method, and follow an order through completion.
+A campus printing service for students, professors, and print shops. Customers upload documents, configure printing, choose fulfillment and payment, and track their orders. Shop staff manage prices, payments, and print jobs for their assigned shop.
 
-**Current stage: guided checkout and shop order files.** Students and professors upload documents during checkout, choose a shop on the existing map, configure each file, choose payment, and review the order before placement. Assigned shop staff access private documents through their own shop's orders.
+## Features
 
-Security deployment, session expiry, encrypted backups, and recovery instructions
-are in [Security operations](docs/security-operations.md). This update requires
-`python -m flask --app run.py db upgrade` before reloading the deployed app and
-signs out existing sessions. SQLite uses application ownership and role checks;
-PostgreSQL additionally supports database row-level security (RLS) on private
-orders, items, payments, uploaded files, and print configurations after migration.
-PostgreSQL RLS requires a restricted web database role that cannot bypass the
-policies; see the security guide for role setup and verification.
+- Student and professor registration with role-based workspaces.
+- Shop search, list/map views, operating hours, services, and prices.
+- Guided checkout with up to 20 files per order and a 25 MiB individual upload ceiling. The combined upload request also has a size limit.
+- Letter, Legal, A4, A3, and A2 paper; grayscale/color; copy counts; optional rush printing.
+- Scheduled pickup, regular delivery where offered, and Blue and Silver professor delivery.
+- Shop-specific cash and manual online payment options, payment QR images, reference submission, and staff verification.
+- Order references, saved price/recipient details, tracking, filtered customer history, and customer-confirmed completion.
+- Staff shop settings with service/payment switches, bulk price editing, photos, hours, and fees.
+- Blue and Silver professor verification with automatically managed profiles and delivery approval controls.
 
-For the current workflows, exact payment/order transitions, implementation limits,
-route inventory, data fields, and configuration defaults, see the
-[technical breakdown](docs/technical-breakdown.md). It distinguishes current code
-from older stage descriptions below and from settings verified on the live host.
+## Accounts and order processing
 
-## Planned features
+| Role | Access |
+|---|---|
+| Student | Own files, checkout, eligible professor recipients, own orders and completion |
+| Professor | Own files/orders and eligible delivery to their assigned Faculty |
+| Shop staff | Assigned shop settings, payments, order files, and printing progress |
+| Administrator | Shops, staff assignments, and authorized payment management |
 
-- Search and select printing shops; view shop information, opening hours, and configurable pricing.
-- Upload documents; configure quantity, paper size, grayscale/color, and regular or rush printing.
-- Students can choose Scheduled Pickup, Delivery, or Blue and Silver's Deliver to Professor option. Professors can choose Scheduled Pickup or, when verified and linked to an approved managed profile with a Faculty, Deliver to Faculty.
-- Choose manual online or onsite payment. Online payment uses configurable instructions, an optional public QR image, and a student-submitted reference. Authorized reviewers can manually verify or reject submitted online references; receipt uploads and gateway APIs remain later work.
-- Receive an order confirmation with a real reference number, status tracking, and order history.
-- Give Shop Staff and Admin their own dashboards and authorized management tools.
+Only Blue and Silver staff manage professor verification and approval. Public registration cannot create staff or administrator accounts. Professor verification creates or associates a profile using the registered identity, department, and faculty; delivery approval remains a separate staff decision.
 
-The list combines implemented foundations with later goals. See [the project specification](docs/project-specification.md) for rules, statuses, security, and open decisions.
+Checkout follows **Upload → Shop → Fulfillment → Payment → Review**. Prices are calculated on the server and saved on placement. A zero paper/color rate means that combination is unavailable. Rush printing adds **PHP 20 once per order**, when offered; delivery is charged separately.
 
-## User roles
+Verifying an online payment or confirming cash starts processing if the order is awaiting payment. Staff then mark the job ready and, for professor delivery, record the physical handoff. Only the customer completes an eligible paid order. Professor self-delivery can use eligible cash-on-delivery processing before collection; completion still requires recorded payment.
 
-| Role | Planned responsibilities |
-| --- | --- |
-| Student | Register/login, create orders, upload documents, select printing options and recipient, choose payment, track own orders, and view own history. |
-| Professor | Register with a department, await Blue and Silver verification and profile linking, then order prints for physical delivery to themselves and manage student delivery acceptance. |
-| Shop Staff | View assigned shop orders and private files, verify payments, update progress, and mark orders ready, delivered, or completed. |
-| Admin | Manage users, shops, and pricing; monitor orders. Blue and Silver staff alone verify and manage professors. |
+Payments are manually checked by authorized staff. The app does not transfer money, book couriers, operate printers, or email documents to professors.
 
-## Technology stack
+## Requirements
 
-Python 3.12, Flask, SQLAlchemy, Flask-Migrate, Flask-Login, Flask-WTF with CSRF protection, PostgreSQL, Jinja templates, vanilla JavaScript, CSS, pytest, and Gunicorn for production.
+- Python 3.12
+- SQLite for local development/current PythonAnywhere deployment, or PostgreSQL
+- Dependencies in [requirements.txt](requirements.txt)
+- LibreOffice or AbiWord for Word document page counting
+- Google Maps JavaScript API configuration for interactive maps
+- GnuPG for encrypted backups; compatible `pg_dump` for PostgreSQL backups
 
-Dependencies are listed in `requirements.txt`. Gunicorn is the production WSGI server for Linux deployment; use Flask's development server locally on Windows.
+Flask serves Jinja templates with JavaScript/CSS. SQLAlchemy, Flask-Migrate, Flask-Login, and Flask-WTF provide database, migration, authentication, and form support. Linux deployments may use `gunicorn wsgi:app`; PythonAnywhere uses its configured WSGI application.
 
-## Development stages
+## Local setup
 
-| Stage | Scope |
-| --- | --- |
-| 0 — Foundation (complete) | Repository inspection, specification, configuration placeholders, and directory layout. |
-| 1 — Application setup (complete) | Flask application factory, environment configuration, extensions, dependency manifest, migration environment, landing page, health route, and basic checks. |
-| 2 — Authentication and roles (complete) | User model, student registration, login/logout, controlled staff/admin account creation, and role-protected placeholders. |
-| 3 — Shops and pricing (complete) | Active-shop directory/search/details, admin shop/service/price/fee settings, staff assignment, and opt-in sample data. |
-| 4 — File upload and print configuration (complete) | Private student uploads and one active print configuration per file. |
-| 5 — Order creation and checkout review (complete) | Active-shop selection, server-calculated quote, order/item snapshots, reference-based confirmation. |
-| 6 — Direct-to-Professor (complete) | Approved professor selection, server-side eligibility checks, order recipient snapshots, and confirmation. |
-| 7 — Payment (complete) | Manual online reference submission, onsite selection, separate payment status, and configuration-driven instructions. |
-| 8 — Order confirmation and tracking (complete) | Owner-only order detail with reference, next step, and a timeline derived from order and payment records. |
-| 9 — Shop Staff order processing (complete) | Assigned-shop order list/detail, scoped private file download, payment-gated processing actions, and timestamped student tracking. |
-| 10 — Admin management (complete) | Admin dashboard, staff assignment, and public payment-instruction editing; existing shop/service/price/fee controls remain in use. |
-| 11 — Student Order History (complete) | Owner-only order list with status filters, newest-first pagination, and links to existing detail/tracking. |
-| 12 — UI/UX implementation (complete) | PDF-inspired mobile-first styling and navigation across student, staff, and admin pages. |
-| 13 — Security & Quality Review (complete) | Security and correctness audit, focused fixes, regression tests, and verification. |
-| 14 — Google Maps shop discovery (complete) | Student map of active shops with confirmed coordinates, search, optional one-time location sharing, and a path into the existing shop/order flow. |
-| 15 — Multiple Files per Order (complete) | Up to 20 distinct files per order, individual checkout print settings, itemized quotes, and one atomic order with historical item snapshots. |
-| 16 — Scheduled Pickup and Delivery (complete) | Required fulfillment choice, server-validated requested schedules, delivery contact/address, delivery fee snapshot, and updated confirmation, history, tracking, and staff detail. |
-| 17 — Student payment experience (complete) | Itemized payment summary, optional configured QR image, normalized reference submission, and clearer pending/submitted status copy. |
-| 18 — Payment verification (complete) | Admin and assigned-shop staff queue, manual verify/reject actions, rejection reason, and review audit fields. |
-| 20 — Professor Delivery (complete) | Blue and Silver-only physical handoff, student consent and professor self-delivery, linked professor accounts, recipient snapshots, and staff instructions. |
-| 21 — Finalized account and professor workflow (complete) | Public Student/Professor registration, staff-provisioned shop accounts, Blue and Silver professor management, controlled Faculty snapshots, online-only professor payment, and staff-confirmed physical handoff. |
-| 26 — Professor verification (complete) | Pending/Verified/Rejected account state, Blue and Silver-only verification and profile management, linked-account eligibility, and safe migration of previously approved links. |
-| Later stages (planned) | Durable private storage and deployment. |
+```bash
+python -m venv .venv
+```
 
-Orders begin at `PENDING_PAYMENT`. Only a payment record marked `PAID` permits staff to move the order to `PROCESSING`, then `READY`, then `COMPLETED`. A separate payment record uses `PENDING` when a method is selected and `SUBMITTED` when an online reference awaits manual verification. An admin or assigned-shop staff member can review `SUBMITTED` online payments and record `PAID` or `REJECTED`; neither action starts processing. Students cannot perform these actions. Blue and Silver staff manage professor approval for future orders without changing historical recipient snapshots.
+Activate the environment:
+
+```powershell
+# Windows PowerShell
+.venv\Scripts\Activate.ps1
+Copy-Item .env.example .env
+```
+
+```bash
+# Linux / macOS
+source .venv/bin/activate
+cp .env.example .env
+```
+
+Set a stable signing secret and other local settings in `.env`, then run:
+
+```bash
+python -m pip install -r requirements.txt
+python -m flask --app run.py db upgrade
+python run.py
+```
+
+Open `http://127.0.0.1:5000`. The existing migration environment is initialized; do not run `db init` again. `/health` checks process liveness only.
+
+To create an administrator or assigned staff account from a trusted server shell:
+
+```bash
+python -m flask --app run.py create-privileged-user --role ADMIN
+python -m flask --app run.py create-privileged-user --role SHOP_STAFF --shop-id SHOP_ID
+```
+
+The commands prompt for account details and a hidden password. Create the shop before assigning staff. For optional development fixtures, run `seed-sample-shops` or `seed-sample-professors` through the Flask CLI; these are not approved business data and cannot run under the production configuration.
+
+## Documents and storage
+
+Supported uploads: PDF, DOC, DOCX, PPT, PPTX, JPG, JPEG, PNG. Private documents default to ignored `instance/uploads`, outside public static assets. Configure `UPLOAD_STORAGE_ROOT` only to another private directory. Never commit uploaded documents, databases, `.env`, keys, or real credentials.
+
+PDF pages are counted directly. Word files require a working renderer; set `WORD_CONVERTER_PATH` for a custom installation. Verify the deployed converter with:
+
+```bash
+python -m flask --app run.py check-page-count /path/to/document.docx
+```
+
+If Word rendering is unavailable, export to PDF for accurate pricing. Images and PowerPoint files currently use copy-based billing without page/slide counting. Request schedules default to same-day eligibility and shop operating-hour slots; they do not reserve courier or shop capacity.
+
+Unattached checkout uploads expire after 24 hours by default. Completed order documents are not automatically expired. Local storage is the only implemented adapter, and the strict production profile refuses local uploads until durable private storage is implemented.
+
+## Updating PythonAnywhere
+
+Back up the database and private uploads first. In the Bash console:
+
+```bash
+cd /home/Decimo/PrintsOnDemand
+source .venv/bin/activate
+git pull --ff-only origin main
+# Run if requirements.txt changed:
+python -m pip install -r requirements.txt
+python -m flask --app run.py db upgrade
+```
+
+Paths are case-sensitive. After all commands succeed, use **Web → Reload**. Stop and resolve command errors before reloading. Run migrations before serving code that depends on new tables. The revocable-session update requires existing users to sign in again.
+
+The current deployment uses SQLite. Selecting `FLASK_ENV=production` requires PostgreSQL, a strong signing secret, trusted hosts, HTTPS, debug disabled, and the production storage requirements; do not change profiles without meeting those requirements.
+
+## Security and operations
+
+- Salted password hashes; server-revocable login credentials with idle/absolute expiry.
+- Customer ownership checks, staff shop isolation, CSRF, and guarded payment/status updates.
+- Shared database rate limits on login, registration, uploads, and account deletion.
+- File size/type/signature checks, private storage, integrity checks, and authorized downloads.
+- HTTPS enforcement, secure cookie options, privacy headers, and browser cleanup on logout/deletion.
+- PostgreSQL private-row policies for orders, items, payments, uploads, and print configurations. SQLite retains application authorization and does not support these RLS policies.
+- Encrypted backup and verification commands, staged-upload cleanup, and interrupted-deletion recovery.
+
+Host settings, restricted database roles, task scheduling, backup keys, off-site copies, and recovery drills require operator configuration. File validation is not antivirus scanning. See [Security operations](docs/security-operations.md) for deployment settings, permissions, sessions, backups, and recovery.
+
+```bash
+python -m flask --app run.py security-check
+python -m flask --app run.py cleanup-security-state
+python -m flask --app run.py cleanup-staged-uploads
+python -m flask --app run.py backup-data
+python -m flask --app run.py verify-backup /private/path/backup.tar.gz.gpg
+```
+
+Use separate operator credentials for complete PostgreSQL backups/maintenance with RLS. Run `recover-account-deletions` only while the app is offline. Additional policies: [Pricing](docs/printing-rates.md), [Account deletion](docs/account-deletion.md).
+
+## Tests
+
+```bash
+python -m pytest -q
+```
+
+Tests cover authentication, authorization, uploads, pricing, checkout, fulfillment, payments, processing, professor management, migrations, deletion, and security controls. PostgreSQL policy tests require an explicitly configured empty disposable database; encrypted-backup integration tests require GnuPG. See the security guide for their setup. Automated tests do not replace deployed configuration checks or load/browser testing.
 
 ## Repository layout
 
 ```text
-app/
-  __init__.py         Application factory
-  config.py           Development, testing, and production configuration
-  extensions.py       SQLAlchemy, migrations, login, and CSRF instances
-  routes/             Public, authentication, shop, file, order, and admin blueprints
-  models/             User, shop, pricing, file, professor, order, and payment models
-  forms.py            CSRF-protected registration and login forms
-  shop_forms.py       Shop, service, price, fee, and staff-assignment forms
-  file_forms.py       CSRF-protected upload and print-configuration forms
-  order_forms.py      CSRF-protected final order form
-  payment_forms.py    CSRF-protected payment method and reference forms
-  admin_forms.py      CSRF-protected professor, assignment, and public payment forms
-  seed.py             Explicit sample shop, pricing, and professor data
-  authorization.py    Reusable role guard
-  cli.py              Controlled staff/admin provisioning
-  services/           Order pricing/creation, professor selection, payment, tracking, staff processing, and admin rules
-  storage/            Private local adapter and reusable upload validation
-  templates/          Base, account, access, shop directory, and admin templates
-  static/
-    css/              Simple foundation stylesheet
-    js/               JavaScript entry point
-    images/           Public UI assets only; never uploaded documents
-docs/
-  project-specification.md
-  ui-reference.md
-  references/         Supplied UI reference PDF
-migrations/           Flask-Migrate/Alembic environment and schema revisions
-tests/                Foundation, authentication, shop, file, and order tests
-run.py                Local development server entry point
-wsgi.py               Production WSGI entry point
-requirements.txt      Python dependencies
-pytest.ini            Test discovery configuration
+app/          Flask routes, models, services, forms, templates, and static assets
+docs/         Operating instructions and business policies
+migrations/   Database migration history; retain for existing deployments
+tests/        Application and migration regression tests
+run.py        Development and Flask CLI entry point
+wsgi.py       Hosted WSGI entry point
 ```
-
-Stage 3 added shops, services, prices, and fees. Stage 4 added uploaded files and print configurations. Stage 5 added `orders` and `order_items`; Stage 6 added professors and optional order destinations; Stage 7 added one payment record per order. Stage 8 derives tracking from those records without adding a table. Stage 9 expands the order-status constraint and adds three nullable processing timestamps. Stage 10 adds an optional single-row table for admin-managed public payment instructions; existing environment values remain the fallback until an admin saves an override.
-
-Stage 11 reuses existing orders and payments for student history. It adds no database table or migration.
-
-Stage 16 adds nullable pickup/delivery snapshot columns and a zero-defaulted delivery fee to `orders`. Existing orders, including those without a destination, retain their stored totals, items, professor details, and payment states. The migration supports upgrade and downgrade without resetting historical orders. Stage 18 adds nullable payment submission/review timestamps, reviewer ID, and rejection reason. Existing submitted payments receive a best-available submission timestamp from their prior `updated_at` value; older paid/rejected records have no invented reviewer audit. Stage 19.1 expands shop coordinate storage from six to fifteen decimal places so the supplied map coordinates are preserved.
-
-Stage 26 adds `users.professor_verification_status` with `PENDING`, `VERIFIED`, and `REJECTED`. The migration marks an existing Professor account verified only when it is already linked to an active, approved managed profile. Other existing Professor accounts remain pending; historical order snapshots are untouched. Run `python -m flask --app run.py db upgrade` before serving the updated app. The downgrade removes only the new status column.
-
-Stage 30 adds nullable `uploaded_files.checkout_staged_at`. Existing files retain `NULL`, so legacy library data and historical order attachments are not candidates for abandoned-checkout cleanup. New checkout uploads receive a timestamp; successful placement clears it while `OrderItem → Order → PrintingShop` establishes the authoritative shop association. The private bytes stay under the existing storage root. The migration preserves all existing file and order rows and supports downgrade.
-
-## Local development plan
-
-1. Install Python 3.12 and create a virtual environment with `python -m venv .venv`.
-2. Activate it with `.venv\Scripts\Activate.ps1` on PowerShell or `source .venv/bin/activate` on macOS/Linux.
-3. Install dependencies with `python -m pip install -r requirements.txt`.
-4. Optionally copy `.env.example` to `.env` and set local values. PowerShell: `Copy-Item .env.example .env`; macOS/Linux: `cp .env.example .env`. An empty or unset `FLASK_ENV` selects development, which uses a local SQLite database in ignored `instance/` and an ephemeral signing secret. No `.env` is needed for the initial landing page.
-5. Run `python -m flask --app run.py db upgrade` to apply all migrations, then `python -m flask --app run.py db check` to confirm there are no pending schema changes. The migration environment is already initialized; do not run `db init` again.
-6. Start the local server with `python run.py` (default `http://127.0.0.1:5000/`). Check `/` and `/health`, then `/auth/register` and `/auth/login`.
-7. Run tests with `python -m pytest`.
-
-Public registration offers **STUDENT** or **PROFESSOR**; it never creates staff or admin accounts. Professor registration requires a department selected from the eight controlled Faculty/department codes. Every new Professor account starts **Pending Verification**. A pending Professor can place ordinary orders and open `/account` to see their name, department, verification status, and student-delivery preference. Older accounts without a department can select one on the Account page once. The former `/professor/settings` URL redirects to `/account`. Neither a preference nor an account role creates an approved managed professor profile, makes the professor selectable by students, or enables **Deliver to Faculty**. Only Blue and Silver staff can verify or reject the request, then link a verified login to an active managed profile with the same email. The profile also needs approval and an assigned Faculty for faculty delivery; student selection additionally needs delivery acceptance enabled. A linked professor can control acceptance from their settings. Each profile can link to one account. Use a trusted server shell to provision a **SHOP_STAFF** or **ADMIN** account: `python -m flask --app wsgi:app create-privileged-user --role SHOP_STAFF --shop-id ID` (or `--role ADMIN`). Provision one staff account for each of Blue and Silver Bookstore, CHALECOSPOT, Iced Design and Prints, and Pixels Print and Press after creating those shops; the command prompts for a hidden password and never seeds a shared password. Existing admin shop assignment remains available, and unassigned staff cannot access shop orders. The trusted CLI can still link a professor directly with `--role PROFESSOR --professor-id ID`, but that account remains pending until Blue and Silver verifies it. Logout uses a CSRF-protected POST form.
-
-Shop staff use the dedicated `/auth/shop-login` page: enter their staff email or name and password. The app reads the authenticated account's assigned shop from the database and opens its `/shop` page; no shop selection is accepted from the browser. This page is intentionally absent from the landing page and student/professor navigation; give the URL directly to staff. It accepts only active `SHOP_STAFF` accounts with a shop assignment, and access to shop features remains role-protected. Staff names must be unique across shop staff accounts to be used as a sign-in identifier; email always identifies one account. Staff accounts are provisioned through the trusted CLI and assigned by an admin, never through public registration. The earlier Blue and Silver sign-in URL still works for existing bookmarks but is no longer linked from the general login page.
-
-For a **local development** Blue and Silver staff login that asks for only a name and password, run `python -m flask --app run.py create-blue-staff --name "Blue and Silver Bookstore"` after the shop exists. The command prompts privately for a 5–8-letter password; it does not put a credential in source code. Enter that staff name and password on `/auth/shop-login`; the account's Blue and Silver assignment determines the destination. The account cannot be reassigned to another shop. Its internal unique email identifier is not part of the login or staff UI. This short-password provisioning path is disabled in production; use the trusted `create-privileged-user` command with a stronger password there.
-
-After logging in, students can open `/shops` to search active shops and view `/shops/<id>` for details and a price table. Admins use `/admin` to reach management pages. `/admin/shops` retains the existing shop editor for creating/editing or activating/deactivating shops, choosing services, setting paper-size/color prices and rush/delivery fees, and assigning existing staff accounts. `/admin/staff` lists Shop Staff accounts and lets an admin assign, reassign, or unassign each from one shop, except that a name-only Blue and Silver account stays assigned there. These changes take effect on the staff member's next request. No user role is changed through assignment. Assigned staff see only their shop at `/shop` and can open `/shop/manage` to update its description, address, hours, services, prices, fees, and public photo. Staff cannot edit another shop or its registered name, map coordinates, active status, or staff assignments. Uploaded JPEG, PNG, or WebP photos are validated, resized to at most 1024 pixels per side, and stored with the shop record; the public directory, shop detail, map card, and circular map pin use the image. The shop's `Proceed` action becomes available once the student has a configured file.
-
-Students can switch from the shop list to `/shops/map`. The map uses the Google Maps JavaScript API as a geographic background and shows only active registered shops with valid stored coordinates. Its search filters registered shop names on the server; it does not use Google Places or external business search. Selecting an application shop pin or shop card opens the custom Prints On Demand panel with active/available status, address, hours, enabled services, configured fulfillment methods, current prices, and applicable fees. Google's base-map place icons are not clickable. **Proceed** opens the existing shop detail and order path, where checkout remains authoritative for pricing. Shops without coordinates remain in list view. Admins can enter or clear a confirmed latitude/longitude pair in the existing shop editor; values must be within latitude -90 to 90 and longitude -180 to 180, with up to fifteen decimal places.
-
-For a local interactive map, enable the **Maps JavaScript API** in your Google Cloud project, create a browser API key, and set `GOOGLE_MAPS_API_KEY` in your ignored `.env` (or process environment). Never commit a real key. Local development uses Google's development map ID unless `GOOGLE_MAPS_MAP_ID` is set; use a map ID belonging to your project in production. Restrict the production browser key to the application's allowed website referrers and the Maps JavaScript API in Google Cloud. The map page sends the site's origin as referrer for that key restriction. When no key is configured or Maps fails, the page keeps its shop cards and prices available and links to list view. **Use my location** asks for browser permission only after a click, places a one-time indicator on the map when granted, and does not send coordinates to Flask or store them. Browser geolocation may require localhost or HTTPS.
-
-The four development seed shops use user-provided coordinates recorded as the verified locations for those sample records. Reseeding refreshes only the coordinates of matching sample rows, while preserving their other fields and leaving other shops unchanged. Once staff save confirmed shop details, that shop is no longer treated as a seed record and reseeding cannot change its coordinates. Administrators can continue to configure coordinates for all other shops.
-
-For an existing deployment such as PythonAnywhere, updating the seed definitions alone does not change its database. From the deployed project directory, with the same virtualenv and environment configuration as the web app, run `python -m flask --app wsgi:app update-shop-map-pins` to preview the three named shops' current and verified coordinates. Then run `python -m flask --app wsgi:app update-shop-map-pins --apply` to update only Blue and Silver Bookstore, CHALECOSPOT, and Iced Design and Prints. This command works for existing shops regardless of their sample flag, requires all three to exist before changing anything, preserves every other shop field, and is idempotent. Reload the web app and check `/shops/map` afterward. It does not create shops or change Pixels Print and Press.
-
-Students can open `/files` from `/student`, then `/files/upload` to store one document at a time. The detail page confirms the filename, byte size, and upload time. It also offers an authorized download, configuration, and deletion. Configuration supports Letter, Legal, A4, A3, A2; grayscale or color; print count 1–999 by default; and rush printing. One active configuration is saved per file. Upload/configuration alone does **not** submit an order. Only the owner may list, view, configure, or delete their file; assigned staff may download it only through an order for their own shop. Once a file belongs to an order, deletion is blocked so its private bytes remain available. The same file may intentionally be used for a later reprint order.
-
-To place an order, start at `/checkout/upload`. Upload up to **20 distinct files** into a private checkout draft, then select an active shop from the shared Google map. The **Shop** workspace combines one selected-shop information/pricing panel with paper size, grayscale/color output, print count, and optional rush settings for each file. Pin selection updates that panel without leaving the page; the server supplies every price preview. A compact selector in the same workspace remains available when Maps fails or a shop has no coordinates. **Proceed to Fulfillment** saves the print choices. The checkout sequence is **Upload → Shop → Fulfillment → Payment → Review → Success**; Fulfillment contains only receiving/delivery choices. Old `/checkout/configure` bookmarks redirect to `/checkout/fulfillment`. Switching shops retains uploaded files and valid print choices, removes unsupported rush, revalidates prices, and clears downstream fulfillment/payment review. The workspace panel is embedded inside the large map, with an internally scrolling bottom sheet on mobile. Its pricing table is the paper/output selector: each accessible radio cell uses the stored price for that exact shop, paper size, and color mode. The current schema stores single prices, not ranges. A compact file selector preserves independent settings per file. Long shop descriptions, the rating placeholder, and the separate price/fee section are omitted. Total and Proceed stay visible, and the panel can be minimized to reach the map. Remove a staged file from the draft before continuing if needed; unattached staged uploads expire after 24 hours. Students can choose **Scheduled Pickup**, **Delivery**, or **Deliver to Professor** when Blue and Silver offers it. The selected active, approved, accepting professor's managed profile supplies the Faculty and Department; customers cannot edit that destination. Professors can choose **Scheduled Pickup**, enabled **Delivery**, or **Deliver to Faculty** when their verified account is linked to an active, approved Blue and Silver managed profile with a Faculty. Pickup keeps its requested date and time slot. Checkout prices each item from `PrintPrice`, adds the shop's `RUSH_PRINTING` fee once if any item requests rush, and adds the shop's configured `DELIVERY` fee once for delivery. The customer chooses onsite or configured manual online payment before review; either Professor Delivery path requires online. Browser-submitted prices and totals are ignored. The server rechecks the quote, fulfillment, payment, eligibility, and fees at placement; changes since review require confirmation again. `/orders/new` and `/files` remain only for older bookmarks and legacy data, and are no longer linked from the normal customer flow.
-
-The completed order receives a unique reference such as `POD-2026-A1B2C3D4E5F6` and can be opened at `/orders/<reference>` by its owner. One `OrderItem` references each selected private upload and stores its file name, print settings, unit price, and line total. `Order` stores the shop name, subtotal, one rush fee, one delivery fee when applicable, fees total, currency (`PHP`), total, and fulfillment snapshot, including professor and Faculty for Professor Delivery. Placement commits the order and all items together. Later price, fee, shop, library, or professor changes do not alter these snapshots. Existing one-file and multi-file orders remain readable. A legacy pending order without a destination can still select an eligible professor; a new pickup or delivery order cannot switch fulfillment after placement. Professor selection records the intended physical recipient: **no file or email is sent**. New orders begin at `PENDING_PAYMENT` until payment is independently recorded as paid and staff starts processing.
-
-Scheduling uses the server's `Asia/Manila` date, independent of the browser timezone. `PICKUP_LEAD_DAYS` (default 0, allowing same-day pickup requests) and `DELIVERY_LEAD_DAYS` (default 2) set the earliest request date; both methods have a 30-day window by default through `PICKUP_MAX_DAYS` and `DELIVERY_MAX_DAYS`. `PICKUP_TIME_SLOTS` and `DELIVERY_TIME_SLOTS` are configurable `HH:MM-HH:MM` tuples in `app/config.py`; the defaults are 10–11, 11–12, 13–14, 14–15, and 15–16. A slot must fit the selected shop's stored opening and closing times. This is a request schedule, without per-day closure data or capacity reservations. Admins enable the existing `PICKUP` or `DELIVERY` service and set the `DELIVERY` fee in `/admin/shops`. Delivery requires both enabled service and configured fee. **Delivery represents a requested delivery workflow; no Lalamove booking or other courier booking is automatically created.**
-
-Each printing shop now owns its cash and online payment switches, online account name/reference, instructions, and payment QR. Assigned staff edit only their own shop at `/shop/manage#payment-settings`; `/admin/payment` is a read-only overview. The payment step and order detail use the selected order's shop settings. Online payment requires that shop's enabled online method and stored QR; account text is optional. Onsite cash requires that shop's enabled cash method. If neither method is available, checkout stops and links back to shop selection. Both Professor Delivery paths require online payment. QR uploads are validated PNG, JPEG, or WebP images up to 5 MB, normalized and stored in the database, and served through owner or assigned-staff routes rather than a public upload path. Initial QR images are **non-scannable development placeholders**, distinct per shop; each shop must replace its image with its actual payment QR before accepting transfers. The migration copies an existing global payment record (or legacy environment values) into separate shop records once; subsequent global changes do not affect checkout. Guided checkout requires a valid 4–120 character InstaPay reference before Review whenever online payment is selected; cash checkout needs no reference. The submitted online reference moves payment from `PENDING` to `SUBMITTED`. This remains a claim awaiting manual staff verification; it does **not** prove funds were received, mark payment `PAID`, or change the order's `PENDING_PAYMENT` status. A repeated identical submission is harmless; a different reference or method change after submission is rejected. No receipt upload or gateway integration exists.
-
-The same `/orders/<reference>` page confirms the stable order reference, shop, total, intended professor when selected, payment method/status, order status, and current next step. Its **Order tracking** section shows order creation, the recorded payment state, any actual shop-processing transitions, and the current order state. It uses stored order, payment, and processing timestamps; an unrecorded step has no timestamp. Refreshing the page creates no new order, payment, or event. Only the order owner can view it.
-
-Students and professors can open **Order History** from their account navigation. `/orders` lists only the signed-in owner's orders, newest first, 20 per page, with optional order-status and payment-status filters. Each row uses the stored order reference, shop-name snapshot, creation time, total, status, payment state, and destination, including the Faculty for Professor Delivery; selecting a reference opens the owner-only detail page. Orders remain in history if a shop or professor later becomes inactive or pricing changes. An order with no payment is labeled “Not selected,” and `SUBMITTED` means awaiting verification, not paid.
-
-Assigned **SHOP_STAFF** users open `/shop` and follow the shop-orders link to `/staff/orders`. The list shows only their shop's orders. Each detail page shows immutable print-price and professor/Faculty snapshots, payment state, and a secure download for files attached to that order. Processing actions are CSRF-protected POSTs. Ordinary orders use `PENDING_PAYMENT` → `PROCESSING` → `READY` → `COMPLETED`; Blue and Silver Professor Delivery inserts `DELIVERED` between `READY` and `COMPLETED`. The first step requires the payment record to already be `PAID`, and every later step rechecks that state. Submitted/rejected online references and pending onsite payments cannot start processing. Processing timestamps, including the physical handoff, appear in owner tracking. Payment verification never automatically starts processing.
-
-Only staff assigned to **Blue and Silver Bookstore** can open `/admin/professors` to verify pending Professor accounts, reject requests, link verified accounts, and manage names, normalized unique emails, department, controlled Faculty (MITL, CAS, ETYCB, CCIS, CHS, GE, IECELL, SHS), office, active state, approval, and student delivery acceptance. Admins, other shops, students, and professors receive 403 on these routes. Verification and profile linking are separate actions. Students see only verified, linked, active, approved, accepting professors with a Faculty; the selected managed professor determines the Faculty and students cannot override it. A verified linked professor with an active, approved profile and a Faculty may choose Deliver to Faculty without a recipient dropdown or editable Faculty, even with student acceptance off. A linked professor can also toggle their own acceptance at `/account`. Only Blue and Silver staff can change a verified name or managed profile identity; the Professor Account page does not expose those edits. Existing orders keep their recipient and Faculty snapshots after edits or deactivation. Older professor profiles without a Faculty must be assigned one by Blue and Silver staff before faculty delivery or new student selection. No electronic file is sent to the professor.
-
-**Professor Delivery requires the configured manual online-payment method.** The backend rejects onsite payment, and the order page shows the online-only requirement. After payment is verified, assigned Blue and Silver staff advance `PENDING_PAYMENT` → `PROCESSING` → `READY` → `DELIVERED` → `COMPLETED`; the `DELIVERED` step records a physical handoff time and appears in owner tracking. Other fulfillment methods keep their existing transitions. No automatic email, gateway transaction, or physical-delivery proof is generated.
-
-Admins and assigned **SHOP_STAFF** can open `/payments/verification` to review only submitted online references. Admins see all shops; staff see only their assigned shop. The review page shows stored order/payment amounts, reference, and submission time. After independently checking receipt of funds, a reviewer can mark the payment `PAID` or reject it with a required reason (maximum 500 characters). A guarded update prevents a stale second review from overwriting the first. The payment keeps the reviewer, review time, and rejection reason; students see a rejection reason on their own order detail but never the verifier identity. Onsite payments are excluded. QR display and reference submission do not automatically verify payment, and there is no payment gateway or notification integration. No new environment settings are required.
-
-**Page counts and pricing:** Checkout reads the page tree in PDFs. For DOC/DOCX, it renders the file to a temporary PDF with LibreOffice (`soffice`/`libreoffice`) or AbiWord (`abiword`) and counts the resulting pages. Word's saved page-count metadata is ignored because it can remain at 1 after edits. The rate for the chosen shop, paper, and color is multiplied by document pages and print copies. If no converter can render a Word file, checkout shows that its page count is unavailable and asks the customer to export it as a PDF; it does not bill an unknown multi-page Word file as one page. Word layout can differ when server fonts differ from the customer's computer, so a PDF is the most reliable way to preserve the intended pagination. Previously uploaded Word drafts should be re-uploaded after this change. Local seed rates remain sample values. Manual payment verification is an authorized human decision, not a gateway confirmation.
-
-On PythonAnywhere, update the web app's virtualenv with `python -m pip install -r requirements.txt`, run the existing database migration workflow (`python -m flask --app wsgi:app db upgrade`), and reload the web app. Check that an office converter is available with `command -v soffice || command -v libreoffice || command -v abiword`. Test a known two-page file from the same virtualenv with `python -m flask --app wsgi:app check-page-count /path/to/two-pages.docx` (or `.pdf`); it should print `Document pages: 2`. If the Word check fails, use a PDF until a working converter is available. The converter runs with a 30-second timeout per attempt and uses an isolated temporary directory; no converted document is retained. This page-count change needs no new database migration, though a deployment that missed the earlier page-count migration still needs `db upgrade`.
-
-On Windows, install LibreOffice before testing DOC/DOCX checkout. The app finds `soffice.exe` on `PATH` or in the default `Program Files\\LibreOffice\\program` location; for a custom installation, set `WORD_CONVERTER_PATH` to the full `soffice.exe` path and restart Flask. Run `python -m flask --app wsgi:app check-page-count C:\\path\\to\\two-pages.docx` to verify the renderer before uploading the document again. The upload itself accepts DOCX without a renderer, but checkout cannot price its pages until rendering succeeds. PDF, JPEG, and PNG uploads do not need LibreOffice.
-
-Private local uploads default to ignored `instance/uploads`, outside `app/static`. `UPLOAD_STORAGE_ROOT` selects another private root for development/testing; if it is inside the repository, add that custom path to `.gitignore`. `UPLOAD_MAX_SIZE` sets the maximum file size in bytes (default and ceiling **25 MiB**) and the request cap adds 64 KiB for multipart form overhead. `UPLOAD_MAX_QUANTITY` changes the print-count ceiling (default **999**). Supported extensions are PDF, DOC, DOCX, PPT, PPTX, JPG, JPEG, and PNG. The server checks the extension, declared MIME type, and a recognizable file signature or OOXML ZIP structure. This is a screening measure, not a malware scan or complete document parser: legacy DOC/PPT share an OLE signature, and valid-looking content can still be malicious. Uploaded bytes live outside the database under random keys; metadata and SHA-256 live in the database. The current adapter is local and **production uploads are refused** until a durable private adapter is configured. Do not use an ephemeral Render filesystem for real uploads.
-
-For development data only, run `python -m flask --app wsgi:app seed-sample-shops` explicitly after `db upgrade`. It adds four sample shops based on the PDF names, sample services, prices for Letter/Legal/A4/A3/A2 in grayscale and color, and sample rush/delivery fees where relevant. It is idempotent by shop name, refreshes the verified coordinates only for existing matching sample records, preserves their other data, and refuses to run in production. The seed amounts and addresses are **sample values, not approved business rates**; seeded pages label them as sample. Assigned staff or admins can replace prices and fees through the UI without changing code.
-
-For fictional professor data, run `python -m flask --app wsgi:app seed-sample-professors` explicitly after `db upgrade`. It adds two active, approved professors plus unapproved and inactive examples using `example.edu` addresses, with sample Faculty values and student-delivery acceptance OFF by default. The command is idempotent by email, leaves existing records and approvals unchanged, and refuses to run in production. These records are development-only sample data; Blue and Silver staff can manage them at `/admin/professors`. They do not appear in student selection until a verified account is linked and delivery acceptance is enabled.
-
-`DATABASE_URL` overrides the local SQLite default; `postgres://` URLs are normalized to `postgresql://`. `FLASK_ENV` accepts `development`, `testing`, or `production`. `TESTING=true` also selects the isolated in-memory SQLite configuration; it cannot be enabled with production. Production requires a PostgreSQL `DATABASE_URL` and a random `SECRET_KEY` of at least 32 characters, rejects debug mode, enables secure session cookies, and does not silently use local defaults. Configure trusted hosts, HTTPS/HSTS, and durable private uploads before deployment. Object-storage names in `.env.example` are reserved for a later adapter and are not used yet. Never commit `.env`, passwords, payment receipts, uploaded documents, or production data.
-
-## Deployment target and storage
-
-Source control is hosted on GitHub. The current PythonAnywhere deployment uses
-SQLite. PostgreSQL is the required database for the application's `production`
-configuration; PostgreSQL/Render remains a separate deployment option. Runtime
-settings and secrets come from environment variables or an ignored `.env` file.
-The WSGI entry point is `wsgi:app`.
-
-### Updating the existing PythonAnywhere app
-
-Back up the database and private uploads before applying migrations. In a
-PythonAnywhere **Bash console**, run:
-
-```bash
-cd /home/Decimo/PrintsOnDemand
-git pull --ff-only origin main
-source .venv/bin/activate
-python -m flask --app run.py db upgrade
-```
-
-The username/path is case-sensitive: this deployment uses `/home/Decimo`, not
-`/home/decimo`. If `requirements.txt` changed, run
-`python -m pip install -r requirements.txt` after activating the virtualenv and
-before running the migration. After all commands succeed, open PythonAnywhere's
-**Web** tab and click **Reload** for the app. Sign in again after the session
-security update. Stop and resolve any command error before reloading.
-
-The security migrations add revocable login sessions and shared abuse counters
-on SQLite and PostgreSQL. The RLS migration is intentionally a no-op on SQLite:
-it does not convert the database or enable PostgreSQL policies there. Customer
-ownership and staff shop permissions remain enforced by application checks on
-both backends. Logout and successful account deletion request browser cache,
-cookie, and origin-storage cleanup through `Clear-Site-Data`; this header needs
-HTTPS and browser support. Server-side session revocation works independently.
-
-For deployment configuration checks, run:
-
-```bash
-python -m flask --app run.py security-check
-```
-
-Review failures using [Security operations](docs/security-operations.md).
-Pulling code and running migrations do not enable host HTTPS, schedule encrypted
-backups, configure off-site storage, or provision PostgreSQL roles automatically.
-
-Local uploads are for development only and must not be assumed durable in production. The storage interface can be replaced with private persistent/object storage without changing file routes. Checkout visits opportunistically delete expired staged uploads; run `python -m flask --app run.py cleanup-staged-uploads` daily as well, especially on an idle site. The command deletes only checkout-marked uploads older than `CHECKOUT_STAGED_RETENTION_HOURS` (default 24) with no order item. It uses the existing reversible private-file deletion staging; after an interrupted cleanup, run `python -m flask --app run.py recover-account-deletions` while the app is offline. Legacy uploads and all order-attached files are excluded. See the [storage and deployment specification](docs/project-specification.md#storage-and-deployment).
-
-## UI/UX reference
-
-**[PrintsOnDemand Mobile.pdf](docs/references/PrintsOnDemand%20Mobile.pdf)** is the primary student UI reference. [UI reference notes](docs/ui-reference.md) record the review of all nine pages. Stages 6–11 added approved-professor selection, manual payment, tracking, staff processing, admin management, and order history. Stage 12 applied the mobile-first visual design.

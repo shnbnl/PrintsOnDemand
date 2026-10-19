@@ -20,6 +20,7 @@ uploads/
 *.sqlite3-*
 
 # Test, coverage, and analysis outputs
+output/
 .pytest_cache/
 .coverage
 .coverage.*
