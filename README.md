@@ -13,6 +13,11 @@ orders, items, payments, uploaded files, and print configurations after migratio
 PostgreSQL RLS requires a restricted web database role that cannot bypass the
 policies; see the security guide for role setup and verification.
 
+For the current workflows, exact payment/order transitions, implementation limits,
+route inventory, data fields, and configuration defaults, see the
+[technical breakdown](docs/technical-breakdown.md). It distinguishes current code
+from older stage descriptions below and from settings verified on the live host.
+
 ## Planned features
 
 - Search and select printing shops; view shop information, opening hours, and configurable pricing.
