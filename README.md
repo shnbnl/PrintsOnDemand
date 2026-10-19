@@ -6,7 +6,12 @@ Prints On Demand is a printing-service web application for students and professo
 
 Security deployment, session expiry, encrypted backups, and recovery instructions
 are in [Security operations](docs/security-operations.md). This update requires
-`flask db upgrade` before reloading the deployed app and signs out existing sessions.
+`python -m flask --app run.py db upgrade` before reloading the deployed app and
+signs out existing sessions. SQLite uses application ownership and role checks;
+PostgreSQL additionally supports database row-level security (RLS) on private
+orders, items, payments, uploaded files, and print configurations after migration.
+PostgreSQL RLS requires a restricted web database role that cannot bypass the
+policies; see the security guide for role setup and verification.
 
 ## Planned features
 
@@ -175,7 +180,48 @@ For fictional professor data, run `python -m flask --app wsgi:app seed-sample-pr
 
 ## Deployment target and storage
 
-Source control will use GitHub and deployment will target Render with PostgreSQL. Runtime settings and secrets come from environment variables. The WSGI entry point is ready for `gunicorn wsgi:app` on Linux. Render service settings and release/migration steps will be finalized before deployment.
+Source control is hosted on GitHub. The current PythonAnywhere deployment uses
+SQLite. PostgreSQL is the required database for the application's `production`
+configuration; PostgreSQL/Render remains a separate deployment option. Runtime
+settings and secrets come from environment variables or an ignored `.env` file.
+The WSGI entry point is `wsgi:app`.
+
+### Updating the existing PythonAnywhere app
+
+Back up the database and private uploads before applying migrations. In a
+PythonAnywhere **Bash console**, run:
+
+```bash
+cd /home/Decimo/PrintsOnDemand
+git pull --ff-only origin main
+source .venv/bin/activate
+python -m flask --app run.py db upgrade
+```
+
+The username/path is case-sensitive: this deployment uses `/home/Decimo`, not
+`/home/decimo`. If `requirements.txt` changed, run
+`python -m pip install -r requirements.txt` after activating the virtualenv and
+before running the migration. After all commands succeed, open PythonAnywhere's
+**Web** tab and click **Reload** for the app. Sign in again after the session
+security update. Stop and resolve any command error before reloading.
+
+The security migrations add revocable login sessions and shared abuse counters
+on SQLite and PostgreSQL. The RLS migration is intentionally a no-op on SQLite:
+it does not convert the database or enable PostgreSQL policies there. Customer
+ownership and staff shop permissions remain enforced by application checks on
+both backends. Logout and successful account deletion request browser cache,
+cookie, and origin-storage cleanup through `Clear-Site-Data`; this header needs
+HTTPS and browser support. Server-side session revocation works independently.
+
+For deployment configuration checks, run:
+
+```bash
+python -m flask --app run.py security-check
+```
+
+Review failures using [Security operations](docs/security-operations.md).
+Pulling code and running migrations do not enable host HTTPS, schedule encrypted
+backups, configure off-site storage, or provision PostgreSQL roles automatically.
 
 Local uploads are for development only and must not be assumed durable in production. The storage interface can be replaced with private persistent/object storage without changing file routes. Checkout visits opportunistically delete expired staged uploads; run `python -m flask --app run.py cleanup-staged-uploads` daily as well, especially on an idle site. The command deletes only checkout-marked uploads older than `CHECKOUT_STAGED_RETENTION_HOURS` (default 24) with no order item. It uses the existing reversible private-file deletion staging; after an interrupted cleanup, run `python -m flask --app run.py recover-account-deletions` while the app is offline. Legacy uploads and all order-attached files are excluded. See the [storage and deployment specification](docs/project-specification.md#storage-and-deployment).
 
