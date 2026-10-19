@@ -42,6 +42,8 @@ def create_app(config_object: object | None = None) -> Flask:
 
     migrate.init_app(app, db)
     login_manager.init_app(app)
+    from app.security import init_security
+    init_security(app)
     csrf.init_app(app)
 
     from app.routes.access import access_bp
@@ -91,6 +93,8 @@ def create_app(config_object: object | None = None) -> Flask:
     from app.cli import register_commands
 
     register_commands(app)
+    from app.security_cli import register_security_commands
+    register_security_commands(app)
 
     @app.errorhandler(404)
     def page_not_found(error):

@@ -7,6 +7,7 @@ from app.models.order import Order, OrderDestination, OrderItem, OrderStatus
 from app.models.professor import Faculty, Professor
 from app.models.payment import Payment, PaymentMethod, PaymentStatus
 from app.models.payment_settings import PaymentSettings
+from app.models.security import AuthSession, RateLimitBucket
 
 __all__ = [
     "ColorMode",

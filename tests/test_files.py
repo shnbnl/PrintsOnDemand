@@ -39,10 +39,14 @@ def make_user(app, email="student@example.com", role=UserRole.STUDENT):
 
 
 def sign_in(client, user_id):
+    from app.services.sessions import issue_session
+    credential = issue_session(db.session.get(User, user_id))
     with client.session_transaction() as session:
-        session["_user_id"] = str(user_id)
+        session.clear()
+        session["_user_id"] = credential
         session["_fresh"] = True
     g.pop("_login_user", None)
+    g.pop("csrf_token", None)
 
 
 def post_upload(client, content=PDF, name="notes.pdf", mime="application/pdf", csrf=True):

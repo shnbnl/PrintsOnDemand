@@ -115,6 +115,7 @@ def test_testing_environment_switch(monkeypatch):
 def test_legacy_postgres_url_is_normalized(monkeypatch):
     monkeypatch.setenv("DATABASE_URL", "postgres://user:password@localhost:5432/prints")
     monkeypatch.setenv("SECRET_KEY", "test-production-key-with-adequate-length")
+    monkeypatch.setenv("TRUSTED_HOSTS", "prints.example")
 
     app = create_app(ProductionConfig)
 

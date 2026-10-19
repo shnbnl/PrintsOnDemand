@@ -2,19 +2,28 @@
 
 from urllib.parse import urlsplit
 
-from flask import Blueprint, flash, make_response, redirect, render_template, request, url_for
-from flask_login import current_user, login_user, logout_user
+from flask import Blueprint, flash, make_response, redirect, render_template, request, session, url_for
+from flask_login import current_user, logout_user
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
+from werkzeug.security import check_password_hash, generate_password_hash
 
 from app.extensions import db
 from app.forms import BlueStaffLoginForm, LoginForm, RegistrationForm, ShopStaffLoginForm
 from app.models import PrintingShop, User, UserRole
 from app.services.professors import PROFESSOR_DELIVERY_SHOP
 from app.professor_faculties import FACULTIES_BY_DEPARTMENT
+from app.services.sessions import begin_login, clear_client_auth, revoke_session
 
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
+_DUMMY_PASSWORD_HASH = generate_password_hash("not-an-account-credential")
+
+
+def valid_credentials(user, password):
+    # Unknown/inactive identities still pay the password-hash cost.
+    valid = check_password_hash(user.password_hash if user else _DUMMY_PASSWORD_HASH, password)
+    return bool(user and user.is_active and valid)
 
 
 def role_home(role: UserRole) -> str:
@@ -102,8 +111,8 @@ def login():
         else:
             email = User.normalize_email(form.email.data)
             user = db.session.scalar(select(User).where(User.email == email))
-        if user and user.is_active and user.check_password(form.password.data):
-            login_user(user, remember=bool(form.remember_me.data) if not blue_login else False)
+        if valid_credentials(user, form.password.data):
+            begin_login(user, remember=bool(form.remember_me.data) if not blue_login else False)
             return redirect(safe_next_url(request.args.get("next")) or role_home(user.role))
         form.password.errors.append("Invalid name or password." if blue_login else "Invalid email or password.")
 
@@ -131,10 +140,10 @@ def shop_login():
             matches = [user for user in candidates if user.name.casefold() == identifier]
             user = matches[0] if len(matches) == 1 else None
         if (
-            user and user.check_password(form.password.data)
-            and user.is_active and user.shop_id is not None and user.shop is not None
+            valid_credentials(user, form.password.data)
+            and user.shop_id is not None and user.shop is not None
         ):
-            login_user(user, remember=False)
+            begin_login(user, remember=False)
             return redirect(safe_next_url(request.args.get("next")) or role_home(user.role))
         form.password.errors.append(
             "Unable to sign in. Check your staff email or name and password, "
@@ -147,7 +156,11 @@ def shop_login():
 
 @auth_bp.post("/logout")
 def logout():
+    revoke_session(session.get("_user_id"))
     if current_user.is_authenticated:
         logout_user()
+    clear_client_auth()
     flash("You have logged out.", "success")
-    return redirect(url_for("main.index"))
+    response = redirect(url_for("main.index"))
+    response.headers["Clear-Site-Data"] = '"cache", "cookies", "storage"'
+    return response

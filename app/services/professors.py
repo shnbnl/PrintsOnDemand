@@ -85,7 +85,7 @@ def validate_professor_selection(
     if actor is not None and actor.role == UserRole.PROFESSOR:
         if professor_id not in (None, ""):
             raise ProfessorSelectionError("Your professor delivery recipient is set by your account.")
-        professor = db.session.get(Professor, actor.professor_id) if actor.professor_id else None
+        professor = db.session.get(Professor, actor.professor_id, populate_existing=True) if actor.professor_id else None
         if not professor_can_self_deliver(actor):
             raise ProfessorSelectionError("Your professor account needs a verified, active profile.")
         return professor

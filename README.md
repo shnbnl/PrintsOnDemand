@@ -4,6 +4,10 @@ Prints On Demand is a printing-service web application for students and professo
 
 **Current stage: guided checkout and shop order files.** Students and professors upload documents during checkout, choose a shop on the existing map, configure each file, choose payment, and review the order before placement. Assigned shop staff access private documents through their own shop's orders.
 
+Security deployment, session expiry, encrypted backups, and recovery instructions
+are in [Security operations](docs/security-operations.md). This update requires
+`flask db upgrade` before reloading the deployed app and signs out existing sessions.
+
 ## Planned features
 
 - Search and select printing shops; view shop information, opening hours, and configurable pricing.

@@ -15,6 +15,18 @@ class Config:
     REMEMBER_COOKIE_SAMESITE = "Lax"
     PERMANENT_SESSION_LIFETIME = timedelta(hours=12)
     REMEMBER_COOKIE_DURATION = timedelta(days=14)
+    AUTH_IDLE_TIMEOUT = timedelta(minutes=30)
+    AUTH_ABSOLUTE_TIMEOUT = timedelta(hours=12)
+    REMEMBER_IDLE_TIMEOUT = timedelta(days=7)
+    AUTH_RATE_LIMIT = 100
+    AUTH_IDENTIFIER_RATE_LIMIT = 20
+    REGISTRATION_RATE_LIMIT = 20
+    UPLOAD_RATE_LIMIT = 60
+    FORCE_HTTPS = False
+    PROXY_FIX_HOPS = 0
+    # Leave room for the multipart decoder's 64 KiB chunks and boundary buffer.
+    MAX_FORM_MEMORY_SIZE = 256 * 1024
+    MAX_FORM_PARTS = 500
     ENV_NAME = "development"
     UPLOAD_MAX_SIZE = 25 * 1024 * 1024
     UPLOAD_MAX_QUANTITY = 999
@@ -55,6 +67,7 @@ class ProductionConfig(Config):
     SESSION_COOKIE_SECURE = True
     REMEMBER_COOKIE_SECURE = True
     GOOGLE_MAPS_MAP_ID = ""
+    FORCE_HTTPS = True
 
 
 CONFIGS = {
@@ -99,6 +112,28 @@ def configure_runtime(app: Flask) -> None:
             raise RuntimeError("Debug mode must be disabled in production.")
 
     app.config["SQLALCHEMY_DATABASE_URI"] = database_url
+    trusted_hosts = os.getenv("TRUSTED_HOSTS", "")
+    if trusted_hosts:
+        app.config["TRUSTED_HOSTS"] = [host.strip() for host in trusted_hosts.split(",") if host.strip()]
+    if app.config["ENV_NAME"] == "production" and not app.config.get("TRUSTED_HOSTS"):
+        raise RuntimeError("Production requires TRUSTED_HOSTS for its public hostnames.")
+    for key in ("FORCE_HTTPS",):
+        value = os.getenv(key)
+        if value:
+            if value.lower() not in {"true", "false", "1", "0"}:
+                raise ValueError(f"{key} must be true or false.")
+            app.config[key] = value.lower() in {"true", "1"}
+    hops = os.getenv("PROXY_FIX_HOPS")
+    if hops:
+        if not hops.isdecimal() or not 0 <= int(hops) <= 3:
+            raise ValueError("PROXY_FIX_HOPS must be between 0 and 3.")
+        app.config["PROXY_FIX_HOPS"] = int(hops)
+    if app.config["FORCE_HTTPS"]:
+        app.config["SESSION_COOKIE_SECURE"] = True
+        app.config["REMEMBER_COOKIE_SECURE"] = True
+        app.config["DEBUG"] = False
+    elif app.config["ENV_NAME"] == "production":
+        raise RuntimeError("HTTPS enforcement cannot be disabled in production.")
     app.config["SECRET_KEY"] = (
         os.getenv("SECRET_KEY")
         or app.config.get("SECRET_KEY")

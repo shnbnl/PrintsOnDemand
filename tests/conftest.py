@@ -1,6 +1,7 @@
 """Shared isolated test application."""
 
 import pytest
+from flask import g
 
 from app import create_app
 from app.config import TestingConfig
@@ -18,6 +19,12 @@ def test_app(monkeypatch, tmp_path):
     monkeypatch.delenv("DATABASE_URL", raising=False)
     monkeypatch.delenv("SECRET_KEY", raising=False)
     app = create_app(TestingConfig)
+    # This fixture deliberately holds an app context across requests. Production
+    # requests each receive a new g; discard its per-request caches accordingly.
+    def reset_request_caches():
+        g.pop("_login_user", None)
+        g.pop("csrf_token", None)
+    app.before_request_funcs.setdefault(None, []).insert(0, reset_request_caches)
     app.config["UPLOAD_MAX_SIZE"] = 25 * 1024 * 1024
     app.config["MAX_CONTENT_LENGTH"] = app.config["UPLOAD_MAX_SIZE"] + 64 * 1024
     app.config["UPLOAD_MAX_QUANTITY"] = 999

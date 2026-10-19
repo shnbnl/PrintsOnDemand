@@ -55,10 +55,14 @@ def student(app, email="student@example.com", role=UserRole.STUDENT):
 
 
 def sign_in(client, user_id):
+    from app.services.sessions import issue_session
+    credential = issue_session(db.session.get(User, user_id))
     with client.session_transaction() as state:
-        state["_user_id"] = str(user_id)
+        state.clear()
+        state["_user_id"] = credential
         state["_fresh"] = True
     g.pop("_login_user", None)
+    g.pop("csrf_token", None)
 
 
 def shop(app, *, name="Campus Prints", active=True, price="2.25", rush=False, rush_fee="5.50"):

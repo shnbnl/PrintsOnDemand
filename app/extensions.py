@@ -14,11 +14,7 @@ csrf = CSRFProtect()
 
 @login_manager.user_loader
 def load_user(user_id: str):
-    """Reload active users from the database for each authenticated request."""
-    from app.models import User
+    """Accept only live, server-issued authentication credentials."""
+    from app.services.sessions import load_session_user
 
-    try:
-        user = db.session.get(User, int(user_id))
-    except ValueError:
-        return None
-    return user if user and user.is_active else None
+    return load_session_user(user_id)

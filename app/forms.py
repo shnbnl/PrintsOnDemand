@@ -49,15 +49,15 @@ class RegistrationForm(FlaskForm):
 
 
 class LoginForm(FlaskForm):
-    email = EmailField("Email", filters=[strip_text], validators=[DataRequired(), Email()])
-    password = PasswordField("Password", validators=[DataRequired()])
+    email = EmailField("Email", filters=[strip_text], validators=[DataRequired(), Email(), Length(max=254)])
+    password = PasswordField("Password", validators=[DataRequired(), Length(max=128)])
     remember_me = BooleanField("Remember me")
     submit = SubmitField("Log-in")
 
 
 class BlueStaffLoginForm(FlaskForm):
-    name = StringField("Name", filters=[strip_text], validators=[DataRequired()])
-    password = PasswordField("Password", validators=[DataRequired()])
+    name = StringField("Name", filters=[strip_text], validators=[DataRequired(), Length(max=120)])
+    password = PasswordField("Password", validators=[DataRequired(), Length(max=128)])
     submit = SubmitField("Log-in")
 
 
@@ -66,5 +66,5 @@ class ShopStaffLoginForm(FlaskForm):
         "Staff email or name", filters=[strip_text],
         validators=[DataRequired(), Length(max=254)],
     )
-    password = PasswordField("Password", validators=[DataRequired()])
+    password = PasswordField("Password", validators=[DataRequired(), Length(max=128)])
     submit = SubmitField("Log in to shop")
