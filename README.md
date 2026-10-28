@@ -81,6 +81,24 @@ python -m flask --app run.py create-privileged-user --role SHOP_STAFF --shop-id 
 
 The commands prompt for account details and a hidden password. Create the shop before assigning staff. For optional development fixtures, run `seed-sample-shops` or `seed-sample-professors` through the Flask CLI; these are not approved business data and cannot run under the production configuration.
 
+## API keys and environment files
+
+Store real configuration values in the local `.env`, using the variable names in
+[.env.example](.env.example). The app loads `.env` with python-dotenv and reads
+`GOOGLE_MAPS_API_KEY` and `GOOGLE_MAPS_MAP_ID` from its environment. Keep real keys
+out of source code, templates, and the example file. `.env`, environment variants,
+and common backup filenames are ignored by Git; `.env.example` contains placeholders
+and remains tracked.
+
+Git push/pull does not transfer ignored secrets. Configure the deployed host's
+own `.env` or process environment separately, then reload the web app. Never paste
+real keys into commits or documentation. Ignoring a file does not remove secrets
+from earlier commits; revoke/rotate a key if it was previously committed.
+
+Google Maps uses a browser-visible key. Restrict it in Google Cloud to the app's
+approved website referrers and the Maps JavaScript API. Server-side credentials
+must never be passed into browser templates or scripts.
+
 ## Documents and storage
 
 Supported uploads: PDF, DOC, DOCX, PPT, PPTX, JPG, JPEG, PNG. Private documents default to ignored `instance/uploads`, outside public static assets. Configure `UPLOAD_STORAGE_ROOT` only to another private directory. Never commit uploaded documents, databases, `.env`, keys, or real credentials.
