@@ -2,7 +2,7 @@
 
 A campus printing service for students, professors, and print shops. Customers upload documents, configure printing, choose fulfillment and payment, and track their orders. Shop staff manage prices, payments, and print jobs for their assigned shop.
 
-The web app is deployed on **Vercel**. This repository also includes instructions for maintaining the existing PythonAnywhere Flask deployment.
+The web app initially used **SQLite** during development. When deployed on **Vercel**, it uses **PostgreSQL**. This repository also includes instructions for maintaining the existing PythonAnywhere Flask deployment.
 
 ## Features
 
@@ -42,7 +42,7 @@ Payments are manually checked by authorized staff. The app does not transfer mon
 | Development assistance | OpenAI Codex |
 | Frontend | HTML, CSS, JavaScript, Jinja templates, and the Plus Jakarta Sans font |
 | Backend | Flask and Werkzeug |
-| Database and migrations | SQLite or PostgreSQL, SQLAlchemy, Flask-SQLAlchemy, Flask-Migrate, and Alembic |
+| Database and migrations | SQLite for initial development; PostgreSQL for the Vercel deployment; SQLAlchemy, Flask-SQLAlchemy, Flask-Migrate, and Alembic |
 | Authentication and forms | Flask-Login, Flask-WTF, WTForms, and email-validator |
 | Documents and images | pypdf, Pillow, and LibreOffice or AbiWord for Word document page counting |
 | Maps | Google Maps JavaScript API |
@@ -70,7 +70,7 @@ Customers and shop staff access the web app through an internet-connected comput
 ## Requirements
 
 - Python 3.12
-- SQLite for local development and PythonAnywhere deployments, or PostgreSQL
+- SQLite for initial/local development and the PythonAnywhere deployment; PostgreSQL for the Vercel deployment
 - Dependencies in [requirements.txt](requirements.txt)
 - LibreOffice or AbiWord for Word document page counting
 - Google Maps JavaScript API configuration for interactive maps
