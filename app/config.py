@@ -80,9 +80,8 @@ CONFIGS = {
 
 
 def select_config() -> type[Config]:
-    """Default to production on Vercel and development on a local workstation."""
-    default = "production" if os.getenv("VERCEL") == "1" else "development"
-    name = (os.getenv("FLASK_ENV") or default).strip().lower()
+    """Select the environment; default to local development."""
+    name = (os.getenv("FLASK_ENV") or "development").strip().lower()
     testing = (os.getenv("TESTING") or "").strip().lower()
     if testing and testing not in {"1", "true", "yes", "on", "0", "false", "no", "off"}:
         raise ValueError("TESTING must be a boolean value.")
@@ -98,8 +97,6 @@ def select_config() -> type[Config]:
 
 def configure_runtime(app: Flask) -> None:
     """Apply environment overrides and require production secrets/config."""
-    if os.getenv("VERCEL") == "1" and app.config["ENV_NAME"] != "production":
-        raise RuntimeError("Vercel requires the production configuration (FLASK_ENV=production).")
     configure_database(app)
 
     if app.config["ENV_NAME"] == "production":

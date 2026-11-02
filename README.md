@@ -4,6 +4,8 @@ A campus printing service for students, professors, and print shops. Customers u
 
 The web app is deployed on **PythonAnywhere**, using **SQLite** for its database.
 
+Live website: [decimo.pythonanywhere.com](https://decimo.pythonanywhere.com/).
+
 ## Features
 
 - Student and professor registration with role-based workspaces.

@@ -1,5 +1,0 @@
-{
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": "flask",
-  "buildCommand": "python scripts/build_vercel.py"
-}

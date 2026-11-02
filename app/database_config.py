@@ -1,4 +1,4 @@
-"""PostgreSQL driver and connection settings for local and serverless hosts."""
+"""Driver selection and connection settings for supported SQL databases."""
 
 import os
 
@@ -26,17 +26,16 @@ def normalize_database_url(value):
 
 
 def configure_database(app):
-    """Let the hosted pooler own connections instead of each function instance."""
+    """Configure the database driver and an optional external connection pool."""
     value = normalize_database_url(
         os.getenv("DATABASE_URL") or app.config.get("SQLALCHEMY_DATABASE_URI")
     )
     url = make_url(value) if value else None
-    vercel = os.getenv("VERCEL") == "1"
     if app.config["ENV_NAME"] == "production":
         if url is None or url.get_backend_name() != "postgresql":
             raise RuntimeError("Production requires a PostgreSQL DATABASE_URL.")
 
-    mode = (os.getenv("DATABASE_POOL_MODE") or ("null" if vercel else "queue")).strip().lower()
+    mode = (os.getenv("DATABASE_POOL_MODE") or "queue").strip().lower()
     if mode not in {"null", "queue"}:
         raise ValueError("DATABASE_POOL_MODE must be null or queue.")
 
@@ -45,10 +44,10 @@ def configure_database(app):
         connect_args = dict(options.get("connect_args") or {})
         connect_args.setdefault("connect_timeout", 10)
         options.setdefault("pool_pre_ping", True)
-        if vercel:
+        if app.config["ENV_NAME"] == "production":
             sslmode = url.query.get("sslmode", connect_args.get("sslmode", "require"))
             if sslmode not in {"require", "verify-ca", "verify-full"}:
-                raise RuntimeError("Vercel database connections require TLS (sslmode=require or verify-full).")
+                raise RuntimeError("Production database connections require TLS (sslmode=require or verify-full).")
             connect_args["sslmode"] = sslmode
         if mode == "null":
             options["poolclass"] = NullPool

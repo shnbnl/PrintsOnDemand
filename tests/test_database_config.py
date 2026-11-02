@@ -6,14 +6,14 @@ from sqlalchemy.engine import make_url
 from sqlalchemy.pool import NullPool
 
 from app import create_app
-from app.config import Config, ProductionConfig, TestingConfig, configure_runtime, select_config
+from app.config import DevelopmentConfig, ProductionConfig, TestingConfig, configure_runtime, select_config
 from app.database_config import configure_database, normalize_database_url
 from app.extensions import db
 
 
 @pytest.fixture(autouse=True)
 def isolated_database_environment(monkeypatch):
-    for name in ("DATABASE_URL", "DATABASE_POOL_MODE", "VERCEL", "FLASK_ENV", "TESTING"):
+    for name in ("DATABASE_URL", "DATABASE_POOL_MODE", "FLASK_ENV", "TESTING"):
         monkeypatch.delenv(name, raising=False)
 
 
@@ -36,24 +36,16 @@ def test_invalid_url_error_does_not_disclose_credentials():
     assert error.value.__suppress_context__ is True
 
 
-def test_vercel_defaults_to_production_and_refuses_testing(monkeypatch):
-    monkeypatch.setenv("VERCEL", "1")
-    assert select_config() is ProductionConfig
+def test_environment_defaults_to_development_and_allows_explicit_testing(monkeypatch):
+    assert select_config() is DevelopmentConfig
     monkeypatch.setenv("TESTING", "true")
+    assert select_config() is TestingConfig
+    monkeypatch.setenv("FLASK_ENV", "production")
     with pytest.raises(ValueError, match="TESTING cannot be enabled"):
         select_config()
 
 
-def test_vercel_rejects_an_explicit_development_profile(monkeypatch):
-    monkeypatch.setenv("VERCEL", "1")
-    app = Flask(__name__)
-    app.config.from_object(Config)
-    with pytest.raises(RuntimeError, match="Vercel requires the production configuration"):
-        configure_runtime(app)
-
-
-def test_vercel_cannot_fall_back_to_a_local_database(monkeypatch):
-    monkeypatch.setenv("VERCEL", "1")
+def test_production_cannot_fall_back_to_a_local_database(monkeypatch):
     app = Flask(__name__)
     app.config.from_object(ProductionConfig)
     with pytest.raises(RuntimeError, match="PostgreSQL DATABASE_URL"):
@@ -63,9 +55,9 @@ def test_vercel_cannot_fall_back_to_a_local_database(monkeypatch):
         configure_runtime(app)
 
 
-def test_vercel_builds_psycopg_engine_with_external_pool_and_tls(monkeypatch):
-    monkeypatch.setenv("VERCEL", "1")
-    monkeypatch.setenv("DATABASE_URL", "postgresql://pod_web:fake@ep-example-pooler.neon.tech/neondb")
+def test_production_builds_psycopg_engine_with_external_pool_and_tls(monkeypatch):
+    monkeypatch.setenv("DATABASE_URL", "postgresql://pod_web:fake@db.example/prints")
+    monkeypatch.setenv("DATABASE_POOL_MODE", "null")
     monkeypatch.setenv("SECRET_KEY", "test-production-secret-at-least-32-characters")
     monkeypatch.setenv("TRUSTED_HOSTS", "prints.example")
     monkeypatch.setenv("FORCE_HTTPS", "true")
@@ -85,8 +77,7 @@ def test_vercel_builds_psycopg_engine_with_external_pool_and_tls(monkeypatch):
 
 
 @pytest.mark.parametrize("sslmode", ["disable", "allow", "prefer"])
-def test_vercel_rejects_a_database_url_that_can_use_plaintext(monkeypatch, sslmode):
-    monkeypatch.setenv("VERCEL", "1")
+def test_production_rejects_a_database_url_that_can_use_plaintext(monkeypatch, sslmode):
     monkeypatch.setenv("DATABASE_URL", f"postgresql://user:fake@db.example/prints?sslmode={sslmode}")
     app = Flask(__name__)
     app.config.from_object(ProductionConfig)
