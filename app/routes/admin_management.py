@@ -7,18 +7,19 @@ from flask_login import current_user
 from flask_wtf import FlaskForm
 from sqlalchemy import select
 
-from app.admin_forms import ProfessorForm, StaffShopForm
+from app.admin_forms import ProfessorForm, StaffProfessorForm, StaffShopForm
 from app.authorization import roles_required
 from app.extensions import db
 from app.models import PaymentSettings, PrintingShop, Professor, ProfessorVerificationStatus, User, UserRole
 from app.services.admin_management import (
     ManagementError, assign_staff_to_shop, delete_managed_professor,
-    save_professor_approvals, verify_professor_with_profile,
+    save_professor_approvals, save_staff_professor, verify_professor_with_profile,
 )
 from app.services.account_deletion import (
     AccountDeletionCleanupError, AccountDeletionError, delete_customer_account,
 )
 from app.services.professors import PROFESSOR_DELIVERY_SHOP
+from app.professor_faculties import DELIVERY_LOCATIONS_BY_DEPARTMENT, FACULTIES_BY_DEPARTMENT
 
 
 admin_management_bp = Blueprint("admin_management", __name__, url_prefix="/admin")
@@ -132,7 +133,25 @@ def professor_editor(record):
 @admin_management_bp.route("/professors/new", methods=["GET", "POST"])
 @professor_management_required
 def new_professor():
-    abort(404)
+    return staff_professor_editor(None)
+
+
+def staff_professor_editor(record):
+    form = StaffProfessorForm(obj=record)
+    if form.validate_on_submit():
+        try:
+            save_staff_professor(record, **{key: getattr(form, key).data for key in (
+                "name", "email", "department", "faculty", "office", "is_active",
+                "direct_send_approved", "accepts_student_deliveries",
+            )})
+        except ManagementError as error:
+            form.email.errors.append(str(error))
+        else:
+            flash("Professor delivery recipient saved.", "success")
+            return redirect(url_for("admin_management.professors"))
+    return render_template("admin/staff_professor_form.html", professor=record, form=form,
+                           faculties_by_department=FACULTIES_BY_DEPARTMENT,
+                           delivery_locations=DELIVERY_LOCATIONS_BY_DEPARTMENT)
 
 
 @admin_management_bp.route("/professors/<int:professor_id>/edit", methods=["GET", "POST"])
@@ -140,6 +159,8 @@ def new_professor():
 def edit_professor(professor_id):
     record = db.get_or_404(Professor, professor_id)
     if record.account is None:
+        if record.is_staff_managed:
+            return staff_professor_editor(record)
         abort(404)
     return professor_editor(record)
 

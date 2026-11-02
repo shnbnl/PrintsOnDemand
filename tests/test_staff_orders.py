@@ -310,7 +310,7 @@ def test_paid_record_allows_only_sequential_processing_and_tracking(client, test
         assert (order.user_id, order.shop_id, order.total, order.professor_name, order.items[0].unit_price) == original
         assert order.payment.payment_status == PaymentStatus.PAID
         steps = build_tracking(order).steps
-        assert [step.title for step in steps] == ["Order created", "Payment", "Processing started", "Order ready", "Delivered to Faculty", "Order completed", "Current order status"]
+        assert [step.title for step in steps] == ["Order created", "Payment", "Processing started", "Order ready", "Delivered to Faculty", "Order completed"]
         assert [step.timestamp.hour for step in steps[2:6]] == [1, 2, 3, 4]
     tracking = client.get(url_a)
     assert tracking.status_code == 200

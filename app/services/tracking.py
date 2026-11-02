@@ -58,7 +58,7 @@ def build_tracking(order: Order) -> OrderTracking:
         payment_step = TrackingStep(
             "Payment", "Onsite payment selected; payment is pending.", payment.updated_at
         )
-        next_step = ("Pay the delivery staff at your Faculty when your printed papers arrive. Payment has not been recorded yet."
+        next_step = ("Arrange payment with Blue and Silver staff. Payment must be confirmed before printing starts."
                      if order.destination == OrderDestination.PROFESSOR else
                      "Pay at the printing shop. Payment has not been recorded yet.")
     else:
@@ -111,7 +111,11 @@ def build_tracking(order: Order) -> OrderTracking:
         steps.append(TrackingStep("Delivered to Faculty", "Blue and Silver staff confirmed physical handoff of the printed papers.", order.delivered_at))
     if order.completed_at:
         steps.append(TrackingStep("Order completed", "This order was marked complete.", order.completed_at))
-    steps.append(TrackingStep("Current order status", order_detail))
+    if order.status not in {OrderStatus.DELIVERED, OrderStatus.COMPLETED}:
+        steps.append(TrackingStep("Current order status", order_detail))
+
+    if order.status == OrderStatus.COMPLETED:
+        next_step = "This order is complete."
 
     return OrderTracking(
         payment_method=method,

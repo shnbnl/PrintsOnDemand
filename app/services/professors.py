@@ -1,6 +1,6 @@
 """One eligibility rule for professor choices and order assignment."""
 
-from sqlalchemy import select
+from sqlalchemy import and_, or_, select
 
 from app.extensions import db
 from app.models import OrderDestination, PrintingShop, Professor, ProfessorVerificationStatus, ServiceType, ShopService, User, UserRole
@@ -30,32 +30,32 @@ def professor_can_self_deliver(account: User) -> bool:
     )
 
 
+def eligible_professor_statement():
+    verified_account = Professor.account.has(and_(
+        User.role == UserRole.PROFESSOR,
+        User.is_active.is_(True),
+        User.professor_verification_status == ProfessorVerificationStatus.VERIFIED,
+    ))
+    staff_recipient = and_(Professor.is_staff_managed.is_(True), ~Professor.account.has())
+    return select(Professor).where(
+        or_(verified_account, staff_recipient),
+        Professor.is_active.is_(True),
+        Professor.direct_send_approved.is_(True),
+        Professor.accepts_student_deliveries.is_(True),
+        Professor.faculty.in_(ALL_FACULTIES),
+    )
+
+
 def selectable_professors() -> list[Professor]:
     return db.session.scalars(
-        select(Professor).join(User, User.professor_id == Professor.id).where(
-            User.role == UserRole.PROFESSOR,
-            User.is_active.is_(True),
-            User.professor_verification_status == ProfessorVerificationStatus.VERIFIED,
-            Professor.is_active.is_(True),
-            Professor.direct_send_approved.is_(True),
-            Professor.accepts_student_deliveries.is_(True),
-            Professor.faculty.is_not(None),
-        ).order_by(Professor.name, Professor.id)
+        eligible_professor_statement().order_by(Professor.name, Professor.id)
     ).all()
 
 
 def selectable_professor(professor_id: int) -> Professor | None:
     return db.session.scalar(
-        select(Professor).join(User, User.professor_id == Professor.id).where(
-            Professor.id == professor_id,
-            User.role == UserRole.PROFESSOR,
-            User.is_active.is_(True),
-            User.professor_verification_status == ProfessorVerificationStatus.VERIFIED,
-            Professor.is_active.is_(True),
-            Professor.direct_send_approved.is_(True),
-            Professor.accepts_student_deliveries.is_(True),
-            Professor.faculty.is_not(None),
-        ).execution_options(populate_existing=True)
+        eligible_professor_statement().where(Professor.id == professor_id)
+        .execution_options(populate_existing=True)
     )
 
 

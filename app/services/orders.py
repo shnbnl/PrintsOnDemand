@@ -26,7 +26,7 @@ def create_order(
     payment_reference: str = "",
 ) -> Order:
     """Commit one order and all quoted items, retrying rare reference collisions."""
-    db.session.refresh(quote.shop, attribute_names=["opening_time", "closing_time", "is_active"])
+    db.session.refresh(quote.shop, attribute_names=["opening_time", "closing_time", "is_active", "is_on_break"])
     validate_ordering_hours(quote.shop)
     try:
         verify_quote_page_counts(quote)

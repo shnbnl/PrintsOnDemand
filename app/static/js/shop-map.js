@@ -79,6 +79,11 @@
     heading.className = 'map-panel-heading';
     const details = document.createElement('div');
     details.append(title, hours);
+    const status = document.createElement('span');
+    status.className = `status-badge ${shop.availability.badge_class}`;
+    status.dataset.shopStatus = String(shop.id);
+    status.textContent = shop.availability.label;
+    details.append(status);
     heading.append(avatar, details);
     const services = document.createElement('ul');
     services.className = 'chip-list';

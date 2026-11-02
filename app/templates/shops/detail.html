@@ -10,6 +10,7 @@
     <div>
       {% if staff_view %}<span class="status-badge {{ 'status-warning' if not shop.is_active else 'status-success' }}">Your assigned shop{% if not shop.is_active %} — inactive{% endif %}</span>{% endif %}
       <h1>{{ shop.name }}</h1>
+      <span class="status-badge {{ shop_status.badge_class }}" data-shop-status="{{ shop.id }}">{{ shop_status.label }}</span>
       {% if shop.is_demo %}<p class="sample-label">Sample shop information and pricing — confirm rates before paying.</p>{% endif %}
       {% if shop.description %}<p>{{ shop.description }}</p>{% endif %}
       <p><strong>Address:</strong> {{ shop.address }}</p>
@@ -17,6 +18,7 @@
     </div>
   </header>
   {% if staff_view %}
+    {% include "shops/_break_control.html" %}
     <section class="staff-queue" aria-labelledby="staff-queue-heading">
       <div class="section-heading"><div><p class="page-eyebrow">Live shop queue</p><h2 id="staff-queue-heading">What needs attention</h2><p class="hint">Counts reflect orders assigned to your shop.</p></div><a class="button button-secondary" href="{{ url_for('staff_orders.index') }}">View all orders</a></div>
       <div class="staff-metrics" data-staggered-cards aria-label="Order status overview">

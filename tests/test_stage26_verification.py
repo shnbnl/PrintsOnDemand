@@ -96,7 +96,9 @@ def test_rejection_and_automatic_profile_creation_are_trusted_actions(client, te
     assert client.post(f"/admin/professors/accounts/{pending_id}/verify", data={
         "csrf_token": token(page),
     }).status_code == 302
-    assert client.get(f"/admin/professors/new?account_id={pending_id}").status_code == 404
+    new_recipient = client.get(f"/admin/professors/new?account_id={pending_id}")
+    assert new_recipient.status_code == 200
+    assert b'does not create a login account' in new_recipient.data
     with test_app.app_context():
         account = db.session.get(User, pending_id)
         profile = account.professor

@@ -3,7 +3,7 @@
 from io import BytesIO
 from types import SimpleNamespace
 
-from flask import Blueprint, abort, current_app, render_template, request, send_file, url_for
+from flask import Blueprint, abort, current_app, jsonify, render_template, request, send_file, url_for
 from sqlalchemy import Numeric, cast, select
 from sqlalchemy.orm import selectinload
 
@@ -11,6 +11,7 @@ from app.authorization import roles_required
 from app.extensions import db
 from app.models import ColorMode, PaperSize, PrintingShop, UserRole
 from app.services.fulfillment import availability
+from app.services.shop_hours import availability_status, ordering_error
 from app.services.professors import shop_supports_professor_delivery
 from app.models import ServiceType, FeeType
 
@@ -48,7 +49,8 @@ def detail_context(shop: PrintingShop) -> dict:
     )
     if ServiceType.RUSH_PRINTING.value in service_types:
         fees.append(SimpleNamespace(fee_type=FeeType.RUSH_PRINTING, amount=20, is_demo=False))
-    return {"shop": shop, "price_rows": rows, "price_map": prices, "services": services, "fees": fees}
+    return {"shop": shop, "price_rows": rows, "price_map": prices, "services": services,
+            "fees": fees, "shop_status": availability_status(shop)}
 
 
 def active_shop_statement(query: str):
@@ -65,7 +67,19 @@ def index():
     query = request.args.get("q", "").strip()[:100]
     statement = active_shop_statement(query)
     shops = db.session.scalars(statement.order_by(PrintingShop.name)).all()
-    return render_template("shops/index.html", shops=shops, query=query)
+    return render_template("shops/index.html", shops=shops, query=query,
+                           shop_statuses={shop.id: availability_status(shop) for shop in shops})
+
+
+@shops_bp.get("/availability")
+@roles_required(UserRole.STUDENT, UserRole.PROFESSOR, UserRole.SHOP_STAFF)
+def live_availability():
+    shops = db.session.scalars(select(PrintingShop).where(PrintingShop.is_active.is_(True))).all()
+    response = jsonify(shops=[{
+        "id": shop.id, **availability_status(shop), "ordering_error": ordering_error(shop),
+    } for shop in shops])
+    response.headers["Cache-Control"] = "private, no-store"
+    return response
 
 
 def map_markers(query: str = "") -> list[dict]:
@@ -90,6 +104,7 @@ def map_markers(query: str = "") -> list[dict]:
             "description": shop.description,
             "address": shop.address,
             "hours": f"{shop.opening_time:%I:%M %p} - {shop.closing_time:%I:%M %p}",
+            "availability": availability_status(shop),
             "services": [item.service_type.label for item in context["services"]],
             "fulfillment": [label for method, label in (
                 ("PROFESSOR", "Direct-to-Professor"),

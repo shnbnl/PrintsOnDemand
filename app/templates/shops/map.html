@@ -56,7 +56,7 @@
                         <p class="page-eyebrow">Selected printing shop</p>
                         <h2>{{ marker.name }}</h2>
                         {% if marker.rating is not none %}<p class="shop-map-rating" aria-label="Rated {{ '%.1f'|format(marker.rating) }} out of 5 stars"><span class="shop-map-rating-stars" aria-hidden="true"><span class="shop-map-rating-fill" style="width: {{ marker.rating * 20 }}%">★★★★★</span>★★★★★</span><strong>{{ '%.1f'|format(marker.rating) }}</strong><span>out of 5</span></p>{% endif %}
-                        <span class="status-badge status-success">Available</span>
+                        <span class="status-badge {{ marker.availability.badge_class }}" data-shop-status="{{ marker.id }}">{{ marker.availability.label }}</span>
                       </div>
                     </div>
                     {% if marker.description %}<p class="shop-discovery-description">{{ marker.description }}</p>{% endif %}

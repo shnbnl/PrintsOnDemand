@@ -49,6 +49,10 @@ def test_customer_completes_own_ready_order_from_history(client, test_app, role)
         assert order.status == OrderStatus.COMPLETED
         assert order.completed_at is not None
     assert b"Complete order" not in client.get("/orders").data
+    completed_page = client.get(f"/orders/{reference}")
+    assert b"Current order status" not in completed_page.data
+    assert b"Order completed" in completed_page.data
+    assert b"This order is complete." in completed_page.data
     assert client.post(f"/orders/{reference}/complete", data={"csrf_token": token(client.get("/orders"))}).status_code == 409
 
 

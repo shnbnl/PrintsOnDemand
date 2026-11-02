@@ -4,6 +4,7 @@
     <div class="map-panel-heading"><span class="shop-avatar" aria-hidden="true">{% if shop.photo_digest %}<img src="{{ url_for('shops.photo', shop_id=shop.id, v=shop.photo_digest[:12]) }}" alt="">{% else %}P{% endif %}</span><div><p class="page-eyebrow">Selected shop</p><h2>{{ shop.name }}</h2></div></div>
     <p class="hint">{{ shop.opening_time.strftime('%I:%M %p') }} – {{ shop.closing_time.strftime('%I:%M %p') }}</p>
     <ul class="chip-list" aria-label="Available services">{% for service in shop_details.services %}<li>{{ service.service_type.label }}</li>{% endfor %}</ul>
+    <span class="status-badge {{ shop_details.shop_status.badge_class }}" data-shop-status="{{ shop.id }}">{{ shop_details.shop_status.label }}</span>
     <p class="{{ 'notice notice-warning' if ordering_error else 'hint' }}" data-ordering-status role="status">{{ ordering_error or 'Open now. Shop hours use Philippine time.' }}</p>
   </section>
 {% else %}<section class="workspace-shop-summary"><h2>Choose your printing shop</h2><p>Tap a map pin to see its services and prices.</p></section>{% endif %}

@@ -9,8 +9,9 @@
     <div>
       <p class="eyebrow">Administration / Recipients</p>
       <h1>Professor Management</h1>
-      <p class="page-lead">Verify Professor accounts, then manage their delivery approval settings.</p>
+      <p class="page-lead">Add professor delivery recipients or verify Professor accounts and manage their approval settings.</p>
     </div>
+    <a class="button button-primary flow-next" href="{{ url_for('admin_management.new_professor') }}">Add professor</a>
   </header>
 
   <div class="operations-overview" aria-label="Professor management overview">
@@ -81,7 +82,7 @@
                 <td data-label="Active"><span class="status-badge status-badge--{{ 'success' if professor.is_active else 'muted' }}">{{ 'Yes' if professor.is_active else 'No' }}</span></td>
                 <td data-label="Direct-to-Professor approval"><span class="status-badge status-badge--{{ 'success' if professor.direct_send_approved else 'muted' }}">{{ 'Approved' if professor.direct_send_approved else 'Not approved' }}</span></td>
                 <td data-label="Accept student deliveries"><span class="status-badge status-badge--{{ 'success' if professor.accepts_student_deliveries else 'muted' }}">{{ 'On' if professor.accepts_student_deliveries else 'Off' }}</span></td>
-                <td data-label="Action">{% if professor.account %}<a class="button button-primary flow-next" href="{{ url_for('admin_management.edit_professor', professor_id=professor.id) }}">Manage</a>{% else %}<a class="button button-danger" href="{{ url_for('admin_management.delete_professor', professor_id=professor.id) }}">Remove legacy profile</a>{% endif %}</td>
+                <td data-label="Action">{% if professor.account or professor.is_staff_managed %}<a class="button button-primary flow-next" href="{{ url_for('admin_management.edit_professor', professor_id=professor.id) }}">Manage</a>{% endif %}{% if not professor.account %}<a class="button button-danger" href="{{ url_for('admin_management.delete_professor', professor_id=professor.id) }}">{{ 'Remove recipient' if professor.is_staff_managed else 'Remove legacy profile' }}</a>{% endif %}</td>
               </tr>
             {% endfor %}
           </tbody>
@@ -91,7 +92,7 @@
   {% else %}
     <div class="empty-state">
       <h2>No professors yet</h2>
-      <p>Verify a Professor account to create its managed profile automatically.</p>
+      <p>Add a professor delivery recipient or verify a Professor account to create its managed profile.</p>
     </div>
   {% endif %}
   </div>

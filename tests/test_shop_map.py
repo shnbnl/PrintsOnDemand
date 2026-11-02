@@ -88,7 +88,7 @@ def test_student_map_search_and_existing_shop_flow(client, test_app):
     assert shops[0]["prices"][2]["color"] == "₱8.75"
     assert set(shops[0]) == {
         "id", "name", "rating", "description", "address", "hours", "services",
-        "fulfillment", "fees", "prices", "is_sample", "position", "detail_url", "photo_url",
+        "fulfillment", "fees", "prices", "is_sample", "position", "detail_url", "photo_url", "availability",
     }
     assert shops[0]["fulfillment"] == []
     assert shops[0]["rating"] is None

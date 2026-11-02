@@ -19,6 +19,8 @@
     <a href="#shop-information">Profile &amp; hours</a><a href="#shop-photo">Photo</a><a href="#shop-services">Services</a><a href="#shop-prices">Prices</a>{% if delivery_enabled %}<a href="#delivery-settings">Delivery fee</a>{% endif %}<a href="#payment-settings">Payments</a><a href="#shop-fees">Other fees</a>
   </nav>
 
+  {% include "shops/_break_control.html" %}
+
   <div class="management-grid shop-settings-grid">
     <div class="settings-column">
     <section class="section-card" id="shop-information">

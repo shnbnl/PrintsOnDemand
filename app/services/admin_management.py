@@ -2,6 +2,7 @@
 
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from email_validator import EmailNotValidError, validate_email
 
 from app.extensions import db
 from app.models import Order, PrintingShop, Professor, ProfessorVerificationStatus, User, UserRole
@@ -56,6 +57,41 @@ def save_professor_approvals(record: Professor, *, is_active: bool,
     record.direct_send_approved = direct_send_approved
     record.accepts_student_deliveries = accepts_student_deliveries
     db.session.commit()
+
+
+def save_staff_professor(record: Professor | None, *, name: str, email: str, department: str,
+                         faculty: str | None, office: str, is_active: bool,
+                         direct_send_approved: bool, accepts_student_deliveries: bool) -> Professor:
+    """Create a delivery-directory recipient without creating login credentials."""
+    if record is not None and (not record.is_staff_managed or record.account is not None):
+        raise ManagementError("This professor's details are managed through their account.")
+    faculty = faculty_for_account(department, faculty)
+    if faculty is None:
+        raise ManagementError("Select a Faculty / program belonging to this department.")
+    try:
+        normalized_email = validate_email(email.strip(), check_deliverability=False).normalized.casefold()
+    except (EmailNotValidError, ValueError) as error:
+        raise ManagementError("Enter a valid professor email.") from error
+    existing_account = db.session.scalar(select(User.id).where(User.email == normalized_email))
+    if existing_account is not None:
+        raise ManagementError("This email already has an account. Verify and manage that account instead.")
+    record = record or Professor()
+    try:
+        record.name = name
+        record.email = normalized_email
+        record.department = department
+        record.faculty = faculty
+        record.office = office.strip()
+        record.is_staff_managed = True
+        record.is_active = is_active
+        record.direct_send_approved = direct_send_approved
+        record.accepts_student_deliveries = accepts_student_deliveries
+        db.session.add(record)
+        db.session.commit()
+    except (IntegrityError, ValueError) as error:
+        db.session.rollback()
+        raise ManagementError("Unable to save this recipient. Check the details and use a unique professor email.") from error
+    return record
 
 
 def delete_managed_professor(professor_id: int) -> None:

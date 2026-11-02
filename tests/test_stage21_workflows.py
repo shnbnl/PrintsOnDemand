@@ -77,7 +77,7 @@ def test_blue_staff_verifies_and_manages_professor_approvals(client, test_app):
     assert client.post(f"/admin/professors/accounts/{account_id}/verify", data={
         "csrf_token": token(pending),
     }).status_code == 302
-    assert client.get("/admin/professors/new").status_code == 404
+    assert client.get("/admin/professors/new").status_code == 200
     with test_app.app_context():
         profile = db.session.get(User, account_id).professor
         assert (profile.department, profile.faculty, profile.account.id, profile.accepts_student_deliveries) == (

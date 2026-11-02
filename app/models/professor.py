@@ -39,6 +39,9 @@ class Professor(db.Model):
     faculty: Mapped[str | None] = mapped_column(db.String(120), nullable=True)
     office: Mapped[str | None] = mapped_column(db.String(120), nullable=True)
     is_active: Mapped[bool] = mapped_column(db.Boolean, nullable=False, default=True)
+    is_staff_managed: Mapped[bool] = mapped_column(
+        db.Boolean, nullable=False, default=False, server_default=db.false()
+    )
     direct_send_approved: Mapped[bool] = mapped_column(db.Boolean, nullable=False, default=False)
     accepts_student_deliveries: Mapped[bool] = mapped_column(
         db.Boolean, nullable=False, default=False, server_default=db.false()
@@ -55,6 +58,8 @@ class Professor(db.Model):
     @property
     def delivery_location(self) -> str | None:
         """Use the registered department for future handoffs; preserve legacy offices."""
+        if self.is_staff_managed and self.account is None:
+            return self.office or DELIVERY_LOCATIONS_BY_DEPARTMENT.get(self.department)
         department = (self.account.professor_department if self.account and self.account.professor_department
                       else self.department)
         return DELIVERY_LOCATIONS_BY_DEPARTMENT.get(department) or self.office

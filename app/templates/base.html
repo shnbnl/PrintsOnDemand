@@ -81,5 +81,6 @@
       {% endfor %}
       {% block content %}{% endblock %}
     </main>
+    {% if current_user.is_authenticated and current_user.role.value in ('STUDENT', 'PROFESSOR', 'SHOP_STAFF') %}<script src="{{ url_for('static', filename='js/shop-availability.js') }}" data-availability-url="{{ url_for('shops.live_availability') }}" defer></script>{% endif %}
   </body>
 </html>

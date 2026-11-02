@@ -90,6 +90,22 @@ def index():
     return editor()
 
 
+@shop_staff_bp.post("/break")
+@roles_required(UserRole.SHOP_STAFF)
+def set_break():
+    shop = assigned_shop()
+    if not FlaskForm().validate_on_submit():
+        abort(400)
+    values = request.form.getlist("on_break")
+    if len(values) != 1 or values[0] not in {"true", "false"}:
+        abort(400)
+    shop.is_on_break = values[0] == "true"
+    db.session.commit()
+    flash("New orders paused while your shop is on a break." if shop.is_on_break
+          else "Break ended. New orders follow your shop's business hours.", "success")
+    return redirect(url_for("access.shop"))
+
+
 @shop_staff_bp.post("/details")
 @roles_required(UserRole.SHOP_STAFF)
 def save_details():

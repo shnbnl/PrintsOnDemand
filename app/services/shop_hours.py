@@ -29,6 +29,8 @@ def is_open(shop: PrintingShop) -> bool:
 
 def ordering_error(shop: PrintingShop) -> str | None:
     if is_open(shop):
+        if shop.is_on_break:
+            return f"{shop.name} is on a break and is not accepting new orders. Please try again later or choose another shop."
         return None
     zone = current_app.config["FULFILLMENT_TIMEZONE"]
     zone_label = "Philippine time" if zone == "Asia/Manila" else zone
@@ -43,3 +45,12 @@ def validate_ordering_hours(shop: PrintingShop) -> None:
     error = ordering_error(shop)
     if error:
         raise ShopClosedError(error)
+
+
+def availability_status(shop: PrintingShop) -> dict:
+    """Closed hours take precedence over a staff member's saved break setting."""
+    if not is_open(shop):
+        return {"code": "CLOSED", "label": "Closed", "badge_class": "status-muted"}
+    if shop.is_on_break:
+        return {"code": "BREAK", "label": "On a break", "badge_class": "status-warning"}
+    return {"code": "AVAILABLE", "label": "Available", "badge_class": "status-success"}

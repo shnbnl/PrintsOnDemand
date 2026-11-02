@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit' if professor else 'Add' }} professor | Prints On Demand{% endblock %}
+{% block content %}
+  {% set back_url = url_for('admin_management.professors') %}{% set back_label = 'Back to professor management' %}{% include '_vector_back.html' %}
+  <header class="page-intro"><p class="page-eyebrow">Blue and Silver / Delivery recipients</p><h1>{{ 'Edit' if professor else 'Add' }} professor</h1><p class="page-lead">Enter the professor's details for Student-to-Professor delivery. This creates a delivery recipient; it does not create a login account.</p></header>
+  <form class="account-form form-card form-grid" method="post" data-staff-professor-form novalidate>
+    {{ form.hidden_tag() }}
+    {% for field in [form.name, form.email, form.department, form.faculty, form.office] %}
+      <div class="field {{ 'field-wide' if field.name == 'office' else '' }}">{{ field.label }} {{ field() }}{% for error in field.errors %}<p class="field-error" role="alert">{{ error }}</p>{% endfor %}</div>
+    {% endfor %}
+    <div class="professor-toggle-list field-wide">
+      {% for field in [form.is_active, form.direct_send_approved, form.accepts_student_deliveries] %}
+        <div class="shop-service-row professor-toggle-row"><label id="{{ field.id }}_label" for="{{ field.id }}">{{ field.label.text }}</label><label class="service-switch">{{ field(role='switch', aria_labelledby=field.id ~ '_label') }}<span class="service-switch-track" aria-hidden="true"></span><span class="service-switch-status service-switch-status--off">Off</span><span class="service-switch-status service-switch-status--on">On</span></label></div>
+      {% endfor %}
+    </div>
+    <div class="form-actions">{{ form.submit(class_='button button-primary flow-next') }}</div>
+  </form>
+  <script id="staff-professor-options" type="application/json">{{ {'faculties': faculties_by_department, 'locations': delivery_locations}|tojson }}</script>
+  <script src="{{ url_for('static', filename='js/staff-professor.js') }}" defer></script>
+{% endblock %}

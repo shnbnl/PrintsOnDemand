@@ -1,0 +1,10 @@
+<section class="content-card" aria-labelledby="shop-break-heading">
+  <h2 id="shop-break-heading">Shop availability</h2>
+  <p>Take a break to pause new orders. Existing orders stay in your queue. Outside business hours, your shop shows Closed.</p>
+  <form method="post" action="{{ url_for('shop_staff.set_break') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="on_break" value="{{ 'false' if shop.is_on_break else 'true' }}">
+    <button class="button {{ 'button-secondary' if shop.is_on_break else 'button-primary' }} flow-next" type="submit" role="switch" aria-checked="{{ 'true' if shop.is_on_break else 'false' }}" aria-label="Pause new orders for a break">{{ 'Resume orders' if shop.is_on_break else 'Take a break' }}</button>
+    <p class="hint">{{ 'Break is on. Resume orders when you return.' if shop.is_on_break else 'Break is off.' }}</p>
+  </form>
+</section>
