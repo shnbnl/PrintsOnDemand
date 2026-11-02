@@ -38,7 +38,10 @@
             {% set latest = order.completed_at or order.ready_at or order.processing_started_at %}
             {% if latest %}<div class="summary-row"><dt>Latest processing event</dt><dd><time datetime="{{ latest.isoformat() }}">{{ latest.strftime('%Y-%m-%d %H:%M UTC') }}</time></dd></div>{% endif %}
           </dl>
-          <a class="card-action" href="{{ url_for('staff_orders.detail', order_reference=order.order_reference) }}">View order</a>
+          <div class="form-actions">
+            <a class="card-action" href="{{ url_for('staff_orders.detail', order_reference=order.order_reference) }}">View order</a>
+            <a class="button button-danger flow-next" href="{{ url_for('staff_orders.delete', order_reference=order.order_reference) }}" aria-label="Delete order {{ order.order_reference }}">Delete order</a>
+          </div>
         </li>
       {% endfor %}
     </ul>

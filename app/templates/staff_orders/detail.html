@@ -13,6 +13,9 @@
       {{ order_badge(order) }}
       {{ payment_badge(order.payment) }}
     </p>
+    <div class="form-actions">
+      <a class="button button-danger flow-next" href="{{ url_for('staff_orders.delete', order_reference=order.order_reference) }}">Delete order</a>
+    </div>
   </header>
 
   <div class="operations-grid staff-order-grid">

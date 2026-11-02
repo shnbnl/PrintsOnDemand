@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Delete order {{ order.order_reference }} | Prints On Demand{% endblock %}
+
+{% block content %}
+  {% set back_url = url_for('staff_orders.detail', order_reference=order.order_reference) %}{% set back_label = 'Back to order' %}{% include '_vector_back.html' %}
+  <header class="page-intro">
+    <p class="eyebrow">Shop Staff / Orders</p>
+    <h1>Delete order {{ order.order_reference }}</h1>
+    <p class="page-lead">Placed by {{ order.user.name }} for {{ order.shop_name }}.</p>
+  </header>
+  <section class="content-card danger-zone account-delete-card">
+    <h2>Confirm deletion</h2>
+    <p>This permanently deletes the order, its print job details, and payment record from your shop and the customer's order history. This cannot be undone.</p>
+    <p>The customer's account and uploaded files remain available. Deleting an order does not issue a refund.</p>
+    {% if error %}<p class="notice notice-error" role="alert">{{ error }}</p>{% endif %}
+    <form class="form-stack" method="post" action="{{ url_for('staff_orders.delete', order_reference=order.order_reference) }}">
+      {{ form.csrf_token }}
+      <label class="checkbox-field"><input type="checkbox" name="confirm_delete" value="yes" required> I want to permanently delete order {{ order.order_reference }}.</label>
+      <div class="form-actions">
+        <button class="button button-danger flow-next" type="submit">Delete order</button>
+        <a class="button button-secondary" href="{{ url_for('staff_orders.detail', order_reference=order.order_reference) }}">Cancel</a>
+      </div>
+    </form>
+  </section>
+{% endblock %}

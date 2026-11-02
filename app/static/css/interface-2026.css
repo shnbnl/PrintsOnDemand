@@ -649,6 +649,8 @@ h3 { font-weight: 710; letter-spacing: -.015em; }
   text-decoration: none;
 }
 .staff-operation-list .card-action { margin-top: .7rem; }
+.staff-operation-list .form-actions { margin-top: .7rem; }
+.staff-operation-list .form-actions .card-action { margin-top: 0; }
 .staff-workspace .action-card::after {
   content: "";
   position: absolute;
@@ -707,6 +709,7 @@ h3 { font-weight: 710; letter-spacing: -.015em; }
 @media (max-width: 48rem) {
   .staff-workspace .action-card { min-height: 0; }
   .staff-operation-list .card-action { width: 100%; justify-content: center; }
+  .staff-operation-list .form-actions .button { width: 100%; }
 }
 
 /* Staff dashboard actions read as buttons while the whole tile stays clickable. */

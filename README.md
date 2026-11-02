@@ -12,6 +12,7 @@ A campus printing service for students, professors, and print shops. Customers u
 - Shop-specific cash and manual online payment options, payment QR images, reference submission, and staff verification.
 - Order references, saved price/recipient details, tracking, filtered customer history, and customer-confirmed completion.
 - Staff shop settings with service/payment switches, bulk price editing, photos, hours, and fees.
+- Shop staff can permanently delete an assigned-shop order after confirmation, including its payment record and customer history entry; customer uploads remain available.
 - Blue and Silver professor verification with automatically managed profiles and delivery approval controls.
 
 ## Accounts and order processing

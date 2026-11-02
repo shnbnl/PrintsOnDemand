@@ -8,8 +8,8 @@ import pytest
 from sqlalchemy import select
 
 from app.extensions import db
-from app.models import Order, OrderStatus, Payment, PaymentStatus, Professor, UploadedFile, User
-from app.services.order_processing import ProcessingError, advance_order, available_action, get_staff_order
+from app.models import Order, OrderItem, OrderStatus, Payment, PaymentStatus, Professor, UploadedFile, User
+from app.services.order_processing import ProcessingError, advance_order, available_action, delete_staff_order, get_staff_order
 from app.services.tracking import build_tracking
 from test_orders import (
     PDF, approved_professor, file, offer_professor_service, place, professor_place,
@@ -56,6 +56,97 @@ def action_post(client, url, action, **extras):
     return client.post(url + "/advance", data={
         "csrf_token": token(client.get(url)), "action": action, **extras,
     })
+
+
+@pytest.mark.parametrize("status", list(OrderStatus))
+def test_shop_can_confirm_delete_order_with_children(client, test_app, status):
+    owner, staff_a, _, url_a, url_b, item_a, item_b, _, _ = setup_orders(client, test_app)
+    a = staff_url(url_a)
+    with test_app.app_context():
+        order = db.session.scalar(select(Order).where(Order.order_reference == url_a.rsplit("/", 1)[1]))
+        order.status = status
+        order_id, payment_id, upload_id = order.id, order.payment.id, order.items[0].uploaded_file_id
+        db.session.commit()
+    sign_in(client, staff_a)
+    assert (a + "/delete").encode() in client.get("/staff/orders").data
+    assert b"Delete order" in client.get(a).data
+    confirmation = client.get(a + "/delete")
+    assert confirmation.status_code == 200
+    assert b"customer's order history" in confirmation.data
+    assert db.session.get(Order, order_id) is not None  # GET never deletes
+    response = client.post(a + "/delete", data={
+        "csrf_token": token(confirmation), "confirm_delete": "yes",
+    }, follow_redirects=True)
+    assert response.status_code == 200
+    assert b"deleted." in response.data
+    assert client.get(a).status_code == 404
+    assert client.get(a + "/delete").status_code == 404
+    assert client.get(f"{a}/files/{item_a}/download").status_code == 404
+    with test_app.app_context():
+        assert db.session.get(Order, order_id) is None
+        assert db.session.get(OrderItem, item_a) is None
+        assert db.session.get(Payment, payment_id) is None
+        assert db.session.get(OrderItem, item_b) is not None
+        assert db.session.get(User, owner) is not None
+        assert db.session.get(UploadedFile, upload_id) is not None
+    sign_in(client, owner)
+    assert client.get(url_a).status_code == 404
+    assert client.get(url_b).status_code == 200
+    assert client.get(f"/files/{upload_id}/download").data == PDF
+
+
+def test_shop_delete_requires_confirmation_csrf_and_own_shop(client, test_app):
+    owner, staff_a, staff_b, url_a, url_b, *_ = setup_orders(client, test_app)
+    a, b = staff_url(url_a), staff_url(url_b)
+    sign_in(client, staff_a)
+    csrf = token(client.get(a + "/delete"))
+    assert client.post(a + "/delete", data={"confirm_delete": "yes"}).status_code == 400
+    assert client.post(a + "/delete", data={"csrf_token": csrf}).status_code == 400
+    assert client.get(a).status_code == 200
+    assert client.get(b + "/delete").status_code == 404
+    assert client.post(b + "/delete", data={"csrf_token": csrf, "confirm_delete": "yes"}).status_code == 404
+    sign_in(client, staff_b)
+    assert client.get(a + "/delete").status_code == 404
+    sign_in(client, owner)
+    csrf = token(client.get(url_a))
+    assert client.get(a + "/delete").status_code == 403
+    assert client.post(a + "/delete", data={"csrf_token": csrf, "confirm_delete": "yes"}).status_code == 403
+    with test_app.app_context():
+        with pytest.raises(ProcessingError) as error:
+            delete_staff_order(db.session.get(User, owner), url_a.rsplit("/", 1)[1])
+        assert error.value.status_code == 403
+        with pytest.raises(ProcessingError) as error:
+            delete_staff_order(db.session.get(User, staff_a), url_b.rsplit("/", 1)[1])
+        assert error.value.status_code == 404
+        db.session.get(User, staff_a).shop_id = None
+        db.session.flush()
+        with pytest.raises(ProcessingError) as error:
+            delete_staff_order(db.session.get(User, staff_a), url_a.rsplit("/", 1)[1])
+        assert error.value.status_code == 403
+
+
+def test_shop_delete_without_payment_and_database_failure(client, test_app, monkeypatch):
+    from sqlalchemy.exc import SQLAlchemyError
+
+    _, staff_a, staff_b, url_a, url_b, *_ = setup_orders(client, test_app)
+    a = staff_url(url_a)
+    sign_in(client, staff_a)
+    csrf = token(client.get(a + "/delete"))
+    with monkeypatch.context() as patch:
+        patch.setattr(db.session, "commit", lambda: (_ for _ in ()).throw(SQLAlchemyError("unavailable")))
+        response = client.post(a + "/delete", data={"csrf_token": csrf, "confirm_delete": "yes"})
+    assert response.status_code == 503
+    assert b"could not be deleted" in response.data
+    with test_app.app_context():
+        order = db.session.scalar(select(Order).where(Order.order_reference == url_a.rsplit("/", 1)[1]))
+        assert order is not None and order.payment is not None and len(order.items) == 1
+    sign_in(client, staff_b)
+    b = staff_url(url_b)
+    response = client.post(b + "/delete", data={
+        "csrf_token": token(client.get(b + "/delete")), "confirm_delete": "yes",
+    })
+    assert response.status_code == 302
+    assert client.get(b).status_code == 404
 
 
 def test_staff_list_detail_and_shop_isolation(client, test_app):

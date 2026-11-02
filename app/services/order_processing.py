@@ -2,10 +2,11 @@
 
 from dataclasses import dataclass
 
-from sqlalchemy import exists, or_, select, update
+from sqlalchemy import delete, exists, or_, select, update
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.extensions import db
-from app.models import Order, OrderDestination, OrderStatus, Payment, PaymentMethod, PaymentStatus, User, UserRole
+from app.models import Order, OrderDestination, OrderItem, OrderStatus, Payment, PaymentMethod, PaymentStatus, User, UserRole
 from app.models.user import utc_now
 from app.services.professors import PROFESSOR_DELIVERY_SHOP
 
@@ -50,6 +51,29 @@ def get_staff_order(actor, order_reference: str) -> Order:
     if order is None:
         raise ProcessingError("Order not found.", 404)
     return order
+
+
+def delete_staff_order(actor, order_reference: str) -> None:
+    """Remove one assigned-shop order and its children, keeping customer uploads."""
+    shop_id = assigned_shop_id(actor)
+    try:
+        order = db.session.scalar(select(Order).where(
+            Order.shop_id == shop_id, Order.order_reference == order_reference,
+        ).with_for_update())
+        if order is None:
+            raise ProcessingError("Order not found.", 404)
+        # Payments restrict parent deletion, so remove children in one transaction.
+        db.session.execute(delete(Payment).where(Payment.order_id == order.id))
+        db.session.execute(delete(OrderItem).where(OrderItem.order_id == order.id))
+        result = db.session.execute(delete(Order).where(
+            Order.id == order.id, Order.shop_id == shop_id,
+        ))
+        if result.rowcount != 1:
+            raise ProcessingError("The order changed. Reload it before trying again.", 409)
+        db.session.commit()
+    except (ProcessingError, SQLAlchemyError):
+        db.session.rollback()
+        raise
 
 
 def available_action(order: Order) -> str | None:
