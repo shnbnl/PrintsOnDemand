@@ -120,7 +120,7 @@ def test_legacy_postgres_url_is_normalized(monkeypatch):
     app = create_app(ProductionConfig)
 
     assert app.config["SQLALCHEMY_DATABASE_URI"] == (
-        "postgresql://user:password@localhost:5432/prints"
+        "postgresql+psycopg://user:password@localhost:5432/prints"
     )
     assert app.config["SESSION_COOKIE_SECURE"] is True
     assert app.config["SESSION_COOKIE_HTTPONLY"] is True

@@ -38,6 +38,9 @@ junit.xml
 build/
 dist/
 *.egg-info/
+# Vercel local state and generated copies of app/static
+.vercel/
+public/static/
 
 # Runtime and temporary files
 *.log

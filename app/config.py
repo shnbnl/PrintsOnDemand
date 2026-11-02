@@ -6,6 +6,8 @@ from datetime import timedelta
 
 from flask import Flask
 
+from app.database_config import configure_database
+
 
 class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
@@ -78,8 +80,9 @@ CONFIGS = {
 
 
 def select_config() -> type[Config]:
-    """Select the environment; default to local development."""
-    name = (os.getenv("FLASK_ENV") or "development").strip().lower()
+    """Default to production on Vercel and development on a local workstation."""
+    default = "production" if os.getenv("VERCEL") == "1" else "development"
+    name = (os.getenv("FLASK_ENV") or default).strip().lower()
     testing = (os.getenv("TESTING") or "").strip().lower()
     if testing and testing not in {"1", "true", "yes", "on", "0", "false", "no", "off"}:
         raise ValueError("TESTING must be a boolean value.")
@@ -95,13 +98,11 @@ def select_config() -> type[Config]:
 
 def configure_runtime(app: Flask) -> None:
     """Apply environment overrides and require production secrets/config."""
-    database_url = os.getenv("DATABASE_URL") or app.config.get("SQLALCHEMY_DATABASE_URI")
-    if database_url and database_url.startswith("postgres://"):
-        database_url = "postgresql://" + database_url[len("postgres://") :]
+    if os.getenv("VERCEL") == "1" and app.config["ENV_NAME"] != "production":
+        raise RuntimeError("Vercel requires the production configuration (FLASK_ENV=production).")
+    configure_database(app)
 
     if app.config["ENV_NAME"] == "production":
-        if not database_url or not database_url.startswith("postgresql"):
-            raise RuntimeError("Production requires a PostgreSQL DATABASE_URL.")
         secret_key = os.getenv("SECRET_KEY", "")
         if len(secret_key.strip()) < 32:
             raise RuntimeError("Production requires a SECRET_KEY of at least 32 characters.")
@@ -111,7 +112,6 @@ def configure_runtime(app: Flask) -> None:
         if app.config.get("DEBUG") or debug_enabled:
             raise RuntimeError("Debug mode must be disabled in production.")
 
-    app.config["SQLALCHEMY_DATABASE_URI"] = database_url
     trusted_hosts = os.getenv("TRUSTED_HOSTS", "")
     if trusted_hosts:
         app.config["TRUSTED_HOSTS"] = [host.strip() for host in trusted_hosts.split(",") if host.strip()]

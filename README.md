@@ -151,6 +151,11 @@ Unattached checkout uploads expire after 24 hours by default. Completed order do
 
 ## Updating PythonAnywhere
 
+For the personal/demo deployment on **Vercel Hobby with Neon Free
+PostgreSQL**, see [Vercel and Neon setup](docs/vercel-neon.md). The connection and
+static-asset configuration are prepared, but production document uploads still
+require a durable private-storage adapter and a compatible upload flow.
+
 Back up the database and private uploads first. In the Bash console:
 
 ```bash
