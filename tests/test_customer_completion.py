@@ -42,6 +42,7 @@ def test_customer_completes_own_ready_order_from_history(client, test_app, role)
     assert b"Complete order" in history.data
     detail = client.get(f"/orders/{reference}")
     assert b"Received your printed order?" in detail.data
+    assert b"Next step:" in detail.data
     response = client.post(f"/orders/{reference}/complete", data={"csrf_token": token(history)})
     assert response.status_code == 302
     with test_app.app_context():
@@ -51,6 +52,7 @@ def test_customer_completes_own_ready_order_from_history(client, test_app, role)
     assert b"Complete order" not in client.get("/orders").data
     completed_page = client.get(f"/orders/{reference}")
     assert b"Current order status" not in completed_page.data
+    assert b"Next step:" not in completed_page.data
     assert b"Order completed" in completed_page.data
     assert b"This order is complete." in completed_page.data
     assert client.post(f"/orders/{reference}/complete", data={"csrf_token": token(client.get("/orders"))}).status_code == 409

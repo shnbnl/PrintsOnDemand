@@ -50,7 +50,7 @@ def validate_ordering_hours(shop: PrintingShop) -> None:
 def availability_status(shop: PrintingShop) -> dict:
     """Closed hours take precedence over a staff member's saved break setting."""
     if not is_open(shop):
-        return {"code": "CLOSED", "label": "Closed", "badge_class": "status-muted"}
+        return {"code": "CLOSED", "label": "Closed", "badge_class": "status-closed"}
     if shop.is_on_break:
-        return {"code": "BREAK", "label": "On a break", "badge_class": "status-warning"}
+        return {"code": "BREAK", "label": "On a break", "badge_class": "status-break"}
     return {"code": "AVAILABLE", "label": "Available", "badge_class": "status-success"}

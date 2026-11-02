@@ -327,6 +327,8 @@ button:disabled, input[type="submit"]:disabled { opacity: 0.52; cursor: not-allo
 .status-badge--danger, .status-badge[data-status="REJECTED"] { border-color: #edb6c1; color: var(--danger); background: var(--danger-bg); }
 .status-badge--muted { color: var(--muted); background: var(--surface-muted); }
 .status-success { border-color: #a9d5bd; color: var(--success); background: var(--success-bg); }
+.status-closed { border-color: #fca5a5; color: #b91c1c; background: #fef2f2; }
+.status-break { border-color: #fdba74; color: #9a3412; background: #fff3e8; }
 .status-warning { border-color: #e9cc84; color: var(--warning); background: var(--warning-bg); }
 .status-paid, .status-ready, .status-completed { border-color: #a9d5bd; color: var(--success); background: var(--success-bg); }
 .status-pending, .status-pending_payment, .status-submitted { border-color: #e9cc84; color: var(--warning); background: var(--warning-bg); }

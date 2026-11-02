@@ -13,7 +13,7 @@
       document.querySelectorAll('[data-shop-status]').forEach(badge => {
         const status = byId.get(badge.dataset.shopStatus);
         badge.textContent = status?.label || 'Closed';
-        badge.className = `status-badge ${status?.badge_class || 'status-muted'}`;
+        badge.className = `status-badge ${status?.badge_class || 'status-closed'}`;
       });
       const workspace = document.querySelector('[data-shop-workspace]');
       const selected = workspace?.querySelector('[data-current-shop]')?.dataset.currentShop;
