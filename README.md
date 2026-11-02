@@ -39,7 +39,6 @@ Payments are manually checked by authorized staff. The app does not transfer mon
 | Area | Software / technology |
 |---|---|
 | Development environment | Windows 11 Pro (64-bit), PowerShell, Python 3.12, Python virtual environments, and pip |
-| Development assistance | OpenAI Codex |
 | Frontend | HTML, CSS, JavaScript, Jinja templates, and the Plus Jakarta Sans font |
 | Backend | Flask and Werkzeug |
 | Database and migrations | SQLite for initial development; PostgreSQL for the Vercel deployment; SQLAlchemy, Flask-SQLAlchemy, Flask-Migrate, and Alembic |
