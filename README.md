@@ -2,7 +2,7 @@
 
 A campus printing service for students, professors, and print shops. Customers upload documents, configure printing, choose fulfillment and payment, and track their orders. Shop staff manage prices, payments, and print jobs for their assigned shop.
 
-The web app initially used **SQLite** during development. When deployed on **Vercel**, it uses **PostgreSQL**. This repository also includes instructions for maintaining the existing PythonAnywhere Flask deployment.
+The web app is deployed on **PythonAnywhere**, using **SQLite** for its database.
 
 ## Features
 
@@ -42,14 +42,14 @@ Payments are manually checked by authorized staff. The app does not transfer mon
 | Code editor | Visual Studio Code for web app development |
 | Frontend | HTML, CSS, JavaScript, Jinja templates, and the Plus Jakarta Sans font |
 | Backend | Flask and Werkzeug |
-| Database and migrations | SQLite for initial development; PostgreSQL for the Vercel deployment; SQLAlchemy, Flask-SQLAlchemy, Flask-Migrate, and Alembic |
+| Database and migrations | SQLite for local development and the PythonAnywhere deployment; SQLAlchemy, Flask-SQLAlchemy, Flask-Migrate, and Alembic |
 | Authentication and forms | Flask-Login, Flask-WTF, WTForms, and email-validator |
 | Documents and images | pypdf, Pillow, and LibreOffice or AbiWord for Word document page counting |
 | Maps | Google Maps JavaScript API |
 | Configuration and command-line tools | python-dotenv and Click |
 | Testing | pytest |
 | Source control | Git and GitHub |
-| Deployment | Vercel; PythonAnywhere instructions are also maintained in this repository |
+| Deployment | PythonAnywhere |
 | Operations | GnuPG for encrypted backups and `pg_dump` for PostgreSQL backups; Gunicorn for compatible Linux deployments |
 
 Package version ranges are recorded in [requirements.txt](requirements.txt).
@@ -71,7 +71,7 @@ Customers and shop staff access the web app through an internet-connected comput
 ## Requirements
 
 - Python 3.12
-- SQLite for initial/local development and the PythonAnywhere deployment; PostgreSQL for the Vercel deployment
+- SQLite for local development and the PythonAnywhere deployment
 - Dependencies in [requirements.txt](requirements.txt)
 - LibreOffice or AbiWord for Word document page counting
 - Google Maps JavaScript API configuration for interactive maps
@@ -151,11 +151,6 @@ If Word rendering is unavailable, export to PDF for accurate pricing. Images and
 Unattached checkout uploads expire after 24 hours by default. Completed order documents are not automatically expired. Local storage is the only implemented adapter, and the strict production profile refuses local uploads until durable private storage is implemented.
 
 ## Updating PythonAnywhere
-
-For the personal/demo deployment on **Vercel Hobby with Neon Free
-PostgreSQL**, see [Vercel and Neon setup](docs/vercel-neon.md). The connection and
-static-asset configuration are prepared, but production document uploads still
-require a durable private-storage adapter and a compatible upload flow.
 
 Back up the database and private uploads first. In the Bash console:
 
