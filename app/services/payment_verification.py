@@ -17,6 +17,34 @@ class VerificationError(ValueError):
         self.status_code = status_code
 
 
+ONSITE_COLLECTION_STATES = (
+    OrderStatus.PENDING_PAYMENT, OrderStatus.PROCESSING, OrderStatus.READY, OrderStatus.DELIVERED,
+)
+
+
+def onsite_cash_order_query():
+    return and_(
+        Order.status.in_(ONSITE_COLLECTION_STATES),
+        or_(Order.destination.is_(None), Order.destination != OrderDestination.PROFESSOR,
+            faculty_cash_handoff_query()),
+    )
+
+
+def can_collect_onsite_cash(payment: Payment) -> bool:
+    order = payment.order
+    return bool(
+        payment.payment_method == PaymentMethod.ONSITE
+        and payment.payment_status == PaymentStatus.PENDING
+        and payment.payment_reference is None
+        and payment.amount == order.total and payment.currency == order.currency
+        and order.status in ONSITE_COLLECTION_STATES
+        and (order.destination != OrderDestination.PROFESSOR or (
+            order.professor_recipient_type == "SELF" and order.user.role == UserRole.PROFESSOR
+            and order.shop.name == PROFESSOR_DELIVERY_SHOP
+        ))
+    )
+
+
 def review_scope(actor) -> int | None:
     if not getattr(actor, "is_authenticated", False):
         raise VerificationError("Sign in to review payments.", 403)
@@ -40,9 +68,7 @@ def review_queue(actor) -> list[Payment]:
             and_(Payment.payment_method == PaymentMethod.ONSITE,
                  Payment.payment_status == PaymentStatus.PENDING,
                  Payment.payment_reference.is_(None),
-                 or_(and_(Order.destination != OrderDestination.PROFESSOR,
-                          Order.status == OrderStatus.PENDING_PAYMENT),
-                     faculty_cash_handoff_query())),
+                 onsite_cash_order_query()),
         ),
         Payment.amount == Order.total, Payment.currency == Order.currency,
     ).options(selectinload(Payment.order).selectinload(Order.user))
@@ -138,24 +164,13 @@ def confirm_onsite_cash(actor, payment_id: int) -> Payment:
     order = payment.order
     if payment.payment_method != PaymentMethod.ONSITE or payment.payment_status != PaymentStatus.PENDING:
         raise VerificationError("This onsite payment is no longer awaiting cash. Reload the page.", 409)
-    faculty_cash = (order.destination == OrderDestination.PROFESSOR
-                    and order.professor_recipient_type == "SELF"
-                    and order.status in (OrderStatus.PENDING_PAYMENT, OrderStatus.PROCESSING,
-                                         OrderStatus.READY, OrderStatus.DELIVERED)
-                    and order.shop.name == PROFESSOR_DELIVERY_SHOP
-                    and order.user.role == UserRole.PROFESSOR)
-    if (not (faculty_cash or (order.status == OrderStatus.PENDING_PAYMENT
-                                and order.destination != OrderDestination.PROFESSOR))
-            or payment.payment_reference is not None
-            or payment.amount != order.total or payment.currency != order.currency):
-        raise VerificationError("Payment details do not match a pending order.", 409)
+    if not can_collect_onsite_cash(payment):
+        raise VerificationError("Payment details do not match an order awaiting onsite cash.", 409)
 
     now = utc_now()
     eligible_order = exists(select(Order.id).where(
         Order.id == Payment.order_id,
-        or_(and_(Order.status == OrderStatus.PENDING_PAYMENT,
-                 Order.destination != OrderDestination.PROFESSOR),
-            faculty_cash_handoff_query()),
+        onsite_cash_order_query(),
         Order.total == Payment.amount, Order.currency == Payment.currency,
         *((Order.shop_id == actor.shop_id,) if actor.role == UserRole.SHOP_STAFF else ()),
     ))

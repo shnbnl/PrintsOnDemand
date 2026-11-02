@@ -31,12 +31,13 @@
       </dl>
     {% endif %}
     {% if action %}
+      {% if order.payment.payment_method.value == 'ONSITE' and order.payment.payment_status.value == 'PENDING' %}<p class="hint">Pay onsite: printing can proceed before cash is collected. Confirm payment after receiving cash; the customer can complete the order once paid.</p>{% endif %}
       <form class="form-actions" method="post" action="{{ url_for('staff_orders.advance', order_reference=order.order_reference) }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button class="button button-primary flow-next" type="submit" name="action" value="{{ action }}">{% if action == 'start_processing' %}Start processing{% elif action == 'mark_ready' %}Mark ready{% else %}Mark delivered to Faculty{% endif %}</button>
       </form>
     {% elif order.status.value == 'PENDING_PAYMENT' %}
-      <p class="notice notice-warning">Processing is unavailable until payment is recorded as paid by an authorized process.</p>
+      <p class="notice notice-warning">Processing is unavailable. Online payment must be confirmed; onsite cash details must match this order.</p>
     {% endif %}
   </section>
   <section class="section-card staff-order-customer">

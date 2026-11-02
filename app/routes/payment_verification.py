@@ -7,7 +7,7 @@ from app.authorization import roles_required
 from app.extensions import db
 from app.models import UserRole
 from app.services.payment_verification import (
-    VerificationError, confirm_onsite_cash, decide_payment, review_payment, review_queue,
+    VerificationError, can_collect_onsite_cash, confirm_onsite_cash, decide_payment, review_payment, review_queue,
 )
 
 
@@ -20,6 +20,11 @@ def payment_or_abort(payment_id):
         return review_payment(current_user, payment_id)
     except VerificationError as error:
         abort(error.status_code, description=str(error))
+
+
+def render_review(payment, *, error=None, status=200):
+    return render_template("payment_verification/detail.html", payment=payment, error=error,
+                           cash_confirmable=can_collect_onsite_cash(payment)), status
 
 
 @payment_verification_bp.get("")
@@ -36,7 +41,7 @@ def index():
 @roles_required(*REVIEW_ROLES)
 def detail(payment_id):
     payment = payment_or_abort(payment_id)
-    return render_template("payment_verification/detail.html", payment=payment, error=None)
+    return render_review(payment)
 
 
 def decide(payment_id, *, reject):
@@ -50,8 +55,7 @@ def decide(payment_id, *, reject):
         if error.status_code in (400, 409):
             db.session.expire_all()
             payment = payment_or_abort(payment_id)
-            return render_template("payment_verification/detail.html", payment=payment,
-                                   error=str(error)), error.status_code
+            return render_review(payment, error=str(error), status=error.status_code)
         abort(error.status_code, description=str(error))
     flash("Payment rejected." if reject else "Payment verified. The order is now Printing.", "success")
     return redirect(url_for("payment_verification.detail", payment_id=decided.id))
@@ -74,16 +78,14 @@ def reject(payment_id):
 def confirm_onsite(payment_id):
     if request.form.get("cash_received") != "yes":
         payment = payment_or_abort(payment_id)
-        return render_template("payment_verification/detail.html", payment=payment,
-                               error="Confirm that the full cash amount was received."), 400
+        return render_review(payment, error="Confirm that the full cash amount was received.", status=400)
     try:
         decided = confirm_onsite_cash(current_user, payment_id)
     except VerificationError as error:
         if error.status_code in (400, 409):
             db.session.expire_all()
             payment = payment_or_abort(payment_id)
-            return render_template("payment_verification/detail.html", payment=payment,
-                                   error=str(error)), error.status_code
+            return render_review(payment, error=str(error), status=error.status_code)
         abort(error.status_code, description=str(error))
-    flash("Onsite cash payment recorded. The order is now Printing.", "success")
+    flash("Onsite cash payment recorded. Printing starts if the order has not already progressed.", "success")
     return redirect(url_for("payment_verification.detail", payment_id=decided.id))

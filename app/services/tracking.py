@@ -58,9 +58,13 @@ def build_tracking(order: Order) -> OrderTracking:
         payment_step = TrackingStep(
             "Payment", "Onsite payment selected; payment is pending.", payment.updated_at
         )
-        next_step = ("Arrange payment with Blue and Silver staff. Payment must be confirmed before printing starts."
+        next_step = ("Pay the Blue and Silver staff at your Faculty when your printed papers arrive. Payment has not been recorded yet."
                      if order.destination == OrderDestination.PROFESSOR else
                      "Pay at the printing shop. Payment has not been recorded yet.")
+        if order.status == OrderStatus.PROCESSING:
+            next_step = "The printing shop is processing your order. Your onsite cash payment is still pending."
+        elif order.status == OrderStatus.READY:
+            next_step = "Your printed papers are ready. Pay onsite and have staff confirm the cash payment before completing the order."
     else:
         method = "Online"
         status = payment.payment_status.value
@@ -82,6 +86,8 @@ def build_tracking(order: Order) -> OrderTracking:
         if payment is None or payment.payment_status not in {PaymentStatus.PAID, PaymentStatus.REJECTED}
         else f"{order.status.value} is the recorded order status."
     )
+    if payment and payment.payment_method == PaymentMethod.ONSITE and payment.payment_status == PaymentStatus.PENDING:
+        order_detail = f"{order.status.value}: onsite cash payment is pending."
 
     steps = [TrackingStep(
         "Order created", f"Order {order.order_reference} was created.", order.created_at

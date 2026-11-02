@@ -1,14 +1,15 @@
-"""Shop-scoped, payment-gated order processing."""
+"""Shop-scoped processing with upfront online payment or pending onsite cash."""
 
 from dataclasses import dataclass
 
-from sqlalchemy import delete, exists, select, update
+from sqlalchemy import and_, delete, exists, or_, select, update
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.extensions import db
-from app.models import Order, OrderDestination, OrderItem, OrderStatus, Payment, PaymentStatus, UserRole
+from app.models import Order, OrderDestination, OrderItem, OrderStatus, Payment, PaymentMethod, PaymentStatus, UserRole
 from app.models.user import utc_now
 from app.services.professors import PROFESSOR_DELIVERY_SHOP
+from app.services.payment_verification import can_collect_onsite_cash, onsite_cash_order_query
 
 
 @dataclass(frozen=True)
@@ -79,7 +80,8 @@ def delete_staff_order(actor, order_reference: str) -> None:
 def available_action(order: Order) -> str | None:
     if (
         order.payment is None
-        or order.payment.payment_status != PaymentStatus.PAID
+        or (order.payment.payment_status != PaymentStatus.PAID
+            and not can_collect_onsite_cash(order.payment))
         or order.payment.amount != order.total
         or order.payment.currency != order.currency
     ):
@@ -135,21 +137,26 @@ def advance_order(actor, order_reference: str, action: str) -> Order:
     if transition is None or order.status != transition[0]:
         raise ProcessingError("This processing action is not available for the order's current state.", 409)
     if available_action(order) != action:
-        raise ProcessingError("Confirm payment before processing this order.", 409)
+        raise ProcessingError("Confirm online payment first, or select a valid pending onsite cash payment.", 409)
     if action == "mark_delivered" and (
         order.destination != OrderDestination.PROFESSOR or actor.shop.name != PROFESSOR_DELIVERY_SHOP
     ):
         raise ProcessingError("Only Blue and Silver staff can confirm professor delivery.", 403)
 
     now = utc_now()
-    paid_payment = exists(select(Payment.id).where(
-        Payment.order_id == Order.id, Payment.payment_status == PaymentStatus.PAID,
+    eligible_payment = exists(select(Payment.id).where(
+        Payment.order_id == Order.id,
+        or_(Payment.payment_status == PaymentStatus.PAID, and_(
+            Payment.payment_method == PaymentMethod.ONSITE,
+            Payment.payment_status == PaymentStatus.PENDING,
+            Payment.payment_reference.is_(None), onsite_cash_order_query(),
+        )),
         Payment.amount == Order.total, Payment.currency == Order.currency,
     ))
     result = db.session.execute(
         update(Order).where(
             Order.id == order.id, Order.shop_id == actor.shop_id,
-            Order.status == transition[0], paid_payment,
+            Order.status == transition[0], eligible_payment,
         ).values(status=transition[1], updated_at=now, **{transition[2]: now})
     )
     if result.rowcount != 1:

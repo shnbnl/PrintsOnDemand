@@ -423,7 +423,7 @@ def render_order_detail(order, *, payment_error=None, professor_error=None, stat
         payment_qr_image_url=url_for("orders.payment_qr", order_reference=order.order_reference) if online_details else None,
         payment_error=payment_error,
         professor_error=professor_error,
-        onsite_instructions=("Arrange cash payment with Blue and Silver staff before printing. Processing starts only after staff confirms payment."
+        onsite_instructions=("Pay the Blue and Silver staff at your Faculty when your printed papers arrive. Printing may start before payment; cash remains pending until staff confirms receipt."
                              if order.destination == OrderDestination.PROFESSOR else
                              "Pay at the printing shop with your order reference. Your payment remains pending until staff records it."),
         tracking=build_tracking(order),
