@@ -61,7 +61,7 @@ The development workstation used for this project has the following specificatio
 | Component | Specification |
 |---|---|
 | Processor | AMD Ryzen 7 5700X, 8 cores |
-| Graphics card | Sapphire PURE Radeon RX 7700 XT |
+| GPU | Sapphire PURE Radeon RX 7700 XT |
 | Memory | 16 GB RAM |
 | Storage | Two approximately 1 TB SSDs (932 GiB each reported by Windows) |
 | Motherboard | B550M Steel Legend |
