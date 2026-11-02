@@ -933,3 +933,9 @@ h3 { font-weight: 710; letter-spacing: -.015em; }
 .staff-pricing-editor .price-input input[aria-invalid="true"] { border-color: #ac3151; }
 .staff-pricing-editor .field-error { max-width: 12rem; font-size: .75rem; }
 #shop-prices .form-actions { margin-top: 1rem; }
+
+/* Shop tabs display their content immediately on every navigation. */
+body.shop-account #main-content :is(.page-intro, .management-grid > *, .operations-grid > *,
+  .shop-list > *, .order-list > *, .staff-metrics > *, .staff-workspace .card-grid > *) {
+  animation: none;
+}

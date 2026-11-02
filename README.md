@@ -2,6 +2,8 @@
 
 A campus printing service for students, professors, and print shops. Customers upload documents, configure printing, choose fulfillment and payment, and track their orders. Shop staff manage prices, payments, and print jobs for their assigned shop.
 
+The web app is deployed on **Vercel**. This repository also includes instructions for maintaining the existing PythonAnywhere Flask deployment.
+
 ## Features
 
 - Student and professor registration with role-based workspaces.
@@ -32,10 +34,43 @@ Verifying an online payment or confirming cash starts processing if the order is
 
 Payments are manually checked by authorized staff. The app does not transfer money, book couriers, operate printers, or email documents to professors.
 
+## Software used
+
+| Area | Software / technology |
+|---|---|
+| Development environment | Windows 11 Pro (64-bit), PowerShell, Python 3.12, Python virtual environments, and pip |
+| Development assistance | OpenAI Codex |
+| Frontend | HTML, CSS, JavaScript, Jinja templates, and the Plus Jakarta Sans font |
+| Backend | Flask and Werkzeug |
+| Database and migrations | SQLite or PostgreSQL, SQLAlchemy, Flask-SQLAlchemy, Flask-Migrate, and Alembic |
+| Authentication and forms | Flask-Login, Flask-WTF, WTForms, and email-validator |
+| Documents and images | pypdf, Pillow, and LibreOffice or AbiWord for Word document page counting |
+| Maps | Google Maps JavaScript API |
+| Configuration and command-line tools | python-dotenv and Click |
+| Testing | pytest |
+| Source control | Git and GitHub |
+| Deployment | Vercel; PythonAnywhere instructions are also maintained in this repository |
+| Operations | GnuPG for encrypted backups and `pg_dump` for PostgreSQL backups; Gunicorn for compatible Linux deployments |
+
+Package version ranges are recorded in [requirements.txt](requirements.txt).
+
+## Hardware used
+
+The development workstation used for this project has the following specifications, verified from the machine hosting this workspace:
+
+| Component | Specification |
+|---|---|
+| Processor | AMD Ryzen 7 5700X, 8 cores |
+| Memory | 16 GB RAM |
+| Storage | Two approximately 1 TB SSDs (932 GiB each reported by Windows) |
+| Motherboard | B550M Steel Legend |
+
+Customers and shop staff access the web app through an internet-connected computer, tablet, or smartphone with a web browser. Shops use their own printer and paper to fulfill orders; the application records print jobs and does not directly control printer hardware.
+
 ## Requirements
 
 - Python 3.12
-- SQLite for local development/current PythonAnywhere deployment, or PostgreSQL
+- SQLite for local development and PythonAnywhere deployments, or PostgreSQL
 - Dependencies in [requirements.txt](requirements.txt)
 - LibreOffice or AbiWord for Word document page counting
 - Google Maps JavaScript API configuration for interactive maps
@@ -129,7 +164,7 @@ python -m flask --app run.py db upgrade
 
 Paths are case-sensitive. After all commands succeed, use **Web → Reload**. Stop and resolve command errors before reloading. Run migrations before serving code that depends on new tables. The revocable-session update requires existing users to sign in again.
 
-The current deployment uses SQLite. Selecting `FLASK_ENV=production` requires PostgreSQL, a strong signing secret, trusted hosts, HTTPS, debug disabled, and the production storage requirements; do not change profiles without meeting those requirements.
+The PythonAnywhere deployment uses SQLite. Selecting `FLASK_ENV=production` requires PostgreSQL, a strong signing secret, trusted hosts, HTTPS, debug disabled, and the production storage requirements; do not change profiles without meeting those requirements.
 
 ## Security and operations
 

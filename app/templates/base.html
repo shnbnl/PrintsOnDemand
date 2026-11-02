@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200..800&amp;display=swap">
-    <style>@view-transition { navigation: auto; } @media (prefers-reduced-motion: reduce) { @view-transition { navigation: none; } }</style>
+    <style>@view-transition { navigation: {{ 'none' if current_user.is_authenticated and current_user.role.value == 'SHOP_STAFF' else 'auto' }}; } @media (prefers-reduced-motion: reduce) { @view-transition { navigation: none; } }</style>
     <script src="{{ url_for('static', filename='js/navigation-transitions.js') }}"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/entry-transitions.css') }}">
@@ -18,7 +18,7 @@
     <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/logout-transition.js') }}" defer></script>
   </head>
-  <body class="page-{{ request.blueprint or 'main' }}">
+  <body class="page-{{ request.blueprint or 'main' }}{% if current_user.is_authenticated and current_user.role.value == 'SHOP_STAFF' %} shop-account{% endif %}">
     <a class="skip-link" href="#main-content">Skip to main content</a>
     {% macro navigation() %}
       {% if current_user.is_authenticated %}
