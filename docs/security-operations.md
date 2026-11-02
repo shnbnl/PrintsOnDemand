@@ -98,17 +98,6 @@ Optional real PostgreSQL integration tests require an empty, disposable database
 POSTGRES_RLS_TEST_URL=postgresql+psycopg://TEST_OWNER@localhost/EMPTY_TEST_DB pytest tests/test_postgres_row_policies.py -q
 ```
 
-The full migration chain, registration/login, and professor-verification backfill
-also have PostgreSQL integration coverage. Run it against an empty disposable
-database with `POSTGRES_MIGRATION_TEST_URL`:
-
-```bash
-POSTGRES_MIGRATION_TEST_URL=postgresql+psycopg://TEST_OWNER@localhost/EMPTY_TEST_DB pytest tests/test_postgres_migrations.py -q
-```
-
-Both suites remove their test objects after running. Never use either test URL
-variable for the deployed Neon database.
-
 The test owner needs permission to create test roles and schemas. Never use the
 deployed database: the fixture refuses existing application tables and removes
 the objects it creates. These tests have also run against PostgreSQL 18.6 in

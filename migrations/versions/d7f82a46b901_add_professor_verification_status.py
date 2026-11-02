@@ -27,7 +27,7 @@ def upgrade():
     op.execute("""
         UPDATE users SET professor_verification_status = 'VERIFIED'
         WHERE role = 'PROFESSOR' AND professor_id IN (
-            SELECT id FROM professors WHERE is_active = TRUE AND direct_send_approved = TRUE
+            SELECT id FROM professors WHERE is_active = 1 AND direct_send_approved = 1
         )
     """)
 
