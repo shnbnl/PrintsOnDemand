@@ -4,13 +4,14 @@
     <div class="map-panel-heading"><span class="shop-avatar" aria-hidden="true">{% if shop.photo_digest %}<img src="{{ url_for('shops.photo', shop_id=shop.id, v=shop.photo_digest[:12]) }}" alt="">{% else %}P{% endif %}</span><div><p class="page-eyebrow">Selected shop</p><h2>{{ shop.name }}</h2></div></div>
     <p class="hint">{{ shop.opening_time.strftime('%I:%M %p') }} – {{ shop.closing_time.strftime('%I:%M %p') }}</p>
     <ul class="chip-list" aria-label="Available services">{% for service in shop_details.services %}<li>{{ service.service_type.label }}</li>{% endfor %}</ul>
+    <p class="{{ 'notice notice-warning' if ordering_error else 'hint' }}" data-ordering-status role="status">{{ ordering_error or 'Open now. Shop hours use Philippine time.' }}</p>
   </section>
 {% else %}<section class="workspace-shop-summary"><h2>Choose your printing shop</h2><p>Tap a map pin to see its services and prices.</p></section>{% endif %}
 {% include "checkout/print_settings.html" %}
 </div>
-<footer class="workspace-total" data-quote-valid="{{ 'true' if preview_quote else 'false' }}">
+<footer class="workspace-total" data-quote-valid="{{ 'true' if preview_quote else 'false' }}" data-ordering-open="{{ 'true' if shop and not ordering_error else 'false' }}">
   <p class="notice notice-error" data-quote-error role="alert" {% if not error %}hidden{% endif %}>{{ error or '' }}</p>
   <div class="summary-row"><span>Printing total</span><strong data-print-total aria-live="polite">{{ (preview_quote.currency ~ ' ' ~ preview_quote.total) if preview_quote else 'Select valid settings' }}</strong></div>
   <p class="hint">Delivery fees are added at Fulfillment when applicable.</p>
-  <button class="button button-primary button-block flow-next" name="intent" value="proceed" type="submit" data-workspace-proceed {% if not shop or not preview_quote %}disabled{% endif %}>Proceed to Fulfillment</button>
+  <button class="button button-primary button-block flow-next" name="intent" value="proceed" type="submit" data-workspace-proceed {% if not shop or not preview_quote or ordering_error %}disabled{% endif %}>Proceed to Fulfillment</button>
 </footer>

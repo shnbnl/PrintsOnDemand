@@ -2,6 +2,8 @@
 
 import pytest
 from flask import g
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from app import create_app
 from app.config import TestingConfig
@@ -19,6 +21,11 @@ def test_app(monkeypatch, tmp_path):
     monkeypatch.delenv("DATABASE_URL", raising=False)
     monkeypatch.delenv("SECRET_KEY", raising=False)
     app = create_app(TestingConfig)
+    # Ordering tests use business hours regardless of when the suite runs.
+    # Boundary tests override this clock explicitly.
+    monkeypatch.setattr("app.services.shop_hours.local_now", lambda: datetime.now(
+        ZoneInfo(app.config["FULFILLMENT_TIMEZONE"])
+    ).replace(hour=12, minute=0, second=0, microsecond=0))
     # This fixture deliberately holds an app context across requests. Production
     # requests each receive a new g; discard its per-request caches accordingly.
     def reset_request_caches():

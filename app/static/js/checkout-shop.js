@@ -238,7 +238,8 @@
           content.removeAttribute("aria-busy");
           content.inert = false;
           form.querySelector("[data-workspace-proceed]").disabled =
-            !select.value || content.querySelector('[data-quote-valid]')?.dataset.quoteValid !== 'true';
+            !select.value || content.querySelector('[data-quote-valid]')?.dataset.quoteValid !== 'true'
+            || content.querySelector('[data-ordering-open]')?.dataset.orderingOpen !== 'true';
         }
       }
     });
@@ -256,7 +257,11 @@
         if (version !== revision) return;
         total.textContent = `${result.currency} ${result.total}`;
         content.querySelector('[data-quote-valid]').dataset.quoteValid = 'true';
-        content.querySelector('[data-workspace-proceed]').disabled = false;
+        content.querySelector('[data-ordering-open]').dataset.orderingOpen = String(result.ordering_open);
+        content.querySelector('[data-workspace-proceed]').disabled = !result.ordering_open;
+        const hoursStatus = content.querySelector('[data-ordering-status]');
+        hoursStatus.textContent = result.ordering_error || 'Open now. Shop hours use Philippine time.';
+        hoursStatus.className = result.ordering_open ? 'hint' : 'notice notice-warning';
         content.querySelector("[data-quote-error]").hidden = true;
         report("");
       } catch (issue) {

@@ -22,6 +22,7 @@ from app.services.fulfillment import (
     FulfillmentError, availability, service_available, slot_options, today, validate_fulfillment,
 )
 from app.services.orders import create_order
+from app.services.shop_hours import ShopClosedError, ordering_error, validate_ordering_hours
 from app.services.payments import (
     PaymentError, online_payment_details, validate_checkout_payment,
 )
@@ -266,6 +267,7 @@ def workspace_context(files, selected, options, *, error=None):
         except PricingError as issue:
             error = error or str(issue)
     return dict(files=files, shop=selected, options=options, error=error, preview_quote=quote,
+                ordering_error=ordering_error(selected) if selected else None,
                 shop_details=detail_context(selected) if selected else None,
                 rush_available=bool(selected and service_available(selected.id, ServiceType.RUSH_PRINTING)),
                 paper_sizes=list(PaperSize), color_modes=list(ColorMode),
@@ -339,7 +341,9 @@ def shop():
             quote = quote_for(saved["file_ids"], selected.id, options)
         except PricingError as issue:
             return jsonify(error=str(issue)), issue.status_code
-        return jsonify(total=str(quote.total), subtotal=str(quote.subtotal), rush_fee=str(quote.rush_fee), currency=quote.currency)
+        closed = ordering_error(selected)
+        return jsonify(total=str(quote.total), subtotal=str(quote.subtotal), rush_fee=str(quote.rush_fee),
+                       currency=quote.currency, ordering_open=closed is None, ordering_error=closed)
     if changed_shop or saved.get("options") != options_state(options):
         for key in ("fulfillment", "payment_method", "payment_reference", "review"):
             saved.pop(key, None)
@@ -351,6 +355,7 @@ def shop():
             return jsonify(html=render_template("checkout/shop_workspace.html", **workspace_context(files, selected, options)), shop_id=selected.id)
         return redirect(url_for("checkout.shop"))
     try:
+        validate_ordering_hours(selected)
         quote_for(saved["file_ids"], selected.id, options)
         for file in files:
             choice = options[file.id]
@@ -365,7 +370,7 @@ def shop():
         db.session.commit()
     except (PricingError, ValueError) as issue:
         db.session.rollback()
-        return render_shop(error=str(issue), status=400, options=options)
+        return render_shop(error=str(issue), status=getattr(issue, "status_code", 400), options=options)
     except SQLAlchemyError:
         db.session.rollback()
         current_app.logger.exception("Could not save checkout print settings")
@@ -441,6 +446,9 @@ def fulfillment():
     shop = selected_shop(saved)
     if shop is None:
         return redirect(url_for("checkout.shop"))
+    error = ordering_error(shop)
+    if error:
+        return render_shop(error=error, status=409)
     try:
         options = checkout_options(saved)
         quote_for(saved["file_ids"], shop.id, options)
@@ -493,6 +501,9 @@ def payment_qr():
     shop = selected_shop(saved)
     if shop is None or selected_files(saved) is None or online_payment_details(shop) is None:
         abort(404)
+    error = ordering_error(shop)
+    if error:
+        abort(409, description=error)
     response = send_file(BytesIO(shop.payment_qr_data), mimetype=shop.payment_qr_mime)
     response.headers["Cache-Control"] = "private, no-store"
     return response
@@ -506,6 +517,9 @@ def payment():
         return redirect(url_for("checkout.upload"))
     if selected_shop(saved) is None:
         return redirect(url_for("checkout.shop"))
+    error = ordering_error(selected_shop(saved))
+    if error:
+        return render_shop(error=error, status=409)
     try:
         quote, fulfillment = current_quote(saved)
     except (PricingError, FulfillmentError):
@@ -534,10 +548,11 @@ def payment():
 
 
 def render_review(quote, fulfillment, saved, *, warning=None, status=200):
+    closed = ordering_error(quote.shop)
     return render_template("checkout/review.html", quote=quote, fulfillment=fulfillment,
                            payment_method=saved["payment_method"],
                            payment_reference=saved.get("payment_reference"),
-                           warning=warning, step=5), status
+                           warning=warning, ordering_error=closed, step=5), 409 if closed else status
 
 
 @checkout_bp.get("/review")
@@ -596,6 +611,9 @@ def place():
         order = create_order(quote, fulfillment=fulfillment,
                              payment_method=saved["payment_method"],
                              payment_reference=saved.get("payment_reference", ""))
+    except ShopClosedError:
+        db.session.rollback()
+        return render_review(quote, fulfillment, saved, status=409)
     except (PaymentError, FulfillmentError):
         return redirect(url_for("checkout.fulfillment"))
     except (SQLAlchemyError, RuntimeError):

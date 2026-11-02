@@ -15,6 +15,7 @@ from app.services.professors import assign_professor, validate_professor_selecti
 from app.services.fulfillment import Fulfillment, FulfillmentError, validate_fulfillment
 from app.services.payments import validate_checkout_payment
 from app.services.pricing import PricingError, verify_quote_page_counts
+from app.services.shop_hours import validate_ordering_hours
 
 
 def create_order(
@@ -25,6 +26,8 @@ def create_order(
     payment_reference: str = "",
 ) -> Order:
     """Commit one order and all quoted items, retrying rare reference collisions."""
+    db.session.refresh(quote.shop, attribute_names=["opening_time", "closing_time", "is_active"])
+    validate_ordering_hours(quote.shop)
     try:
         verify_quote_page_counts(quote)
     except PricingError as error:
@@ -51,6 +54,7 @@ def create_order(
                 actor_role=actor.role,
                 reference=payment_reference,
             )
+        validate_ordering_hours(quote.shop)
         reference = f"POD-{utc_now().year}-{secrets.token_hex(6).upper()}"
         order = Order(
             user_id=quote.user_id,

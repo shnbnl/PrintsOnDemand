@@ -17,6 +17,7 @@ from app.models import (
 from app.order_forms import PlaceOrderForm, SelectProfessorForm
 from app.payment_forms import PaymentMethodForm, PaymentReferenceForm
 from app.services.orders import create_order
+from app.services.shop_hours import ordering_error
 from app.services.order_processing import ProcessingError, complete_customer_order, customer_can_complete
 from app.services.fulfillment import (
     FIELDS, FulfillmentError, availability, slot_options, today, validate_fulfillment,
@@ -217,6 +218,7 @@ def selection_url(quote, fulfillment, *, remove_file_id=None):
 
 
 def render_review(quote, *, fulfillment, warning=None, status=200):
+    closed = ordering_error(quote.shop)
     form = PlaceOrderForm(formdata=None)
     form.file_id.data = str(quote.items[0].uploaded_file.id)
     form.shop_id.data = str(quote.shop.id)
@@ -224,11 +226,11 @@ def render_review(quote, *, fulfillment, warning=None, status=200):
         getattr(form, field).data = value
     return render_template(
         "orders/review.html", quote=quote, form=form, fulfillment=fulfillment,
-        warning=warning, selection_url=selection_url(quote, fulfillment),
+        warning=warning, ordering_error=closed, selection_url=selection_url(quote, fulfillment),
         remove_urls={item.uploaded_file.id: selection_url(
             quote, fulfillment, remove_file_id=item.uploaded_file.id,
         ) for item in quote.items},
-    ), status
+    ), 409 if closed else status
 
 
 @orders_bp.route("/new", methods=["GET", "POST"])
@@ -343,7 +345,7 @@ def create():
             file_ids=file_ids, shop_id=shop_id, options=options,
             destination=form.destination.data, professor_id=form.professor_id.data,
             fulfillment_fields={field: request.form.get(field, "") for field in FIELDS},
-            error=str(error), status=400,
+            error=str(error), status=getattr(error, "status_code", 400),
         )
     except (SQLAlchemyError, RuntimeError):
         db.session.rollback()

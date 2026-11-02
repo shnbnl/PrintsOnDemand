@@ -87,7 +87,8 @@
           <input type="hidden" name="quantity_{{ item.uploaded_file.id }}" value="{{ item.quantity }}">
           {% if item.is_rush %}<input type="hidden" name="is_rush_{{ item.uploaded_file.id }}" value="1">{% endif %}
         {% endfor %}
-        {{ form.submit(class_="button button-primary button-block") }}
+        {% if ordering_error %}<p class="notice notice-error" role="alert">{{ ordering_error }}</p>{% endif %}
+        {{ form.submit(class_="button button-primary button-block", disabled=ordering_error is not none) }}
       </form>
     </aside>
   </div>
